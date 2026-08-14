@@ -1,12 +1,17 @@
 """Tests for the config flow.
 
-The config flow's pure logic (the ``async_show_form`` decisions) is
-hard to test without HA's full flow harness. We test the schema
-construction and the underlying constant choices that drive the UI.
+The config flow requires ``homeassistant.config_entries`` at import
+time so HA's flow-discovery can find the handler class. In a pure-Python
+dev environment without HA installed, the module can't import — these
+tests skip automatically in that case.
 """
 from __future__ import annotations
 
-from custom_components.rune.config_flow import CATEGORY_OPTIONS
+import pytest
+
+homeassistant = pytest.importorskip("homeassistant")
+
+from custom_components.rune.config_flow import CATEGORY_OPTIONS  # noqa: E402
 
 
 class TestCategoryOptions:

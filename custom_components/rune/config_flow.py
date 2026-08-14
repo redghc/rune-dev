@@ -10,8 +10,10 @@ omitted here so a user can add a device and start using it with
 pre-existing SmartIR profiles, broadlink codes, etc. Once Fase 7 lands
 the config flow grows a third step.
 
-HA imports are deferred to inside the flow step methods so this
-module imports cleanly in pure-Python environments (CI, tests, dev).
+HA imports live at module level — HA's config-flow discovery requires
+the handler class to be a ``ConfigFlow`` subclass with a ``domain``
+class attribute set to :data:`DOMAIN`. Deferring the import would
+break that discovery.
 """
 from __future__ import annotations
 
@@ -19,15 +21,23 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
+from homeassistant.helpers import selector
 
-from custom_components.rune.const import CONF_TRANSMITTER
+from custom_components.rune.const import CONF_TRANSMITTER, DOMAIN
 from custom_components.rune.domain.enums import EntityCategory
 
 _LOGGER = logging.getLogger(__name__)
 
 
 CATEGORY_OPTIONS = [
-    {"value": c.value, "label": c.value.title()}
+    selector.SelectOptionDict(value=c.value, label=c.value.title())
     for c in (
         EntityCategory.FAN,
         EntityCategory.CLIMATE,
@@ -40,13 +50,8 @@ CATEGORY_OPTIONS = [
 ]
 
 
-class RuneConfigFlow:
-    """Two-screen setup flow.
-
-    MVP: we don't subclass ``ConfigFlow`` here because that requires HA
-    imports. The flow is exercised through HA's runtime via
-    :func:`async_get_config_flow` once the integration is loaded.
-    """
+class RuneConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Two-screen setup flow."""
 
     VERSION = 1
 
@@ -57,19 +62,16 @@ class RuneConfigFlow:
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> Any:
+    ) -> ConfigFlowResult:
         """Step 1: name + category."""
-        from homeassistant.const import CONF_NAME
-        from homeassistant.helpers import selector
-
         if user_input is not None:
-            self._device_name = user_input[CONF_NAME]
+            self._device_name = user_input["name"]
             self._category = user_input["category"]
             return await self.async_step_transmitter()
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_NAME, default="My device"): selector.TextSelector(),
+                vol.Required("name", default="My device"): selector.TextSelector(),
                 vol.Required("category", default=EntityCategory.FAN.value): (
                     selector.SelectSelector(
                         selector.SelectSelectorConfig(options=CATEGORY_OPTIONS)
@@ -77,17 +79,12 @@ class RuneConfigFlow:
                 ),
             }
         )
-        # The actual show_form call is delegated to HA's runtime
-        # via the parent class — wrapped in a closure so the test
-        # suite doesn't have to import HA's full flow harness.
-        return self._show_form("user", schema)
+        return self.async_show_form(step_id="user", data_schema=schema)
 
     async def async_step_transmitter(
         self, user_input: dict[str, Any] | None = None
-    ) -> Any:
+    ) -> ConfigFlowResult:
         """Step 2: pick the emitter entity."""
-        from homeassistant.helpers import selector
-
         if user_input is not None:
             self._transmitter = user_input[CONF_TRANSMITTER]
             return await self._async_create_entry()
@@ -101,19 +98,16 @@ class RuneConfigFlow:
                 ),
             }
         )
-        return self._show_form("transmitter", schema)
+        return self.async_show_form(step_id="transmitter", data_schema=schema)
 
-    async def _async_create_entry(self) -> Any:
+    async def _async_create_entry(self) -> ConfigFlowResult:
         """Persist the entry with the collected data."""
-
         # Use the device name to derive a unique id.
         unique_id = f"{self._category}-{self._device_name}".lower().replace(" ", "-")
-        # These helpers come from HA's ConfigFlow parent class —
-        # call via the runtime-provided implementation.
-        await self._set_unique_id(unique_id)
+        await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
 
-        return self._create_entry(
+        return self.async_create_entry(
             title=self._device_name,
             data={
                 "name": self._device_name,
@@ -122,24 +116,9 @@ class RuneConfigFlow:
             },
         )
 
-    # ------------------------------------------------------------------
-    # Hooks the HA runtime injects via ConfigFlow subclassing.
-    # ------------------------------------------------------------------
 
-    def _show_form(self, step_id: str, schema: Any) -> Any:
-        return self.async_show_form(step_id=step_id, data_schema=schema)
-
-    def _create_entry(self, *, title: str, data: dict[str, Any]) -> Any:
-        return self.async_create_entry(title=title, data=data)
-
-    async def _set_unique_id(self, unique_id: str) -> None:
-        await self.async_set_unique_id(unique_id)
-
-    def _abort_if_unique_id_configured(self) -> None:
-        self.async_abort_if_unique_id_configured()
-
-
-def async_get_options_flow(config_entry: Any) -> Any:
+@callback
+def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
     """Return the options flow handler.
 
     Phase 7 expands this; for the MVP the options flow is a no-op.
@@ -147,22 +126,11 @@ def async_get_options_flow(config_entry: Any) -> Any:
     return RuneOptionsFlow()
 
 
-class RuneOptionsFlow:
+class RuneOptionsFlow(OptionsFlow):
     """No-op options flow for MVP."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> Any:
+    ) -> ConfigFlowResult:
         """Single empty step so HA renders the options page without errors."""
-        return self._create_entry(title="", data={})
-
-    def _create_entry(self, *, title: str, data: dict[str, Any]) -> Any:
-        return self.async_create_entry(title=title, data=data)
-
-
-__all__ = [
-    "CATEGORY_OPTIONS",
-    "RuneConfigFlow",
-    "RuneOptionsFlow",
-    "async_get_options_flow",
-]
+        return self.async_create_entry(title="", data={})
