@@ -1,0 +1,62 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Añadir un dispositivo RUNE",
+                "description": "Elige un nombre y categoría para el dispositivo que quieres controlar.",
+                "data": {
+                    "name": "Nombre del dispositivo",
+                    "category": "Categoría"
+                }
+            },
+            "transmitter": {
+                "title": "Elige un emisor",
+                "description": "Selecciona la entidad de emisor IR o RF que RUNE debe usar para enviar comandos.",
+                "data": {
+                    "transmitter": "Emisor"
+                }
+            }
+        },
+        "error": {
+            "no_transmitter": "No se encontró un emisor compatible. Añade un blaster IR o RF primero.",
+            "cannot_connect": "No se puede alcanzar el núcleo de Home Assistant."
+        },
+        "abort": {
+            "already_configured": "Este dispositivo ya está configurado."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Opciones de RUNE",
+                "description": "Opciones específicas del dispositivo (trabajo de Fase 7 en progreso)."
+            }
+        }
+    },
+    "services": {
+        "send_command": {
+            "name": "Enviar comando",
+            "description": "Dispara un pulso aprendido en un dispositivo RUNE.",
+            "fields": {
+                "device_id": {
+                    "name": "Dispositivo",
+                    "description": "ID del dispositivo RUNE a controlar."
+                },
+                "command_key": {
+                    "name": "Clave del comando",
+                    "description": "Clave del PulseCommand a enviar."
+                }
+            }
+        },
+        "learn_command": {
+            "name": "Aprender comando",
+            "description": "Inicia una sesión de aprendizaje en un dispositivo RUNE.",
+            "fields": {
+                "device_id": {
+                    "name": "Dispositivo",
+                    "description": "ID del dispositivo RUNE para capturar."
+                }
+            }
+        }
+    }
+}

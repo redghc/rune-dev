@@ -1,0 +1,122 @@
+[project]
+name = "rune"
+version = "0.1.0"
+description = "RUNE — Remote Universal Network Engine. Home Assistant custom integration for IR/RF remote control."
+readme = "PLAN.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "RUNE contributors"},
+]
+dependencies = [
+    "pytest-timeout>=2.4.0",
+    "voluptuous>=0.16.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["custom_components/rune/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "--cov=custom_components/rune/domain",
+    "--cov=custom_components/rune/adapters",
+    "--cov-report=term-missing",
+    "--cov-fail-under=90",
+    "--cov-config=pyproject.toml",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:homeassistant.*",
+]
+
+[tool.coverage.run]
+source = [
+    "custom_components/rune/domain",
+    "custom_components/rune/adapters",
+]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/adapters/storage/ha_store.py",                # requires HA core; tested via contract + manual
+    "*/adapters/transmitters/native_ir.py",            # requires HA + infrared_protocols
+    "*/adapters/transmitters/native_rf.py",            # requires HA + rf_protocols
+    "*/adapters/transmitters/broadlink_ir.py",         # requires HA core
+    "*/adapters/transmitters/broadlink_rf.py",         # requires HA core
+    "*/adapters/transmitters/esphome_ir.py",           # requires HA core
+    "*/adapters/transmitters/esphome_rf.py",           # requires HA core
+    "*/adapters/receivers/native_ir.py",               # requires HA core
+    "*/adapters/receivers/broadlink_rf.py",            # requires HA + broadlink
+    "*/adapters/receivers/esphome_legacy_ir.py",       # requires HA core
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+    "SIM",  # flake8-simplify
+    "PL",   # pylint
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "PLR0913",  # too many arguments — domain models need many fields
+    "PLR2004",  # magic value — we have constants for everything that matters
+    "B008",     # function call in default argument — common in dataclass field(default_factory=...)
+    "BLE001",   # blind-except — common in exception-translation boundaries
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # test literals are explicit
+    "SIM117",   # nested with-statements are clearer in tests
+]
+"custom_components/rune/adapters/**/*.py" = [
+    "PLC0415",  # lazy imports of HA / broadlink / infrared_protocols are required
+    "PLW0108",  # the lambdas in factory.py are explicit predicates
+]
+"custom_components/rune/tests/adapters/**/*.py" = [
+    "PLC0415",  # lazy imports of HA for skip-detection
+    "PLW0108",  # explicit lambda predicates for pytest parametrize ids
+]
+"custom_components/rune/platforms/**/*.py" = [
+    "PLC0415",  # lazy HA imports inside properties
+    "PLR0911",  # coordinator's async_dispatch_action has 13 returns; that's the enum dispatch
+]
+"custom_components/rune/tests/platforms/**/*.py" = [
+    "PLC0415",  # lazy imports for in-test fixtures
+    "B017",      # blind Exception catch in test_async_send_pulse_missing_raises
+]
+"custom_components/rune/tests/test_*.py" = [
+    "PLC0415",  # lazy imports for in-test fixtures
+]
+"custom_components/rune/__init__.py" = [
+    "PLC0415",  # lazy HA imports inside lifecycle functions
+]
+"custom_components/rune/config_flow.py" = [
+    "PLC0415",  # lazy HA imports inside step methods
+]
+"custom_components/rune/websocket_api.py" = [
+    "PLC0415",  # lazy HA imports inside registration
+]

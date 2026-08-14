@@ -1,0 +1,62 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Add a RUNE device",
+                "description": "Choose a name and category for the device you want to control.",
+                "data": {
+                    "name": "Device name",
+                    "category": "Category"
+                }
+            },
+            "transmitter": {
+                "title": "Pick a transmitter",
+                "description": "Select the IR or RF emitter entity that RUNE should use to send commands.",
+                "data": {
+                    "transmitter": "Transmitter"
+                }
+            }
+        },
+        "error": {
+            "no_transmitter": "No compatible emitter found. Add an IR or RF blaster first.",
+            "cannot_connect": "Cannot reach Home Assistant core."
+        },
+        "abort": {
+            "already_configured": "This device is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "RUNE options",
+                "description": "Device-specific options (Phase 7 work in progress)."
+            }
+        }
+    },
+    "services": {
+        "send_command": {
+            "name": "Send command",
+            "description": "Fire a learned pulse on a RUNE device.",
+            "fields": {
+                "device_id": {
+                    "name": "Device",
+                    "description": "ID of the RUNE device to control."
+                },
+                "command_key": {
+                    "name": "Command key",
+                    "description": "Key of the PulseCommand to send."
+                }
+            }
+        },
+        "learn_command": {
+            "name": "Learn command",
+            "description": "Start a learn session on a RUNE device.",
+            "fields": {
+                "device_id": {
+                    "name": "Device",
+                    "description": "ID of the RUNE device to capture for."
+                }
+            }
+        }
+    }
+}

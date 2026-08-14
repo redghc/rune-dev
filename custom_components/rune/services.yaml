@@ -1,0 +1,27 @@
+send_command:
+  name: Send command
+  description: Fire a learned pulse on a RUNE device.
+  fields:
+    device_id:
+      name: Device
+      description: ID of the RUNE device to control.
+      required: true
+      selector:
+        text:
+    command_key:
+      name: Command key
+      description: Key of the PulseCommand to send (e.g. "power_on", "speed_2").
+      required: true
+      selector:
+        text:
+
+learn_command:
+  name: Learn command
+  description: Start a learn session on a RUNE device.
+  fields:
+    device_id:
+      name: Device
+      description: ID of the RUNE device to capture for.
+      required: true
+      selector:
+        text:

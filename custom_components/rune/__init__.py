@@ -1,0 +1,319 @@
+"""RUNE — Remote Universal Network Engine.
+
+A Home Assistant custom integration for IR/RF remote control. This
+package is loaded by HA via the standard ``async_setup_entry`` flow
+declared in :func:`async_setup_entry` below.
+
+Lifecycle:
+
+- :func:`async_setup_entry` — called by HA when a user adds the
+  integration via the config flow. Wires the device + action
+  repositories, builds the coordinator, forwards the entry to each
+  platform, and registers the public services.
+- :func:`async_unload_entry` — reverses setup on user removal or
+  options change.
+- :func:`async_remove_entry` — runs when the user removes the
+  integration. RUNE leaves the data in place by default so
+  re-installing preserves the setup.
+
+The coordinator lives in :mod:`custom_components.rune.platforms._coordinator`.
+Every platform shell (:mod:`platforms.fan`, :mod:`platforms.button`, …)
+delegates TX and action dispatch through it.
+
+HA imports are deferred to inside the lifecycle functions so this
+module imports cleanly in pure-Python environments (CI, tests, dev).
+The HA core is only required when ``async_setup_entry`` runs.
+"""
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING, Any
+
+from custom_components.rune.adapters.transmitters.factory import select_transmitter
+from custom_components.rune.adapters.tx_gate import TxGate
+from custom_components.rune.const import (
+    DOMAIN,
+    MANUFACTURER,
+    PLATFORMS,
+)
+from custom_components.rune.migrations import (
+    LATEST_ACTION_VERSION,
+    LATEST_DEVICE_VERSION,
+    LATEST_SIGNAL_VERSION,
+    migrate_actions,
+    migrate_devices,
+    migrate_signals,
+)
+from custom_components.rune.platforms._coordinator import DevicePlatformCoordinator
+
+
+def _build_repositories(hass: Any) -> tuple[Any, Any, Any]:
+    """Construct the three HA-Store-backed repositories.
+
+    Deferred import: the HA Store adapter is only needed at integration
+    setup time, never at module import. Keeping the import here lets
+    the rest of the package stay importable in pure-Python environments.
+    """
+    from custom_components.rune.adapters.storage.ha_store import (
+        HAStoreActionRepository,
+        HAStoreDeviceRepository,
+        HAStoreSignalRepository,
+    )
+
+    return (
+        HAStoreDeviceRepository(hass),
+        HAStoreActionRepository(hass),
+        HAStoreSignalRepository(hass),
+    )
+
+if TYPE_CHECKING:
+    pass
+
+_LOGGER = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Integration setup
+# ---------------------------------------------------------------------------
+
+
+async def async_setup_entry(hass: Any, entry: Any) -> bool:
+    """Set up RUNE from a config entry.
+
+    Steps:
+
+    1. Load (and migrate) the three persisted stores.
+    2. Build the TX gate + coordinator.
+    3. Forward the entry to every platform so each platform file can
+       enumerate devices and add its entities.
+    4. Register the integration's public services
+       (``rune.send_command``, ``rune.learn_command``).
+    5. Register the WebSocket command handlers.
+
+    On success, the coordinator lives in ``hass.data[DOMAIN][entry_id]``.
+    """
+    # Local imports keep the module importable without HA core
+    # (CI / tests / dev environments).
+    from homeassistant.const import Platform
+
+    hass.data.setdefault(DOMAIN, {})
+
+    # 1. Repositories with on-disk migration.
+    device_repo, action_repo, signal_repo = _build_repositories(hass)
+
+    await _migrate_all(hass, device_repo, action_repo, signal_repo)
+
+    # 2. Coordinator.
+    tx_gate = TxGate(mirror=_mirror_for_entry(hass, entry))
+    coordinator = DevicePlatformCoordinator(
+        hass=hass,
+        device_repository=device_repo,
+        action_repository=action_repo,
+        tx_gate=tx_gate,
+        transmitter_factory=select_transmitter,
+    )
+
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+        "device_repository": device_repo,
+        "action_repository": action_repo,
+        "signal_repository": signal_repo,
+    }
+
+    # 3. Forward to each platform. HA instantiates the platform module
+    #    on demand; the module's ``async_setup_entry`` builds entities.
+    platforms_list = [getattr(Platform, p) for p in PLATFORMS]
+    await hass.config_entries.async_forward_entry_setups(entry, platforms_list)
+
+    # 4. Services.
+    _register_services(hass, coordinator)
+
+    # 5. WebSocket commands.
+    from custom_components.rune.websocket_api import async_register_websocket_commands
+
+    async_register_websocket_commands(hass)
+
+    return True
+
+
+async def async_unload_entry(hass: Any, entry: Any) -> bool:
+    """Tear down a RUNE entry."""
+    from homeassistant.const import Platform
+
+    platforms_list = [getattr(Platform, p) for p in PLATFORMS]
+    unloaded = await hass.config_entries.async_unload_platforms(entry, platforms_list)
+    if not unloaded:
+        return False
+
+    # Remove the entry's data.
+    hass.data[DOMAIN].pop(entry.entry_id, None)
+
+    # Drop the service registrations if no other entries remain.
+    if not hass.data[DOMAIN]:
+        _unregister_services(hass)
+        from custom_components.rune.websocket_api import async_unregister_websocket_commands
+
+        async_unregister_websocket_commands(hass)
+
+    return True
+
+
+async def async_remove_entry(hass: Any, entry: Any) -> None:
+    """Drop the on-disk store when the user removes the integration.
+
+    Unlike HAIR, RUNE's user-facing catalog lives in separate stores
+    for devices / actions / unknown signals. The ``async_remove_entry``
+    hook only fires when the user explicitly deletes the entry, so
+    we leave the data in place by default — the user can re-install
+    without losing their setup.
+    """
+    # No-op by design. Override here when a destructive removal is wanted.
+
+
+# ---------------------------------------------------------------------------
+# Migrations
+# ---------------------------------------------------------------------------
+
+
+async def _migrate_all(
+    hass: Any,
+    device_repo: Any,
+    action_repo: Any,
+    signal_repo: Any,
+) -> None:
+    """Run the migration chain on each store and persist the result.
+
+    Each migration is pure (list[dict] → list[dict]); the adapter
+    loads the records, the chain runs, and we save the migrated
+    records back. Errors are logged but don't fail setup — the
+    data is preserved either way.
+    """
+
+    for label, repo, migrate_fn, target_version in (
+        ("rune.devices", device_repo, migrate_devices, LATEST_DEVICE_VERSION),
+        ("rune.actions", action_repo, migrate_actions, LATEST_ACTION_VERSION),
+        ("rune.unknown_signals", signal_repo, migrate_signals, LATEST_SIGNAL_VERSION),
+    ):
+        try:
+            records = await _read_raw_records(repo)
+            migrated, final_version = migrate_fn(records, from_version=0)
+            if final_version != target_version:
+                _LOGGER.warning(
+                    "rune: %s migration stopped at v%d (expected v%d); "
+                    "current build may need an upgrade",
+                    label,
+                    final_version,
+                    target_version,
+                )
+            await _write_raw_records(repo, migrated)
+        except Exception as err:
+            _LOGGER.warning("rune: migration of %s failed: %s", label, err)
+
+
+async def _read_raw_records(repo: Any) -> list[dict]:
+    """Read raw dict records from the underlying Store."""
+    if hasattr(repo, "_store"):
+        return list(await repo._store.async_load() or [])
+    if hasattr(repo, "load"):
+        return [d.to_dict() for d in await repo.load()]
+    return []
+
+
+async def _write_raw_records(repo: Any, records: list[dict]) -> None:
+    """Write raw dict records through the underlying Store."""
+    if hasattr(repo, "_store"):
+        await repo._store.async_save(records)
+
+
+def _mirror_for_entry(hass: Any, entry: Any) -> Any:
+    """Construct the MirrorLog used by the TX gate.
+
+    Returns a fresh in-process mirror for now; Phase 7 will wire it
+    to a HA-store-backed mirror for cross-restart continuity.
+    """
+    from custom_components.rune.sniffer.mirror import MirrorLog
+
+    return MirrorLog()
+
+
+# ---------------------------------------------------------------------------
+# Service handlers
+# ---------------------------------------------------------------------------
+
+
+def _register_services(hass: Any, coordinator: DevicePlatformCoordinator) -> None:
+    """Register the integration's public services."""
+    if not hass.services.has_service(DOMAIN, "send_command"):
+        hass.services.async_register(
+            DOMAIN,
+            "send_command",
+            lambda call: _async_handle_send_command(coordinator, call),
+        )
+
+    if not hass.services.has_service(DOMAIN, "learn_command"):
+        hass.services.async_register(
+            DOMAIN,
+            "learn_command",
+            lambda call: _async_handle_learn_command(coordinator, call),
+        )
+
+
+def _unregister_services(hass: Any) -> None:
+    """Drop every service the integration registered."""
+    for service_name in ("send_command", "learn_command"):
+        if hass.services.has_service(DOMAIN, service_name):
+            hass.services.async_remove(DOMAIN, service_name)
+
+
+async def _async_handle_send_command(
+    coordinator: DevicePlatformCoordinator, call: Any
+) -> None:
+    """Handle ``rune.send_command``.
+
+    Required service data:
+
+    - ``device_id`` — id of the RuneDevice.
+    - ``command_key`` — key of the PulseCommand to send.
+    """
+    device_id = call.data.get("device_id")
+    command_key = call.data.get("command_key")
+    if not device_id or not command_key:
+        _LOGGER.warning("rune.send_command missing device_id or command_key")
+        return
+    device = await coordinator._devices.get(device_id)  # type: ignore[attr-defined]
+    if device is None:
+        _LOGGER.warning("rune.send_command: unknown device %s", device_id)
+        return
+    command = device.commands.get(command_key)
+    if command is None:
+        _LOGGER.warning(
+            "rune.send_command: device %s has no command %s", device_id, command_key
+        )
+        return
+    await coordinator.async_send_command(device=device, command=command)
+
+
+async def _async_handle_learn_command(
+    coordinator: DevicePlatformCoordinator, call: Any
+) -> None:
+    """Handle ``rune.learn_command``.
+
+    Placeholder: real capture-orchestrator wiring lands in Phase 4's
+    integration into the sniffer. For now this just logs the request
+    so the service exists in the HA service panel without errors.
+    """
+    _LOGGER.info(
+        "rune.learn_command invoked (UI capture flow not yet wired in MVP)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Re-exports for HA discovery
+# ---------------------------------------------------------------------------
+
+__all__ = [
+    "MANUFACTURER",
+    "async_remove_entry",
+    "async_setup_entry",
+    "async_unload_entry",
+]
