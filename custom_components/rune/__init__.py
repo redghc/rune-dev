@@ -138,7 +138,78 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
 
     async_register_websocket_commands(hass)
 
+    # 6. Sidebar panel — the user-visible front-end. The HTML lives at
+    #    ``frontend/dist/rune-panel.html``; HA serves it from the
+    #    static path registered here. The panel's JS talks to the WS
+    #    API registered above, so it shares the same handlers as
+    #    every other client (services, options flow, custom SPA).
+    await _register_panel(hass, entry)
+
     return True
+
+
+async def _register_panel(hass: Any, entry: Any) -> None:
+    """Register the RUNE sidebar panel and its static asset path.
+
+    The panel HTML is served from the ``frontend/dist/`` directory of
+    the integration. We register a static path so HA can load the
+    file, then call ``panel_custom.async_register_panel`` to add the
+    sidebar entry.
+
+    Errors during panel registration are logged but do not fail the
+    setup — the integration remains usable via the options flow even
+    if the panel can't be mounted.
+    """
+    try:
+        from homeassistant.components import panel_custom
+        from homeassistant.components.http import StaticPathConfig
+        from homeassistant.loader import async_get_integration
+
+        from custom_components.rune.const import (
+            PANEL_HTML_FILENAME,
+            PANEL_ICON,
+            PANEL_STATIC_PATH,
+            PANEL_TITLE,
+            PANEL_URL,
+        )
+
+        integration = await async_get_integration(hass, DOMAIN)
+        # StaticPathConfig requires a URL path and a filesystem path.
+        # The integration's ``file`` attribute points to the package
+        # root; the panel HTML sits under ``frontend/dist/``.
+        static_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
+        static_path = f"{integration.file_path}/frontend/dist/{PANEL_HTML_FILENAME}"
+
+        await hass.http.async_register_static_paths(
+            [
+                StaticPathConfig(static_url, static_path, cache_headers=False),
+            ]
+        )
+
+        await panel_custom.async_register_panel(
+            hass,
+            webcomponent_name="rune-panel",
+            sidebar_title=PANEL_TITLE,
+            sidebar_icon=PANEL_ICON,
+            frontend_url_path=PANEL_URL,
+            config={"entry_id": entry.entry_id},
+            require_admin=True,
+            embed_iframe=False,
+            trust_external=False,
+            module_url=f"{static_url}?v=0.2.0",
+        )
+
+        _LOGGER.info(
+            "rune: sidebar panel registered at %s (static %s)",
+            PANEL_URL,
+            static_url,
+        )
+    except Exception as err:
+        _LOGGER.warning(
+            "rune: failed to register sidebar panel (frontend still usable via "
+            "options flow): %s",
+            err,
+        )
 
 
 async def async_unload_entry(hass: Any, entry: Any) -> bool:

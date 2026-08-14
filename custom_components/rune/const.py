@@ -23,7 +23,9 @@ CONF_RECEIVER = "receiver"
 MANUFACTURER = "RUNE"
 PANEL_TITLE = "RUNE"
 PANEL_ICON = "mdi:remote"
-PANEL_URL = "rune"
+PANEL_URL = "rune-panel"
+PANEL_STATIC_PATH = "/rune_panel_static"
+PANEL_HTML_FILENAME = "rune-panel.html"
 
 # Platform names forwarded to HA. Strings (not the HA ``Platform``
 # enum) so the constant can be imported without HA core.
