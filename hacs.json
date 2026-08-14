@@ -1,0 +1,6 @@
+{
+    "name": "RUNE — Remote Universal Network Engine",
+    "render_readme": true,
+    "country": ["ES", "MX", "AR", "CL", "CO", "PE", "VE"],
+    "homeassistant": "2026.6.0"
+}
