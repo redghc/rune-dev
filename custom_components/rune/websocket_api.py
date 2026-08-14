@@ -26,7 +26,6 @@ from custom_components.rune.const import WS_PREFIX
 from custom_components.rune.domain.errors import (
     ActionError,
     CommandNotLearnedError,
-    UnsupportedHardwareError,
 )
 from custom_components.rune.domain.models import RuneDevice
 
@@ -165,13 +164,71 @@ async def _ws_device_create(
 ) -> dict[str, Any]:
     """Create a new RuneDevice from a payload.
 
-    MVP: this is a stub that always rejects. Phase 7 implements the
-    full path with seed-from-profile support.
+    Required fields:
+
+    - ``name`` — display name for the device.
+    - ``category`` — one of :class:`EntityCategory`.
+    - ``transmitter`` — entity_id of the IR/RF emitter.
+
+    Optional fields:
+
+    - ``manufacturer`` — manufacturer string (default: ``None``).
+    - ``model`` — model string (default: ``None``).
+    - ``receiver`` — entity_id of an IR/RF receiver (default: ``None``).
+    - ``discrete_speed_count`` — for fans (default: ``3``).
+    - ``commands`` — dict of pre-learned commands keyed by ``key``.
+
+    Persists the device via the device repository and returns its
+    serialized record.
     """
-    raise UnsupportedHardwareError(
-        "rune.device/create is not implemented in the MVP; "
-        "use the config flow to add devices"
+    from uuid import uuid4
+
+    from custom_components.rune.domain.enums import EntityCategory
+    from custom_components.rune.domain.models import (
+        PulseCommand,
+        PulsePayload,
+        RuneDevice,
     )
+
+    name = msg.get("name")
+    category_value = msg.get("category")
+    transmitter = msg.get("transmitter")
+
+    if not name or not category_value or not transmitter:
+        raise ActionError("name, category, and transmitter are required")
+
+    try:
+        category = EntityCategory(category_value)
+    except ValueError as err:
+        raise ActionError(f"unknown category: {category_value!r}") from err
+
+    commands: dict[str, Any] = {}
+    for key, payload_dict in (msg.get("commands") or {}).items():
+        commands[key] = PulseCommand(
+            key=key,
+            label=payload_dict.get("label", key),
+            category=payload_dict.get("category", "custom"),
+            signal_category=payload_dict.get("signal_category"),
+            payload=PulsePayload.from_dict(payload_dict.get("payload") or {}),
+        )
+
+    device = RuneDevice(
+        id=str(uuid4()),
+        name=name,
+        category=category,
+        manufacturer=msg.get("manufacturer"),
+        model=msg.get("model"),
+        transmitter_entity_ids=[transmitter],
+        receiver_entity_ids=[msg.get("receiver")] if msg.get("receiver") else [],
+        discrete_speed_count=int(msg.get("discrete_speed_count", 3)),
+        commands=commands,
+    )
+
+    repo = await ctx.device_repository()
+    await repo.upsert(device)
+    _LOGGER.info("rune: created device %s (%s)", device.id, device.name)
+
+    return {"device": device.to_dict()}
 
 
 @_register("device/delete")

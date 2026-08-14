@@ -118,6 +118,11 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
         "device_repository": device_repo,
         "action_repository": action_repo,
         "signal_repository": signal_repo,
+        # A flat cache the config flow reads so the "Manage devices"
+        # menu stays in sync with whatever the coordinator surfaces.
+        # Refreshed on every entry reload and on every successful
+        # ``rune.device/create`` call.
+        "_flow_devices_cache": [],
     }
 
     # 3. Forward to each platform. HA instantiates the platform module

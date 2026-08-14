@@ -18,7 +18,6 @@ from custom_components.rune.domain.enums import (
 from custom_components.rune.domain.errors import (
     ActionError,
     CommandNotLearnedError,
-    UnsupportedHardwareError,
 )
 from custom_components.rune.domain.models import (
     PulseCommand,
@@ -185,10 +184,38 @@ class TestWsDeviceDelete:
 
 @pytest.mark.asyncio
 class TestWsDeviceCreate:
-    async def test_not_implemented_in_mvp(self) -> None:
+    async def test_creates_device(self) -> None:
         from custom_components.rune.websocket_api import _ws_device_create
 
-        with pytest.raises(UnsupportedHardwareError):
+        repo = InMemoryDeviceRepository()
+
+        async def _list_repo(self) -> InMemoryDeviceRepository:  # type: ignore[no-untyped-def]
+            return repo
+
+        original = RuneWebSocketContext.device_repository
+        RuneWebSocketContext.device_repository = _list_repo  # type: ignore[method-assign]
+        try:
+            result = await _ws_device_create(
+                _ctx(),
+                {
+                    "name": "Bedroom fan",
+                    "category": "fan",
+                    "transmitter": "infrared.bedroom",
+                },
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        assert "device" in result
+        assert result["device"]["name"] == "Bedroom fan"
+        assert result["device"]["category"] == "fan"
+        devices = await repo.load()
+        assert len(devices) == 1
+        assert devices[0].transmitter_entity_ids == ["infrared.bedroom"]
+
+    async def test_missing_required_fields_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_device_create
+
+        with pytest.raises(ActionError):
             await _ws_device_create(_ctx(), {})
 
 
