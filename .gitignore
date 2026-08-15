@@ -8,8 +8,13 @@ __pycache__/
 .Python
 build/
 dist/
-# RUNE panel assets are hand-written (no build step) — must ship with repo
+# RUNE panel build artefacts ship with the repo — Lit SPA bundled to a
+# single ``panel.html`` plus the HA ``<rune-panel>`` shim at
+# ``panel.js``. Both are produced by ``pnpm build`` in
+# ``custom_components/rune/frontend/``.
 !custom_components/rune/frontend/dist/
+!custom_components/rune/frontend/dist/panel.html
+!custom_components/rune/frontend/dist/panel.js
 *.egg-info/
 *.egg
 .eggs/
@@ -30,6 +35,17 @@ env/
 # uv cache
 # ---------------------------------------------------------------------------
 .uv-cache/
+
+# ---------------------------------------------------------------------------
+# Node / pnpm / Vite (RUNE panel frontend)
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+.npm/
+.eslintcache
+.vite/
+*.tsbuildinfo
 
 # ---------------------------------------------------------------------------
 # Testing & coverage

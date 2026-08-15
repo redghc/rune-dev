@@ -1,836 +1,798 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>RUNE</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    :root {
-      --primary: #03a9f4;
-      --bg: #1f1f1f;
-      --bg-2: #252525;
-      --card: #2c2c2c;
-      --text: #e1e1e1;
-      --muted: #9aa0a6;
-      --border: #3a3a3a;
-      --danger: #f44336;
-      --ok: #4caf50;
-      --warn: #ff9800;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: Roboto, "Helvetica Neue", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0; padding: 0;
-      min-height: 100vh;
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      min-height: 100vh;
-    }
-    nav {
-      background: var(--bg-2);
-      border-right: 1px solid var(--border);
-      padding: 16px 0;
-    }
-    .brand {
-      padding: 0 20px 16px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
-    }
-    .brand h1 { margin: 0; font-size: 18px; font-weight: 500; }
-    .brand .pill {
-      display: inline-block; padding: 1px 6px; border-radius: 8px;
-      background: var(--bg); color: var(--muted); font-size: 10px;
-      border: 1px solid var(--border); margin-left: 4px;
-    }
-    .nav-item {
-      display: block; padding: 10px 20px; color: var(--muted);
-      text-decoration: none; cursor: pointer; border: 0; background: transparent;
-      width: 100%; text-align: left; font: inherit;
-    }
-    .nav-item:hover { background: var(--bg); color: var(--text); }
-    .nav-item.active { background: var(--bg); color: var(--primary); border-left: 3px solid var(--primary); }
-    main { padding: 24px; overflow-y: auto; max-height: 100vh; }
-    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
-    .toolbar .grow { flex: 1; }
-    button {
-      background: var(--primary); color: white; border: 0; padding: 8px 14px;
-      border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px;
-    }
-    button.secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-    button.danger { background: var(--danger); }
-    button.warn { background: var(--warn); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    input, select, textarea {
-      background: var(--card); color: var(--text); border: 1px solid var(--border);
-      padding: 8px; border-radius: 4px; font: inherit; font-size: 13px;
-      width: 100%;
-    }
-    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
-    .empty {
-      text-align: center; padding: 60px 20px; color: var(--muted);
-      border: 2px dashed var(--border); border-radius: 8px;
-    }
-    .device {
-      background: var(--card); border-radius: 8px; padding: 16px;
-      margin-bottom: 12px; border: 1px solid var(--border);
-    }
-    .device-head {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 12px; gap: 8px;
-    }
-    .device h3 { margin: 0 0 4px; font-size: 16px; font-weight: 500; }
-    .device .meta { color: var(--muted); font-size: 12px; }
-    .device .actions { display: flex; gap: 4px; }
-    .device .actions button { padding: 4px 10px; font-size: 12px; }
-    .commands {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 6px;
-    }
-    .cmd {
-      background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px;
-      padding: 8px; cursor: pointer; font: inherit; color: var(--text);
-      font-size: 12px; text-align: center; transition: all 0.1s;
-    }
-    .cmd:hover { background: var(--primary); color: white; border-color: var(--primary); }
-    .cmd:active { transform: scale(0.97); }
-    .cmd.flash { background: var(--ok) !important; color: white !important; }
-    .cmd .learn {
-      display: block; font-size: 10px; color: var(--muted); margin-top: 4px;
-    }
-    .cmd:hover .learn { color: rgba(255,255,255,0.7); }
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: var(--card); border: 1px solid var(--border); padding: 12px 20px;
-      border-radius: 8px; opacity: 0; transition: opacity 0.2s;
-      pointer-events: none; z-index: 1000; max-width: 80%;
-    }
-    .toast.show { opacity: 1; }
-    .toast.err { border-color: var(--danger); color: #ff8a80; }
-    .toast.ok { border-color: var(--ok); color: #b9f6ca; }
-    dialog {
-      background: var(--card); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 24px; min-width: 420px; max-width: 90vw;
-    }
-    dialog::backdrop { background: rgba(0,0,0,0.6); }
-    .form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-    .form-row label { font-size: 12px; color: var(--muted); }
-    .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-    .tx-row { display: flex; gap: 4px; align-items: center; }
-    .tx-row select { flex: 1; }
-    .badge {
-      display: inline-block; padding: 1px 8px; border-radius: 10px;
-      background: var(--bg-2); color: var(--muted); font-size: 11px;
-      border: 1px solid var(--border); margin-left: 6px;
-    }
-    .badge.protocol { color: var(--primary); border-color: var(--primary); }
-    .signal-card {
-      background: var(--card); border-radius: 6px; padding: 10px;
-      margin-bottom: 6px; border: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .signal-card .info { font-size: 13px; }
-    .signal-card .meta { color: var(--muted); font-size: 11px; }
-    .remote-card {
-      background: var(--card); border-radius: 8px; padding: 12px;
-      margin-bottom: 12px; border: 1px solid var(--border);
-    }
-    .remote-card h4 { margin: 0 0 8px; font-size: 14px; }
-    .remote-card.dismissed { opacity: 0.5; }
-    .action-card {
-      background: var(--card); border-radius: 6px; padding: 10px;
-      margin-bottom: 6px; border: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-    .stat-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      padding: 16px;
-    }
-    .stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-    .stat-card .value { font-size: 24px; font-weight: 500; }
-    .status-dot {
-      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-      margin-right: 6px; background: var(--muted);
-    }
-    .status-dot.ok { background: var(--ok); }
-    .status-dot.err { background: var(--danger); }
-    pre {
-      background: var(--bg-2); padding: 8px; border-radius: 4px;
-      font-size: 11px; overflow-x: auto;
-    }
-    .help {
-      background: var(--bg-2); border-left: 3px solid var(--primary);
-      padding: 10px 14px; border-radius: 4px; font-size: 12px;
-      color: var(--muted); margin-bottom: 12px;
-    }
-    .help code { background: var(--bg); padding: 1px 5px; border-radius: 3px; }
-  </style>
-</head>
-<body>
-  <div class="layout">
-    <nav>
-      <div class="brand">
-        <h1>RUNE <span class="pill" id="version-pill">v0</span></h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>RUNE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: #1f1f1f;
+        color: #e1e1e1;
+        font-family: Roboto, "Helvetica Neue", sans-serif;
+      }
+    </style>
+    <script type="module" crossorigin>(function(){const e=document.createElement("link").relList;if(e&&e.supports&&e.supports("modulepreload"))return;for(const i of document.querySelectorAll('link[rel="modulepreload"]'))r(i);new MutationObserver(i=>{for(const a of i)if(a.type==="childList")for(const n of a.addedNodes)n.tagName==="LINK"&&n.rel==="modulepreload"&&r(n)}).observe(document,{childList:!0,subtree:!0});function t(i){const a={};return i.integrity&&(a.integrity=i.integrity),i.referrerPolicy&&(a.referrerPolicy=i.referrerPolicy),i.crossOrigin==="use-credentials"?a.credentials="include":i.crossOrigin==="anonymous"?a.credentials="omit":a.credentials="same-origin",a}function r(i){if(i.ep)return;i.ep=!0;const a=t(i);fetch(i.href,a)}})();/**
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const Q=globalThis,ue=Q.ShadowRoot&&(Q.ShadyCSS===void 0||Q.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,pe=Symbol(),be=new WeakMap;let Oe=class{constructor(e,t,r){if(this._$cssResult$=!0,r!==pe)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o;const t=this.t;if(ue&&e===void 0){const r=t!==void 0&&t.length===1;r&&(e=be.get(t)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),r&&be.set(t,e))}return e}toString(){return this.cssText}};const je=s=>new Oe(typeof s=="string"?s:s+"",void 0,pe),w=(s,...e)=>{const t=s.length===1?s[0]:e.reduce((r,i,a)=>r+(n=>{if(n._$cssResult$===!0)return n.cssText;if(typeof n=="number")return n;throw Error("Value passed to 'css' function must be a 'css' function result: "+n+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+s[a+1],s[0]);return new Oe(t,s,pe)},Ie=(s,e)=>{if(ue)s.adoptedStyleSheets=e.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(const t of e){const r=document.createElement("style"),i=Q.litNonce;i!==void 0&&r.setAttribute("nonce",i),r.textContent=t.cssText,s.appendChild(r)}},ye=ue?s=>s:s=>s instanceof CSSStyleSheet?(e=>{let t="";for(const r of e.cssRules)t+=r.cssText;return je(t)})(s):s;/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const{is:qe,defineProperty:Be,getOwnPropertyDescriptor:Ve,getOwnPropertyNames:We,getOwnPropertySymbols:Ke,getPrototypeOf:Fe}=Object,S=globalThis,$e=S.trustedTypes,Je=$e?$e.emptyScript:"",ne=S.reactiveElementPolyfillSupport,j=(s,e)=>s,ee={toAttribute(s,e){switch(e){case Boolean:s=s?Je:null;break;case Object:case Array:s=s==null?s:JSON.stringify(s)}return s},fromAttribute(s,e){let t=s;switch(e){case Boolean:t=s!==null;break;case Number:t=s===null?null:Number(s);break;case Object:case Array:try{t=JSON.parse(s)}catch{t=null}}return t}},he=(s,e)=>!qe(s,e),xe={attribute:!0,type:String,converter:ee,reflect:!1,useDefault:!1,hasChanged:he};Symbol.metadata??(Symbol.metadata=Symbol("metadata")),S.litPropertyMetadata??(S.litPropertyMetadata=new WeakMap);let z=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??(this.l=[])).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=xe){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){const r=Symbol(),i=this.getPropertyDescriptor(e,r,t);i!==void 0&&Be(this.prototype,e,i)}}static getPropertyDescriptor(e,t,r){const{get:i,set:a}=Ve(this.prototype,e)??{get(){return this[t]},set(n){this[t]=n}};return{get:i,set(n){const l=i==null?void 0:i.call(this);a==null||a.call(this,n),this.requestUpdate(e,l,r)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??xe}static _$Ei(){if(this.hasOwnProperty(j("elementProperties")))return;const e=Fe(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(j("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(j("properties"))){const t=this.properties,r=[...We(t),...Ke(t)];for(const i of r)this.createProperty(i,t[i])}const e=this[Symbol.metadata];if(e!==null){const t=litPropertyMetadata.get(e);if(t!==void 0)for(const[r,i]of t)this.elementProperties.set(r,i)}this._$Eh=new Map;for(const[t,r]of this.elementProperties){const i=this._$Eu(t,r);i!==void 0&&this._$Eh.set(i,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){const t=[];if(Array.isArray(e)){const r=new Set(e.flat(1/0).reverse());for(const i of r)t.unshift(ye(i))}else e!==void 0&&t.push(ye(e));return t}static _$Eu(e,t){const r=t.attribute;return r===!1?void 0:typeof r=="string"?r:typeof e=="string"?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){var e;this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),(e=this.constructor.l)==null||e.forEach(t=>t(this))}addController(e){var t;(this._$EO??(this._$EO=new Set)).add(e),this.renderRoot!==void 0&&this.isConnected&&((t=e.hostConnected)==null||t.call(e))}removeController(e){var t;(t=this._$EO)==null||t.delete(e)}_$E_(){const e=new Map,t=this.constructor.elementProperties;for(const r of t.keys())this.hasOwnProperty(r)&&(e.set(r,this[r]),delete this[r]);e.size>0&&(this._$Ep=e)}createRenderRoot(){const e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return Ie(e,this.constructor.elementStyles),e}connectedCallback(){var e;this.renderRoot??(this.renderRoot=this.createRenderRoot()),this.enableUpdating(!0),(e=this._$EO)==null||e.forEach(t=>{var r;return(r=t.hostConnected)==null?void 0:r.call(t)})}enableUpdating(e){}disconnectedCallback(){var e;(e=this._$EO)==null||e.forEach(t=>{var r;return(r=t.hostDisconnected)==null?void 0:r.call(t)})}attributeChangedCallback(e,t,r){this._$AK(e,r)}_$ET(e,t){var a;const r=this.constructor.elementProperties.get(e),i=this.constructor._$Eu(e,r);if(i!==void 0&&r.reflect===!0){const n=(((a=r.converter)==null?void 0:a.toAttribute)!==void 0?r.converter:ee).toAttribute(t,r.type);this._$Em=e,n==null?this.removeAttribute(i):this.setAttribute(i,n),this._$Em=null}}_$AK(e,t){var a,n;const r=this.constructor,i=r._$Eh.get(e);if(i!==void 0&&this._$Em!==i){const l=r.getPropertyOptions(i),c=typeof l.converter=="function"?{fromAttribute:l.converter}:((a=l.converter)==null?void 0:a.fromAttribute)!==void 0?l.converter:ee;this._$Em=i;const p=c.fromAttribute(t,l.type);this[i]=p??((n=this._$Ej)==null?void 0:n.get(i))??p,this._$Em=null}}requestUpdate(e,t,r,i=!1,a){var n;if(e!==void 0){const l=this.constructor;if(i===!1&&(a=this[e]),r??(r=l.getPropertyOptions(e)),!((r.hasChanged??he)(a,t)||r.useDefault&&r.reflect&&a===((n=this._$Ej)==null?void 0:n.get(e))&&!this.hasAttribute(l._$Eu(e,r))))return;this.C(e,t,r)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(e,t,{useDefault:r,reflect:i,wrapped:a},n){r&&!(this._$Ej??(this._$Ej=new Map)).has(e)&&(this._$Ej.set(e,n??t??this[e]),a!==!0||n!==void 0)||(this._$AL.has(e)||(this.hasUpdated||r||(t=void 0),this._$AL.set(e,t)),i===!0&&this._$Em!==e&&(this._$Eq??(this._$Eq=new Set)).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}const e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){var r;if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??(this.renderRoot=this.createRenderRoot()),this._$Ep){for(const[a,n]of this._$Ep)this[a]=n;this._$Ep=void 0}const i=this.constructor.elementProperties;if(i.size>0)for(const[a,n]of i){const{wrapped:l}=n,c=this[a];l!==!0||this._$AL.has(a)||c===void 0||this.C(a,void 0,n,c)}}let e=!1;const t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),(r=this._$EO)==null||r.forEach(i=>{var a;return(a=i.hostUpdate)==null?void 0:a.call(i)}),this.update(t)):this._$EM()}catch(i){throw e=!1,this._$EM(),i}e&&this._$AE(t)}willUpdate(e){}_$AE(e){var t;(t=this._$EO)==null||t.forEach(r=>{var i;return(i=r.hostUpdated)==null?void 0:i.call(r)}),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&(this._$Eq=this._$Eq.forEach(t=>this._$ET(t,this[t]))),this._$EM()}updated(e){}firstUpdated(e){}};z.elementStyles=[],z.shadowRootOptions={mode:"open"},z[j("elementProperties")]=new Map,z[j("finalized")]=new Map,ne==null||ne({ReactiveElement:z}),(S.reactiveElementVersions??(S.reactiveElementVersions=[])).push("2.1.2");/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const I=globalThis,we=s=>s,te=I.trustedTypes,Ee=te?te.createPolicy("lit-html",{createHTML:s=>s}):void 0,Te="$lit$",C=`lit$${Math.random().toFixed(9).slice(2)}$`,Re="?"+C,Ze=`<${Re}>`,R=document,B=()=>R.createComment(""),V=s=>s===null||typeof s!="object"&&typeof s!="function",ve=Array.isArray,Ge=s=>ve(s)||typeof(s==null?void 0:s[Symbol.iterator])=="function",oe=`[ 	
+\f\r]`,H=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,Ae=/-->/g,ke=/>/g,P=RegExp(`>|${oe}(?:([^\\s"'>=/]+)(${oe}*=${oe}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`,"g"),Ce=/'/g,Se=/"/g,Le=/^(?:script|style|textarea|title)$/i,Ye=s=>(e,...t)=>({_$litType$:s,strings:e,values:t}),d=Ye(1),U=Symbol.for("lit-noChange"),v=Symbol.for("lit-nothing"),De=new WeakMap,O=R.createTreeWalker(R,129);function Me(s,e){if(!ve(s)||!s.hasOwnProperty("raw"))throw Error("invalid template strings array");return Ee!==void 0?Ee.createHTML(e):e}const Xe=(s,e)=>{const t=s.length-1,r=[];let i,a=e===2?"<svg>":e===3?"<math>":"",n=H;for(let l=0;l<t;l++){const c=s[l];let p,h,u=-1,_=0;for(;_<c.length&&(n.lastIndex=_,h=n.exec(c),h!==null);)_=n.lastIndex,n===H?h[1]==="!--"?n=Ae:h[1]!==void 0?n=ke:h[2]!==void 0?(Le.test(h[2])&&(i=RegExp("</"+h[2],"g")),n=P):h[3]!==void 0&&(n=P):n===P?h[0]===">"?(n=i??H,u=-1):h[1]===void 0?u=-2:(u=n.lastIndex-h[2].length,p=h[1],n=h[3]===void 0?P:h[3]==='"'?Se:Ce):n===Se||n===Ce?n=P:n===Ae||n===ke?n=H:(n=P,i=void 0);const k=n===P&&s[l+1].startsWith("/>")?" ":"";a+=n===H?c+Ze:u>=0?(r.push(p),c.slice(0,u)+Te+c.slice(u)+C+k):c+C+(u===-2?l:k)}return[Me(s,a+(s[t]||"<?>")+(e===2?"</svg>":e===3?"</math>":"")),r]};class W{constructor({strings:e,_$litType$:t},r){let i;this.parts=[];let a=0,n=0;const l=e.length-1,c=this.parts,[p,h]=Xe(e,t);if(this.el=W.createElement(p,r),O.currentNode=this.el.content,t===2||t===3){const u=this.el.content.firstChild;u.replaceWith(...u.childNodes)}for(;(i=O.nextNode())!==null&&c.length<l;){if(i.nodeType===1){if(i.hasAttributes())for(const u of i.getAttributeNames())if(u.endsWith(Te)){const _=h[n++],k=i.getAttribute(u).split(C),X=/([.?@])?(.*)/.exec(_);c.push({type:1,index:a,name:X[2],strings:k,ctor:X[1]==="."?et:X[1]==="?"?tt:X[1]==="@"?st:ae}),i.removeAttribute(u)}else u.startsWith(C)&&(c.push({type:6,index:a}),i.removeAttribute(u));if(Le.test(i.tagName)){const u=i.textContent.split(C),_=u.length-1;if(_>0){i.textContent=te?te.emptyScript:"";for(let k=0;k<_;k++)i.append(u[k],B()),O.nextNode(),c.push({type:2,index:++a});i.append(u[_],B())}}}else if(i.nodeType===8)if(i.data===Re)c.push({type:2,index:a});else{let u=-1;for(;(u=i.data.indexOf(C,u+1))!==-1;)c.push({type:7,index:a}),u+=C.length-1}a++}}static createElement(e,t){const r=R.createElement("template");return r.innerHTML=e,r}}function N(s,e,t=s,r){var n,l;if(e===U)return e;let i=r!==void 0?(n=t._$Co)==null?void 0:n[r]:t._$Cl;const a=V(e)?void 0:e._$litDirective$;return(i==null?void 0:i.constructor)!==a&&((l=i==null?void 0:i._$AO)==null||l.call(i,!1),a===void 0?i=void 0:(i=new a(s),i._$AT(s,t,r)),r!==void 0?(t._$Co??(t._$Co=[]))[r]=i:t._$Cl=i),i!==void 0&&(e=N(s,i._$AS(s,e.values),i,r)),e}class Qe{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){const{el:{content:t},parts:r}=this._$AD,i=((e==null?void 0:e.creationScope)??R).importNode(t,!0);O.currentNode=i;let a=O.nextNode(),n=0,l=0,c=r[0];for(;c!==void 0;){if(n===c.index){let p;c.type===2?p=new G(a,a.nextSibling,this,e):c.type===1?p=new c.ctor(a,c.name,c.strings,this,e):c.type===6&&(p=new it(a,this,e)),this._$AV.push(p),c=r[++l]}n!==(c==null?void 0:c.index)&&(a=O.nextNode(),n++)}return O.currentNode=R,i}p(e){let t=0;for(const r of this._$AV)r!==void 0&&(r.strings!==void 0?(r._$AI(e,r,t),t+=r.strings.length-2):r._$AI(e[t])),t++}}class G{get _$AU(){var e;return((e=this._$AM)==null?void 0:e._$AU)??this._$Cv}constructor(e,t,r,i){this.type=2,this._$AH=v,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=r,this.options=i,this._$Cv=(i==null?void 0:i.isConnected)??!0}get parentNode(){let e=this._$AA.parentNode;const t=this._$AM;return t!==void 0&&(e==null?void 0:e.nodeType)===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=N(this,e,t),V(e)?e===v||e==null||e===""?(this._$AH!==v&&this._$AR(),this._$AH=v):e!==this._$AH&&e!==U&&this._(e):e._$litType$!==void 0?this.$(e):e.nodeType!==void 0?this.T(e):Ge(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==v&&V(this._$AH)?this._$AA.nextSibling.data=e:this.T(R.createTextNode(e)),this._$AH=e}$(e){var a;const{values:t,_$litType$:r}=e,i=typeof r=="number"?this._$AC(e):(r.el===void 0&&(r.el=W.createElement(Me(r.h,r.h[0]),this.options)),r);if(((a=this._$AH)==null?void 0:a._$AD)===i)this._$AH.p(t);else{const n=new Qe(i,this),l=n.u(this.options);n.p(t),this.T(l),this._$AH=n}}_$AC(e){let t=De.get(e.strings);return t===void 0&&De.set(e.strings,t=new W(e)),t}k(e){ve(this._$AH)||(this._$AH=[],this._$AR());const t=this._$AH;let r,i=0;for(const a of e)i===t.length?t.push(r=new G(this.O(B()),this.O(B()),this,this.options)):r=t[i],r._$AI(a),i++;i<t.length&&(this._$AR(r&&r._$AB.nextSibling,i),t.length=i)}_$AR(e=this._$AA.nextSibling,t){var r;for((r=this._$AP)==null?void 0:r.call(this,!1,!0,t);e!==this._$AB;){const i=we(e).nextSibling;we(e).remove(),e=i}}setConnected(e){var t;this._$AM===void 0&&(this._$Cv=e,(t=this._$AP)==null||t.call(this,e))}}class ae{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,r,i,a){this.type=1,this._$AH=v,this._$AN=void 0,this.element=e,this.name=t,this._$AM=i,this.options=a,r.length>2||r[0]!==""||r[1]!==""?(this._$AH=Array(r.length-1).fill(new String),this.strings=r):this._$AH=v}_$AI(e,t=this,r,i){const a=this.strings;let n=!1;if(a===void 0)e=N(this,e,t,0),n=!V(e)||e!==this._$AH&&e!==U,n&&(this._$AH=e);else{const l=e;let c,p;for(e=a[0],c=0;c<a.length-1;c++)p=N(this,l[r+c],t,c),p===U&&(p=this._$AH[c]),n||(n=!V(p)||p!==this._$AH[c]),p===v?e=v:e!==v&&(e+=(p??"")+a[c+1]),this._$AH[c]=p}n&&!i&&this.j(e)}j(e){e===v?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}}class et extends ae{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===v?void 0:e}}class tt extends ae{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==v)}}class st extends ae{constructor(e,t,r,i,a){super(e,t,r,i,a),this.type=5}_$AI(e,t=this){if((e=N(this,e,t,0)??v)===U)return;const r=this._$AH,i=e===v&&r!==v||e.capture!==r.capture||e.once!==r.once||e.passive!==r.passive,a=e!==v&&(r===v||i);i&&this.element.removeEventListener(this.name,this,r),a&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){var t;typeof this._$AH=="function"?this._$AH.call(((t=this.options)==null?void 0:t.host)??this.element,e):this._$AH.handleEvent(e)}}class it{constructor(e,t,r){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=r}get _$AU(){return this._$AM._$AU}_$AI(e){N(this,e)}}const le=I.litHtmlPolyfillSupport;le==null||le(W,G),(I.litHtmlVersions??(I.litHtmlVersions=[])).push("3.3.3");const rt=(s,e,t)=>{const r=(t==null?void 0:t.renderBefore)??e;let i=r._$litPart$;if(i===void 0){const a=(t==null?void 0:t.renderBefore)??null;r._$litPart$=i=new G(e.insertBefore(B(),a),a,void 0,t??{})}return i._$AI(s),i};/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const T=globalThis;class y extends z{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){var t;const e=super.createRenderRoot();return(t=this.renderOptions).renderBefore??(t.renderBefore=e.firstChild),e}update(e){const t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=rt(t,this.renderRoot,this.renderOptions)}connectedCallback(){var e;super.connectedCallback(),(e=this._$Do)==null||e.setConnected(!0)}disconnectedCallback(){var e;super.disconnectedCallback(),(e=this._$Do)==null||e.setConnected(!1)}render(){return U}}var Pe;y._$litElement$=!0,y.finalized=!0,(Pe=T.litElementHydrateSupport)==null||Pe.call(T,{LitElement:y});const ce=T.litElementPolyfillSupport;ce==null||ce({LitElement:y});(T.litElementVersions??(T.litElementVersions=[])).push("4.2.2");/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const E=s=>(e,t)=>{t!==void 0?t.addInitializer(()=>{customElements.define(s,e)}):customElements.define(s,e)};/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const at={attribute:!0,type:String,converter:ee,reflect:!1,hasChanged:he},nt=(s=at,e,t)=>{const{kind:r,metadata:i}=t;let a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&globalThis.litPropertyMetadata.set(i,a=new Map),r==="setter"&&((s=Object.create(s)).wrapped=!0),a.set(t.name,s),r==="accessor"){const{name:n}=t;return{set(l){const c=e.get.call(this);e.set.call(this,l),this.requestUpdate(n,c,s,!0,l)},init(l){return l!==void 0&&this.C(n,void 0,s,l),l}}}if(r==="setter"){const{name:n}=t;return function(l){const c=this[n];e.call(this,l),this.requestUpdate(n,c,s,!0,l)}}throw Error("Unsupported decorator location: "+r)};function ze(s){return(e,t)=>typeof t=="object"?nt(s,e,t):((r,i,a)=>{const n=i.hasOwnProperty(a);return i.constructor.createProperty(a,r),n?Object.getOwnPropertyDescriptor(i,a):void 0})(s,e,t)}/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */function f(s){return ze({...s,state:!0,attribute:!1})}/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */const ot=(s,e,t)=>(t.configurable=!0,t.enumerable=!0,Reflect.decorate&&typeof e!="object"&&Object.defineProperty(s,e,t),t);/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */function M(s,e){return(t,r,i)=>{const a=n=>{var l;return((l=n.renderRoot)==null?void 0:l.querySelector(s))??null};return ot(t,r,{get(){return a(this)}})}}const A=w`
+  :host {
+    --primary: #03a9f4;
+    --bg: #1f1f1f;
+    --bg-2: #252525;
+    --card: #2c2c2c;
+    --text: #e1e1e1;
+    --muted: #9aa0a6;
+    --border: #3a3a3a;
+    --danger: #f44336;
+    --ok: #4caf50;
+    --warn: #ff9800;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+    color: var(--text);
+    box-sizing: border-box;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  button {
+    background: var(--primary);
+    color: white;
+    border: 0;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+  }
+  button.danger {
+    background: var(--danger);
+  }
+  button.warn {
+    background: var(--warn);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  input,
+  select,
+  textarea {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  label {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  .help {
+    background: var(--bg-2);
+    border-left: 3px solid var(--primary);
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .help code {
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+`,o={version:"0.3.2",section:"devices",devices:[],remotes:[],actions:[],transmitters:[],receivers:[],toasts:[],deviceDialog:{open:!1,editing:null},learnDialog:{open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},setSection(s){this.section=s,b()},pushToast(s,e){const t=Date.now()+Math.floor(Math.random()*1e3);this.toasts=[...this.toasts,{id:t,text:s,kind:e}],b(),setTimeout(()=>{this.toasts=this.toasts.filter(r=>r.id!==t),b()},2400)},openDeviceDialog(s=null){this.deviceDialog={open:!0,editing:s},b()},closeDeviceDialog(){this.deviceDialog={open:!1,editing:null},b()},openLearnDialog(s,e){this.learnDialog={open:!0,deviceId:s,commandKey:e,status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},closeLearnDialog(){this.learnDialog={open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},updateLearn(s){this.learnDialog={...this.learnDialog,...s},b()},setDevices(s){this.devices=s,b()},setRemotes(s){this.remotes=s,b()},setActions(s){this.actions=s,b()},setTransmitters(s){this.transmitters=s,b()},setReceivers(s){this.receivers=s,b()}},de=new Set;function D(s){return de.add(s),()=>de.delete(s)}function b(){for(const s of de)s()}var lt=Object.defineProperty,ct=Object.getOwnPropertyDescriptor,Ue=(s,e,t,r)=>{for(var i=r>1?void 0:r?ct(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&lt(e,t,i),i};let se=class extends y{constructor(){super(...arguments),this._tick=0,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++)}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}render(){return this._tick,d`
+      <div class="stack">
+        ${o.toasts.map(s=>d`
+            <div class="toast ${s.kind??""}">${s.text}</div>
+          `)}
       </div>
-      <button class="nav-item active" data-section="devices">Devices</button>
-      <button class="nav-item" data-section="sniffer">Sniffer</button>
-      <button class="nav-item" data-section="actions">Actions</button>
-      <button class="nav-item" data-section="settings">Settings</button>
-    </nav>
-    <main>
-      <!-- ====== DEVICES ====== -->
-      <section id="section-devices">
-        <div class="toolbar">
-          <h2 style="margin: 0; font-weight: 400;">Devices</h2>
-          <span class="grow"></span>
-          <button id="add-device-btn">+ Add device</button>
-          <button id="refresh-devices-btn" class="secondary">Refresh</button>
-        </div>
-        <div id="devices-list"></div>
-      </section>
+    `}};se.styles=[A,w`
+      .stack {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1000;
+        pointer-events: none;
+      }
+      .toast {
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 12px 20px;
+        border-radius: 8px;
+        max-width: 80%;
+        animation: rune-fade-in 0.15s ease-out;
+      }
+      .toast.err {
+        border-color: var(--danger);
+        color: #ff8a80;
+      }
+      .toast.ok {
+        border-color: var(--ok);
+        color: #b9f6ca;
+      }
+      @keyframes rune-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `];Ue([f()],se.prototype,"_tick",2);se=Ue([E("rune-toast-stack")],se);const dt=8e3,q=new Map;let ut=1;window.addEventListener("message",s=>{const e=s.data??{};if(!e||e.type!=="rune-bridge-result"||typeof e.id!="number")return;const t=q.get(e.id);t&&(q.delete(e.id),typeof e.error=="string"?t.reject(new Error(e.error)):t.resolve(e.result))});function $(s){const e=ut++;return new Promise((t,r)=>{const i=setTimeout(()=>{q.has(e)&&(q.delete(e),r(new Error("bridge timeout (no response from HA)")))},dt),a={timer:i,resolve:n=>{clearTimeout(i),t(n)},reject:n=>{clearTimeout(i),r(n)}};q.set(e,a),window.parent.postMessage({type:"rune-bridge",id:e,...s},"*")})}const m={list:()=>$({kind:"ws",message:{type:"rune/list"}}),getDevice:s=>$({kind:"ws",message:{type:"rune/device/get",device_id:s}}),createDevice:s=>$({kind:"ws",message:{type:"rune/device/create",...s}}),updateDevice:s=>$({kind:"ws",message:{type:"rune/device/update",...s}}),deleteDevice:s=>$({kind:"ws",message:{type:"rune/device/delete",device_id:s}}),learnCommand:s=>$({kind:"ws",message:{type:"rune/command/learn",...s}}),listSniffer:()=>$({kind:"ws",message:{type:"rune/sniffer/list"}}),dismissRemote:s=>$({kind:"ws",message:{type:"rune/sniffer/dismiss",remote_id:s}}),listActions:()=>$({kind:"ws",message:{type:"rune/action/list"}}),transmitters:()=>$({kind:"ws",message:{type:"rune/transmitter/list"}}),receivers:()=>$({kind:"ws",message:{type:"rune/receiver/list"}}),sendCommand:(s,e)=>$({kind:"service",domain:"rune",service:"send_command",service_data:{device_id:s,command_key:e}})};var pt=Object.defineProperty,ht=Object.getOwnPropertyDescriptor,me=(s,e,t,r)=>{for(var i=r>1?void 0:r?ht(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&pt(e,t,i),i};let K=class extends y{constructor(){super(...arguments),this._flash=null}_onEdit(){o.openDeviceDialog(this.device)}async _onDelete(){if(confirm(`Delete device "${this.device.name}"?`))try{await m.deleteDevice(this.device.id),o.pushToast("Deleted","ok");const{devices:s}=await m.list();o.setDevices(s??[])}catch(s){o.pushToast(s.message,"err")}}async _send(s,e){try{await m.sendCommand(this.device.id,s.key),e.classList.add("flash"),setTimeout(()=>e.classList.remove("flash"),280),o.pushToast(`Sent ${s.label??s.key}`,"ok")}catch(t){o.pushToast(t.message,"err")}}_learn(){const s=prompt(`Learn which command on "${this.device.name}"?
 
-      <!-- ====== SNIFFER ====== -->
-      <section id="section-sniffer" style="display:none;">
-        <div class="toolbar">
-          <h2 style="margin: 0; font-weight: 400;">Sniffer</h2>
-          <span class="grow"></span>
-          <button id="refresh-sniffer-btn" class="secondary">Refresh</button>
-        </div>
-        <div class="help">
-          Live signals captured from every receiver you've configured. The
-          sniffer listens on each receiver entity automatically once you add
-          a device. Assign a signal to a device command via the
-          <code>Actions</code> tab, or dismiss the whole remote here.
-        </div>
-        <div id="sniffer-list"></div>
-      </section>
-
-      <!-- ====== ACTIONS ====== -->
-      <section id="section-actions" style="display:none;">
-        <div class="toolbar">
-          <h2 style="margin: 0; font-weight: 400;">Actions</h2>
-          <span class="grow"></span>
-        </div>
-        <div class="help">
-          Action bindings connect a captured signal to a side-effect:
-          fire a pulse on a device, call a service, activate a scene, run
-          a script, or fire an event. Bindings are managed programmatically
-          (the API is stable; a UI editor lands in v0.4).
-        </div>
-        <div id="actions-list"></div>
-      </section>
-
-      <!-- ====== SETTINGS ====== -->
-      <section id="section-settings" style="display:none;">
-        <h2 style="margin: 0 0 16px; font-weight: 400;">Settings</h2>
-        <div class="status-grid">
-          <div class="stat-card">
-            <div class="label">Integration</div>
-            <div class="value" style="font-size:18px;">RUNE</div>
-            <div class="meta" id="stat-version" style="margin-top:6px;"></div>
+Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnDialog(this.device.id,s.trim())}render(){const s=this.device,e=(s.transmitter_entity_ids??[]).join(", ")||"—",t=`${s.category} • ${s.command_count} command(s) • tx: ${e}`;return this._flash,d`
+      <div class="device">
+        <div class="device-head">
+          <div>
+            <h3>${s.name}</h3>
+            <div class="meta">${t}</div>
           </div>
-          <div class="stat-card">
-            <div class="label">Devices</div>
-            <div class="value" id="stat-devices">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">Sniffer signals</div>
-            <div class="value" id="stat-signals">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="label">Action bindings</div>
-            <div class="value" id="stat-actions">—</div>
+          <div class="actions">
+            <button class="secondary" @click=${this._onEdit}>Edit</button>
+            <button class="danger" @click=${this._onDelete}>Delete</button>
           </div>
         </div>
-        <h3 style="margin-top:24px;">Available transmitters</h3>
-        <div id="settings-transmitters" class="status-grid"></div>
-        <h3 style="margin-top:24px;">Available receivers</h3>
-        <div id="settings-receivers" class="status-grid"></div>
-      </section>
-    </main>
-  </div>
-
-  <div id="toast" class="toast"></div>
-
-  <!-- ====== DIALOGS ====== -->
-  <dialog id="device-dialog">
-    <h2 id="device-dialog-title" style="margin: 0 0 16px;">Add device</h2>
-    <input type="hidden" id="device-id">
-    <div class="form-row">
-      <label for="device-name">Name</label>
-      <input id="device-name" placeholder="Bedroom fan">
-    </div>
-    <div class="form-row">
-      <label for="device-category">Category</label>
-      <select id="device-category">
-        <option value="fan">Fan</option>
-        <option value="climate">Climate</option>
-        <option value="light">Light</option>
-        <option value="cover">Cover</option>
-        <option value="media_player">Media player</option>
-        <option value="switch">Switch</option>
-        <option value="remote">Remote</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label for="device-manufacturer">Manufacturer (optional)</label>
-      <input id="device-manufacturer" placeholder="Broadlink, ESPHome, ...">
-    </div>
-    <div class="form-row">
-      <label for="device-model">Model (optional)</label>
-      <input id="device-model" placeholder="RM4 Pro, FRM97, ...">
-    </div>
-    <div class="form-row">
-      <label for="device-tx">Transmitter</label>
-      <div class="tx-row">
-        <select id="device-tx"><option>Loading…</option></select>
-        <button id="refresh-tx-btn" class="secondary" type="button">↻</button>
+        <div class="commands">
+          ${(s.commands??[]).map(r=>d`
+              <button
+                class="cmd"
+                title=${`Send "${r.label??r.key}" to ${s.name}`}
+                @click=${i=>this._send(r,i.currentTarget)}
+              >
+                ${r.label??r.key}
+              </button>
+            `)}
+          <button class="cmd placeholder" @click=${this._learn}>
+            + Learn command
+          </button>
+        </div>
       </div>
-    </div>
-    <div id="device-dialog-error" style="color: var(--danger); font-size: 12px;"></div>
-    <div class="dialog-actions">
-      <button class="secondary" type="button" id="device-cancel-btn">Cancel</button>
-      <button type="button" id="device-save-btn">Save</button>
-    </div>
-  </dialog>
-
-  <dialog id="learn-dialog">
-    <h2 style="margin: 0 0 16px;">Learn command</h2>
-    <input type="hidden" id="learn-device-id">
-    <input type="hidden" id="learn-command-key">
-    <div class="help">
-      Point your remote at the receiver and press the button you want to
-      capture. RUNE records the raw timings and writes them into the
-      command slot.
-    </div>
-    <div class="form-row">
-      <label>Command</label>
-      <div><strong id="learn-target">—</strong></div>
-    </div>
-    <div class="form-row">
-      <label>Status</label>
-      <div id="learn-status" style="font-family: monospace;">Idle</div>
-    </div>
-    <div class="form-row">
-      <label>Captured timings</label>
-      <pre id="learn-timings" style="max-height:120px;">—</pre>
-    </div>
-    <div class="dialog-actions">
-      <button class="secondary" type="button" id="learn-cancel-btn">Cancel</button>
-      <button type="button" id="learn-start-btn">Start learn</button>
-      <button type="button" id="learn-save-btn" disabled>Save & close</button>
-    </div>
-  </dialog>
-
-  <script>
-    // ===== RUNE <-> HA bridge =====
-    // Every request has a UUID id; the parent posts the same id back
-    // in the result. We track a per-request promise in ``_pending`` and
-    // resolve it when the result lands. There's no source/origin
-    // check: same-origin postMessage is reliable; the previous
-    // session-based filter was the source of "buttons do nothing".
-    const _pending = new Map();
-    let _nextId = 1;
-
-    window.addEventListener("message", (event) => {
-      const data = event.data || {};
-      if (data.type !== "rune-bridge-result") return;
-      const r = _pending.get(data.id);
-      if (!r) return;
-      _pending.delete(data.id);
-      if (data.error) r.reject(new Error(data.error));
-      else r.resolve(data.result);
-    });
-
-    // Safety net: if the parent never responds, reject after 8s
-    // so the UI doesn't hang forever on a stuck bridge.
-    const BRIDGE_TIMEOUT_MS = 8000;
-
-    function bridgeCall(kind, payload) {
-      const id = _nextId++;
-      window.parent.postMessage(
-        { type: "rune-bridge", kind, id, ...payload },
-        "*"
-      );
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          if (_pending.has(id)) {
-            _pending.delete(id);
-            reject(new Error("bridge timeout (no response from HA)"));
-          }
-        }, BRIDGE_TIMEOUT_MS);
-        _pending.set(id, {
-          resolve: (v) => { clearTimeout(timer); resolve(v); },
-          reject: (e) => { clearTimeout(timer); reject(e); },
-        });
-      });
-    }
-
-    const ws = {
-      list: () => bridgeCall("ws", { message: { type: "rune/list" } }),
-      getDevice: (id) =>
-        bridgeCall("ws", { message: { type: "rune/device/get", device_id: id } }),
-      createDevice: (payload) =>
-        bridgeCall("ws", { message: { type: "rune/device/create", ...payload } }),
-      updateDevice: (payload) =>
-        bridgeCall("ws", { message: { type: "rune/device/update", ...payload } }),
-      deleteDevice: (id) =>
-        bridgeCall("ws", { message: { type: "rune/device/delete", device_id: id } }),
-      learnCommand: (payload) =>
-        bridgeCall("ws", {
-          message: { type: "rune/command/learn", ...payload },
-        }),
-      listSniffer: () =>
-        bridgeCall("ws", { message: { type: "rune/sniffer/list" } }),
-      dismissRemote: (remote_id) =>
-        bridgeCall("ws", { message: { type: "rune/sniffer/dismiss", remote_id } }),
-      listActions: () =>
-        bridgeCall("ws", { message: { type: "rune/action/list" } }),
-      transmitters: () =>
-        bridgeCall("ws", { message: { type: "rune/transmitter/list" } }),
-      receivers: () =>
-        bridgeCall("ws", { message: { type: "rune/receiver/list" } }),
-      sendCommand: (device_id, command_key) =>
-        bridgeCall("service", {
-          domain: "rune",
-          service: "send_command",
-          service_data: { device_id, command_key },
-        }),
-    };
-
-    // ===== UI helpers =====
-    const toastEl = document.getElementById("toast");
-    let toastTimer;
-    function toast(msg, kind) {
-      toastEl.textContent = msg;
-      toastEl.classList.remove("err", "ok");
-      if (kind === "err") toastEl.classList.add("err");
-      if (kind === "ok") toastEl.classList.add("ok");
-      toastEl.classList.add("show");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
-    }
-
-    function el(tag, attrs, children) {
-      const node = document.createElement(tag);
-      if (attrs) {
-        for (const [k, v] of Object.entries(attrs)) {
-          if (k === "class") node.className = v;
-          else if (k === "on") for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
-          else if (k === "html") node.innerHTML = v;
-          else node.setAttribute(k, v);
-        }
+    `}};K.styles=[A,w`
+      .device {
+        background: var(--card);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
       }
-      if (children) for (const c of children) node.appendChild(c);
-      return node;
-    }
-
-    // ===== Navigation =====
-    document.querySelectorAll(".nav-item").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        const section = btn.dataset.section;
-        for (const s of ["devices", "sniffer", "actions", "settings"]) {
-          document.getElementById("section-" + s).style.display = s === section ? "" : "none";
-        }
-        if (section === "sniffer") loadSniffer();
-        if (section === "actions") loadActions();
-        if (section === "settings") loadSettings();
-      });
-    });
-
-    // ===== DEVICES =====
-    let _devices = [];
-
-    async function loadDevices() {
-      try {
-        const { devices } = await ws.list();
-        _devices = devices || [];
-        renderDevices();
-        updateStats();
-      } catch (err) { toast("Load devices: " + err.message, "err"); }
-    }
-
-    function renderDevices() {
-      const list = document.getElementById("devices-list");
-      list.innerHTML = "";
-      if (!_devices.length) {
-        list.appendChild(el("div", { class: "empty" }, [
-          el("div", {}, [document.createTextNode("No devices yet.")]),
-          el("div", { style: "margin-top:8px;font-size:12px;" }, [
-            document.createTextNode("Click + Add device to create one, or use the config flow."),
-          ]),
-        ]));
-        return;
+      .device-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        gap: 8px;
       }
-      for (const d of _devices) list.appendChild(renderDeviceCard(d));
-    }
-
-    function renderDeviceCard(d) {
-      const tx = (d.transmitter_entity_ids || []).join(", ") || "—";
-      const meta = `${d.category} • ${d.command_count} command(s) • tx: ${tx}`;
-      const head = el("div", { class: "device-head" }, [
-        el("div", {}, [
-          el("h3", {}, [document.createTextNode(d.name)]),
-          el("div", { class: "meta" }, [document.createTextNode(meta)]),
-        ]),
-        el("div", { class: "actions" }, [
-          el("button", { class: "secondary", on: { click: () => openDeviceDialog(d) } }, [
-            document.createTextNode("Edit"),
-          ]),
-          el("button", { class: "danger", on: { click: () => deleteDevice(d) } }, [
-            document.createTextNode("Delete"),
-          ]),
-        ]),
-      ]);
-      const cmdsEl = el("div", { class: "commands" });
-      for (const c of d.commands || []) cmdsEl.appendChild(renderCommandButton(d, c));
-      cmdsEl.appendChild(el("button", {
-        class: "cmd",
-        style: "border-style:dashed;color:var(--muted);",
-        on: { click: () => openLearnDialog(d) },
-      }, [
-        document.createTextNode("+ Learn command"),
-      ]));
-      return el("div", { class: "device" }, [head, cmdsEl]);
-    }
-
-    function renderCommandButton(d, c) {
-      const btn = el("button", {
-        class: "cmd",
-        title: `Send "${c.label || c.key}" to ${d.name}`,
-        on: { click: () => sendPulse(d, c, btn) },
-      }, [document.createTextNode(c.label || c.key)]);
-      return btn;
-    }
-
-    async function sendPulse(d, c, btn) {
-      try {
-        await ws.sendCommand(d.id, c.key);
-        btn.classList.add("flash");
-        setTimeout(() => btn.classList.remove("flash"), 280);
-        toast(`Sent ${c.label || c.key}`, "ok");
-      } catch (err) { toast(err.message, "err"); }
-    }
-
-    async function deleteDevice(d) {
-      if (!confirm(`Delete device "${d.name}"?`)) return;
-      try {
-        await ws.deleteDevice(d.id);
-        toast("Deleted", "ok");
-        await loadDevices();
-      } catch (err) { toast(err.message, "err"); }
-    }
-
-    // ===== Device dialog (add + edit) =====
-    const dlg = document.getElementById("device-dialog");
-    let _editing = null;
-
-    async function openDeviceDialog(d) {
-      _editing = d || null;
-      document.getElementById("device-dialog-title").textContent =
-        d ? "Edit device" : "Add device";
-      document.getElementById("device-id").value = d ? d.id : "";
-      document.getElementById("device-name").value = d ? d.name : "";
-      document.getElementById("device-category").value = d ? d.category : "fan";
-      document.getElementById("device-manufacturer").value = d ? (d.manufacturer || "") : "";
-      document.getElementById("device-model").value = d ? (d.model || "") : "";
-      document.getElementById("device-dialog-error").textContent = "";
-
-      // Open the modal FIRST so the user gets immediate feedback even
-      // if the bridge hangs on the transmitter list. The select will
-      // show a transient "Loading..." until the bridge resolves.
-      dlg.showModal();
-
-      // Now load the transmitter list (non-blocking on modal open).
-      try {
-        await loadTransmitters(d ? d.transmitter_entity_ids : null);
-      } catch (err) {
-        // Bridge failed — the select already shows the error inline.
-        console.error("[rune] loadTransmitters failed:", err);
+      .device h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 500;
       }
-    }
-
-    document.getElementById("add-device-btn").addEventListener("click", () => openDeviceDialog());
-    document.getElementById("device-cancel-btn").addEventListener("click", () => dlg.close());
-    document.getElementById("refresh-devices-btn").addEventListener("click", loadDevices);
-    document.getElementById("refresh-tx-btn").addEventListener("click", () =>
-      loadTransmitters(_editing ? _editing.transmitter_entity_ids : null)
-    );
-    document.getElementById("device-save-btn").addEventListener("click", async () => {
-      const errEl = document.getElementById("device-dialog-error");
-      errEl.textContent = "";
-      const name = document.getElementById("device-name").value.trim();
-      const category = document.getElementById("device-category").value;
-      const tx = document.getElementById("device-tx").value;
-      const manufacturer = document.getElementById("device-manufacturer").value.trim();
-      const model = document.getElementById("device-model").value.trim();
-      if (!name) { errEl.textContent = "Name is required"; return; }
-      if (!tx || tx.startsWith("(")) { errEl.textContent = "Pick a transmitter"; return; }
-      const payload = {
-        name, category, transmitter: tx, manufacturer, model,
-        discrete_speed_count: category === "fan" ? 3 : 0,
-      };
-      try {
-        if (_editing) {
-          await ws.updateDevice({ device_id: _editing.id, ...payload });
-          toast("Updated", "ok");
-        } else {
-          await ws.createDevice(payload);
-          toast("Created", "ok");
-        }
-        dlg.close();
-        await loadDevices();
-      } catch (err) { errEl.textContent = err.message; }
-    });
-
-    async function loadTransmitters(selected) {
-      const sel = document.getElementById("device-tx");
-      sel.innerHTML = "<option>Loading…</option>";
-      try {
-        const { transmitters } = await ws.transmitters();
-        sel.innerHTML = "";
-        if (!transmitters.length) {
-          sel.innerHTML = "<option>(no IR/RF emitters in HA)</option>";
-          return;
-        }
-        for (const t of transmitters) {
-          const opt = document.createElement("option");
-          opt.value = t.entity_id;
-          opt.textContent = `${t.entity_id} (${t.state})`;
-          if (selected && selected.includes(t.entity_id)) opt.selected = true;
-          sel.appendChild(opt);
-        }
-      } catch (err) {
-        sel.innerHTML = `<option>${err.message}</option>`;
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
       }
-    }
-
-    // ===== SNIFFER =====
-    let _remotes = [];
-
-    async function loadSniffer() {
-      try {
-        const { remotes } = await ws.listSniffer();
-        _remotes = remotes || [];
-        renderSniffer();
-        updateStats();
-      } catch (err) { toast("Load sniffer: " + err.message, "err"); }
-    }
-
-    function renderSniffer() {
-      const list = document.getElementById("sniffer-list");
-      list.innerHTML = "";
-      const visible = _remotes.filter((r) => !r.dismissed);
-      if (!visible.length) {
-        list.appendChild(el("div", { class: "empty" }, [
-          document.createTextNode("No captured signals yet."),
-        ]));
-        return;
+      .actions {
+        display: flex;
+        gap: 4px;
       }
-      for (const r of visible) {
-        const card = el("div", { class: "remote-card" + (r.dismissed ? " dismissed" : "") }, [
-          el("h4", {}, [
-            document.createTextNode(r.label || r.protocol_label || r.id),
-            el("span", { class: "badge protocol" }, [
-              document.createTextNode(r.protocol_label || "unknown"),
-            ]),
-            el("span", { class: "badge" }, [
-              document.createTextNode(`${r.signal_count} signal(s)`),
-            ]),
-          ]),
-        ]);
-        for (const s of r.signals) {
-          card.appendChild(el("div", { class: "signal-card" }, [
-            el("div", { class: "info" }, [
-              document.createTextNode(s.alias || s.fingerprint || s.id),
-            ]),
-            el("div", { class: "meta" }, [
-              document.createTextNode(
-                `hits: ${s.hit_count} · last: ${s.last_seen} · ${s.decoded_fingerprint || "—"}`
-              ),
-            ]),
-          ]));
-        }
-        card.appendChild(el("button", {
-          class: "secondary",
-          on: { click: () => dismissRemote(r) },
-        }, [document.createTextNode(r.dismissed ? "Re-activate" : "Dismiss remote")]));
-        list.appendChild(card);
+      .actions button {
+        padding: 4px 10px;
+        font-size: 12px;
       }
-    }
-
-    async function dismissRemote(r) {
-      try {
-        await ws.dismissRemote(r.id);
-        await loadSniffer();
-      } catch (err) { toast(err.message, "err"); }
-    }
-
-    document.getElementById("refresh-sniffer-btn").addEventListener("click", loadSniffer);
-
-    // ===== ACTIONS =====
-    let _actions = [];
-    async function loadActions() {
-      try {
-        const { actions } = await ws.listActions();
-        _actions = actions || [];
-        renderActions();
-        updateStats();
-      } catch (err) { toast("Load actions: " + err.message, "err"); }
-    }
-
-    function renderActions() {
-      const list = document.getElementById("actions-list");
-      list.innerHTML = "";
-      if (!_actions.length) {
-        list.appendChild(el("div", { class: "empty" }, [
-          document.createTextNode("No action bindings yet."),
-        ]));
-        return;
+      .commands {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 6px;
       }
-      for (const a of _actions) {
-        list.appendChild(el("div", { class: "action-card" }, [
-          el("div", { class: "info" }, [
-            el("strong", {}, [document.createTextNode(a.name || a.id)]),
-            el("div", { class: "meta" }, [
-              document.createTextNode(
-                `${a.target.kind} · signal ${a.signal_id.slice(0, 8)}… · min_hits: ${a.min_hits}`
-              ),
-            ]),
-          ]),
-        ]));
+      .cmd {
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px;
+        cursor: pointer;
+        font: inherit;
+        color: var(--text);
+        font-size: 12px;
+        text-align: center;
+        transition: all 0.1s;
       }
-    }
-
-    // ===== SETTINGS =====
-    async function loadSettings() {
-      try {
-        const [{ transmitters }, { receivers }, { devices }] = await Promise.all([
-          ws.transmitters(), ws.receivers(), ws.list(),
-        ]);
-        renderSettings({ transmitters, receivers, devices: devices || [] });
-      } catch (err) { toast("Load settings: " + err.message, "err"); }
-    }
-
-    function renderSettings({ transmitters, receivers, devices }) {
-      const txList = document.getElementById("settings-transmitters");
-      txList.innerHTML = "";
-      if (!transmitters.length) {
-        txList.appendChild(el("div", { class: "empty" }, [
-          document.createTextNode("No IR/RF emitters found."),
-        ]));
-      } else {
-        for (const t of transmitters) {
-          txList.appendChild(el("div", { class: "stat-card" }, [
-            el("div", { class: "label" }, [document.createTextNode(t.entity_id)]),
-            el("div", { class: "value", style: "font-size:14px;" }, [
-              el("span", { class: "status-dot ok" }, []),
-              document.createTextNode(" " + t.state),
-            ]),
-          ]));
-        }
+      .cmd:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
       }
-      const rxList = document.getElementById("settings-receivers");
-      rxList.innerHTML = "";
-      if (!receivers.length) {
-        rxList.appendChild(el("div", { class: "empty" }, [
-          document.createTextNode("No IR/RF receivers found."),
-        ]));
-      } else {
-        for (const r of receivers) {
-          rxList.appendChild(el("div", { class: "stat-card" }, [
-            el("div", { class: "label" }, [document.createTextNode(r.entity_id)]),
-            el("div", { class: "value", style: "font-size:14px;" }, [
-              el("span", { class: "status-dot ok" }, []),
-              document.createTextNode(" " + r.state),
-            ]),
-          ]));
-        }
+      .cmd:active {
+        transform: scale(0.97);
       }
-    }
-
-    function updateStats() {
-      document.getElementById("stat-devices").textContent = _devices.length;
-      const signalTotal = (_remotes || []).reduce((acc, r) => acc + r.signals.length, 0);
-      document.getElementById("stat-signals").textContent = signalTotal;
-      document.getElementById("stat-actions").textContent = (_actions || []).length;
-    }
-
-    // ===== Learn command dialog =====
-    const learnDlg = document.getElementById("learn-dialog");
-    let _learnContext = null;
-
-    async function openLearnDialog(d) {
-      const key = prompt(
-        `Learn which command on "${d.name}"?\n\n` +
-        `Enter a command key (e.g. "off", "speed_2", "power_on"):`,
-        "off"
-      );
-      if (!key) return;
-      _learnContext = { device: d, key: key.trim() };
-      document.getElementById("learn-device-id").value = d.id;
-      document.getElementById("learn-command-key").value = _learnContext.key;
-      document.getElementById("learn-target").textContent =
-        `${d.name} → ${_learnContext.key}`;
-      document.getElementById("learn-status").textContent = "Idle — click Start learn";
-      document.getElementById("learn-timings").textContent = "—";
-      document.getElementById("learn-save-btn").disabled = true;
-      learnDlg.showModal();
-    }
-
-    document.getElementById("learn-cancel-btn").addEventListener("click", () => learnDlg.close());
-    document.getElementById("learn-start-btn").addEventListener("click", async () => {
-      const status = document.getElementById("learn-status");
-      const timingsEl = document.getElementById("learn-timings");
-      const saveBtn = document.getElementById("learn-save-btn");
-      try {
-        status.textContent = "Capturing… press the button on your remote NOW";
-        const result = await ws.learnCommand({
-          device_id: _learnContext.device.id,
-          command_key: _learnContext.key,
-          timeout_s: 15,
-        });
-        if (result && result.captured) {
-          status.textContent = `Captured: ${result.captured.protocol_label || "raw"} @ ${result.carrier_frequency_hz} Hz`;
-          timingsEl.textContent = JSON.stringify(result.raw_timings.slice(0, 30)) +
-            (result.raw_timings.length > 30 ? "…" : "");
-          saveBtn.disabled = false;
-          _learnContext.captured = result.captured;
-          _learnContext.raw_timings = result.raw_timings;
-        } else {
-          status.textContent = "No signal captured";
-        }
-      } catch (err) { status.textContent = "Failed: " + err.message; }
-    });
-    document.getElementById("learn-save-btn").addEventListener("click", async () => {
-      if (!_learnContext || !_learnContext.captured) return;
-      try {
-        // Persist the captured command back into the device via update.
-        const device = await ws.getDevice(_learnContext.device.id);
-        const commands = { ...(device.device.commands || {}) };
-        commands[_learnContext.key] = {
-          key: _learnContext.key,
-          label: _learnContext.key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
-          category: "custom",
-          signal_category: { ..._learnContext.captured.signal_category },
-          payload: { ..._learnContext.captured.payload, raw_timings: _learnContext.raw_timings },
-        };
-        await ws.updateDevice({ device_id: _learnContext.device.id, commands });
-        toast(`Learned "${_learnContext.key}"`, "ok");
-        learnDlg.close();
-        await loadDevices();
-      } catch (err) { toast(err.message, "err"); }
-    });
-
-    // ===== Init =====
-    document.getElementById("version-pill").textContent = "v" + (__VERSION__ || "0");
-    loadDevices();
-  </script>
-</body>
+      .cmd.flash {
+        background: var(--ok) !important;
+        color: white !important;
+      }
+      .cmd.placeholder {
+        border-style: dashed;
+        color: var(--muted);
+      }
+    `];me([ze({attribute:!1})],K.prototype,"device",2);me([f()],K.prototype,"_flash",2);K=me([E("rune-device-card")],K);var vt=Object.defineProperty,mt=Object.getOwnPropertyDescriptor,fe=(s,e,t,r)=>{for(var i=r>1?void 0:r?mt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&vt(e,t,i),i};let F=class extends y{constructor(){super(...arguments),this._tick=0,this._loading=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++),this.refresh()}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}async refresh(){this._loading=!0;try{const{devices:s}=await m.list();o.setDevices(s??[])}catch(s){o.pushToast(`Load devices: ${s.message}`,"err")}finally{this._loading=!1}}_add(){o.openDeviceDialog(null)}render(){this._tick;const s=o.devices;return d`
+      <div class="toolbar">
+        <h2>Devices</h2>
+        <span class="grow"></span>
+        <button @click=${this._add}>+ Add device</button>
+        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
+          ${this._loading?"Loading…":"Refresh"}
+        </button>
+      </div>
+      ${s.length===0?d`<div class="empty">
+            <div>No devices yet.</div>
+            <div style="margin-top:8px;font-size:12px;">
+              Click + Add device to create one, or use the config flow.
+            </div>
+          </div>`:d`${s.map(e=>d`<rune-device-card .device=${e}></rune-device-card>`)}`}
+    `}};F.styles=[A,w`
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .toolbar h2 {
+        margin: 0;
+        font-weight: 400;
+      }
+      .grow {
+        flex: 1;
+      }
+    `];fe([f()],F.prototype,"_tick",2);fe([f()],F.prototype,"_loading",2);F=fe([E("rune-devices-view")],F);var ft=Object.defineProperty,gt=Object.getOwnPropertyDescriptor,ge=(s,e,t,r)=>{for(var i=r>1?void 0:r?gt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&ft(e,t,i),i};let J=class extends y{constructor(){super(...arguments),this._tick=0,this._loading=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++),this.refresh()}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}async refresh(){this._loading=!0;try{const{remotes:s}=await m.listSniffer();o.setRemotes(s??[])}catch(s){o.pushToast(`Load sniffer: ${s.message}`,"err")}finally{this._loading=!1}}async _dismiss(s){try{await m.dismissRemote(s.id),await this.refresh()}catch(e){o.pushToast(e.message,"err")}}render(){this._tick;const s=o.remotes.filter(e=>!e.dismissed);return d`
+      <div class="toolbar">
+        <h2>Sniffer</h2>
+        <span class="grow"></span>
+        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
+          ${this._loading?"Loading…":"Refresh"}
+        </button>
+      </div>
+      <div class="help">
+        Live signals captured from every receiver you've configured. The
+        sniffer listens on each receiver entity automatically once you add
+        a device. Assign a signal to a device command via the
+        <code>Actions</code> tab, or dismiss the whole remote here.
+      </div>
+      ${s.length===0?d`<div class="empty">No captured signals yet.</div>`:s.map(e=>d`
+              <div class="remote-card ${e.dismissed?"dismissed":""}">
+                <h4>
+                  ${e.label??e.protocol_label??e.id}
+                  <span class="badge protocol">${e.protocol_label??"unknown"}</span>
+                  <span class="badge">${e.signal_count} signal(s)</span>
+                </h4>
+                ${e.signals.map(t=>d`
+                    <div class="signal-card">
+                      <div class="info">${t.alias??t.fingerprint??t.id}</div>
+                      <div class="meta">
+                        hits: ${t.hit_count} · last: ${t.last_seen} ·
+                        ${t.decoded_fingerprint??"—"}
+                      </div>
+                    </div>
+                  `)}
+                <button class="secondary" @click=${()=>this._dismiss(e)}>
+                  ${e.dismissed?"Re-activate":"Dismiss remote"}
+                </button>
+              </div>
+            `)}
+    `}};J.styles=[A,w`
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .toolbar h2 {
+        margin: 0;
+        font-weight: 400;
+      }
+      .grow {
+        flex: 1;
+      }
+      .remote-card {
+        background: var(--card);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
+      }
+      .remote-card.dismissed {
+        opacity: 0.5;
+      }
+      .remote-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      .signal-card {
+        background: var(--card);
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 6px;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .signal-card .info {
+        font-size: 13px;
+      }
+      .signal-card .meta {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        background: var(--bg-2);
+        color: var(--muted);
+        font-size: 11px;
+        border: 1px solid var(--border);
+        margin-left: 6px;
+      }
+      .badge.protocol {
+        color: var(--primary);
+        border-color: var(--primary);
+      }
+    `];ge([f()],J.prototype,"_tick",2);ge([f()],J.prototype,"_loading",2);J=ge([E("rune-sniffer-view")],J);var _t=Object.defineProperty,bt=Object.getOwnPropertyDescriptor,_e=(s,e,t,r)=>{for(var i=r>1?void 0:r?bt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&_t(e,t,i),i};let Z=class extends y{constructor(){super(...arguments),this._tick=0,this._loading=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++),this.refresh()}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}async refresh(){this._loading=!0;try{const{actions:s}=await m.listActions();o.setActions(s??[])}catch(s){o.pushToast(`Load actions: ${s.message}`,"err")}finally{this._loading=!1}}render(){this._tick;const s=o.actions;return d`
+      <div class="toolbar">
+        <h2>Actions</h2>
+        <span class="grow"></span>
+        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
+          ${this._loading?"Loading…":"Refresh"}
+        </button>
+      </div>
+      <div class="help">
+        Action bindings connect a captured signal to a side-effect: fire a
+        pulse on a device, call a service, activate a scene, run a script,
+        or fire an event. Bindings are managed programmatically (the API
+        is stable; a UI editor lands in v0.4).
+      </div>
+      ${s.length===0?d`<div class="empty">No action bindings yet.</div>`:s.map(e=>d`
+              <div class="action-card">
+                <div class="info">
+                  <strong>${e.name??e.id}</strong>
+                  <div class="meta">
+                    ${e.target.kind} · signal ${e.signal_id.slice(0,8)}… ·
+                    min_hits: ${e.min_hits}
+                  </div>
+                </div>
+              </div>
+            `)}
+    `}};Z.styles=[A,w`
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .toolbar h2 {
+        margin: 0;
+        font-weight: 400;
+      }
+      .grow {
+        flex: 1;
+      }
+      .action-card {
+        background: var(--card);
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 6px;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .action-card .info strong {
+        font-weight: 500;
+      }
+      .action-card .meta {
+        color: var(--muted);
+        font-size: 11px;
+      }
+    `];_e([f()],Z.prototype,"_tick",2);_e([f()],Z.prototype,"_loading",2);Z=_e([E("rune-actions-view")],Z);var yt=Object.defineProperty,$t=Object.getOwnPropertyDescriptor,Ne=(s,e,t,r)=>{for(var i=r>1?void 0:r?$t(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&yt(e,t,i),i};let ie=class extends y{constructor(){super(...arguments),this._tick=0,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++),this.refresh()}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}async refresh(){try{const[{transmitters:s},{receivers:e},{devices:t}]=await Promise.all([m.transmitters(),m.receivers(),m.list()]);o.setTransmitters(s??[]),o.setReceivers(e??[]),o.setDevices(t??[])}catch(s){o.pushToast(`Load settings: ${s.message}`,"err")}}render(){this._tick;const s=o.remotes.reduce((e,t)=>e+t.signals.length,0);return d`
+      <h2>Settings</h2>
+      <div class="status-grid">
+        <div class="stat-card">
+          <div class="label">Integration</div>
+          <div class="value" style="font-size:18px;">RUNE</div>
+          <div class="meta">v${o.version}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Devices</div>
+          <div class="value">${o.devices.length}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Sniffer signals</div>
+          <div class="value">${s}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Action bindings</div>
+          <div class="value">${o.actions.length}</div>
+        </div>
+      </div>
+      <h3>Available transmitters</h3>
+      <div class="status-grid">
+        ${o.transmitters.length===0?d`<div class="empty">No IR/RF emitters found.</div>`:o.transmitters.map(e=>d`
+                <div class="stat-card">
+                  <div class="label">${e.entity_id}</div>
+                  <div class="value" style="font-size:14px;">
+                    <span class="status-dot ok"></span>${e.state}
+                  </div>
+                </div>
+              `)}
+      </div>
+      <h3>Available receivers</h3>
+      <div class="status-grid">
+        ${o.receivers.length===0?d`<div class="empty">No IR/RF receivers found.</div>`:o.receivers.map(e=>d`
+                <div class="stat-card">
+                  <div class="label">${e.entity_id}</div>
+                  <div class="value" style="font-size:14px;">
+                    <span class="status-dot ok"></span>${e.state}
+                  </div>
+                </div>
+              `)}
+      </div>
+    `}};ie.styles=[A,w`
+      h2 {
+        margin: 0 0 16px;
+        font-weight: 400;
+      }
+      h3 {
+        margin-top: 24px;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .stat-card .label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .stat-card .value {
+        font-size: 24px;
+        font-weight: 500;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        background: var(--muted);
+      }
+      .status-dot.ok {
+        background: var(--ok);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+    `];Ne([f()],ie.prototype,"_tick",2);ie=Ne([E("rune-settings-view")],ie);var xt=Object.defineProperty,wt=Object.getOwnPropertyDescriptor,x=(s,e,t,r)=>{for(var i=r>1?void 0:r?wt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&xt(e,t,i),i};const Et=["fan","climate","light","cover","media_player","switch","remote"];let g=class extends y{constructor(){super(...arguments),this._tick=0,this._txLoading=!1,this._transmitters=[],this._err="",this._busy=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>{var e;const s=((e=this._dlg)==null?void 0:e.open)??!1;this._tick++,queueMicrotask(()=>{const t=this._dlg;t&&(o.deviceDialog.open&&!s?t.showModal():!o.deviceDialog.open&&s&&t.close())})})}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}updated(s){var t;this._tick;const e=o.deviceDialog.editing;(t=this._dlg)!=null&&t.open&&(e?(this._nameEl&&document.activeElement!==this._nameEl&&(this._nameEl.value=e.name),this._categoryEl&&document.activeElement!==this._categoryEl&&(this._categoryEl.value=e.category),this._manufacturerEl&&document.activeElement!==this._manufacturerEl&&(this._manufacturerEl.value=e.manufacturer??""),this._modelEl&&document.activeElement!==this._modelEl&&(this._modelEl.value=e.model??"")):(this._nameEl&&document.activeElement!==this._nameEl&&(this._nameEl.value=""),this._categoryEl&&document.activeElement!==this._categoryEl&&(this._categoryEl.value="fan"),this._manufacturerEl&&document.activeElement!==this._manufacturerEl&&(this._manufacturerEl.value=""),this._modelEl&&document.activeElement!==this._modelEl&&(this._modelEl.value="")),this._loadTransmitters((e==null?void 0:e.transmitter_entity_ids)??null))}async _loadTransmitters(s){this._txLoading=!0;try{const{transmitters:e}=await m.transmitters();this._transmitters=e??[],queueMicrotask(()=>{if(this._txEl){if(this._txEl.innerHTML="",!this._transmitters.length){const t=document.createElement("option");t.value="",t.textContent="(no IR/RF emitters in HA)",this._txEl.appendChild(t);return}for(const t of this._transmitters){const r=document.createElement("option");r.value=t.entity_id,r.textContent=`${t.entity_id} (${t.state})`,s&&s.includes(t.entity_id)&&(r.selected=!0),this._txEl.appendChild(r)}}})}catch(e){this._transmitters=[],queueMicrotask(()=>{this._txEl&&(this._txEl.innerHTML=`<option>${e.message}</option>`)})}finally{this._txLoading=!1}}_cancel(){o.closeDeviceDialog()}async _save(){var l,c,p,h,u;this._err="";const s=o.deviceDialog.editing,e=((l=this._nameEl)==null?void 0:l.value.trim())??"",t=((c=this._categoryEl)==null?void 0:c.value)??"fan",r=((p=this._txEl)==null?void 0:p.value)??"",i=((h=this._manufacturerEl)==null?void 0:h.value.trim())??"",a=((u=this._modelEl)==null?void 0:u.value.trim())??"";if(!e){this._err="Name is required";return}if(!r||r.startsWith("(")){this._err="Pick a transmitter";return}const n={name:e,category:t,transmitter:r,manufacturer:i,model:a,discrete_speed_count:t==="fan"?3:0};this._busy=!0;try{s?(await m.updateDevice({device_id:s.id,...n}),o.pushToast("Updated","ok")):(await m.createDevice(n),o.pushToast("Created","ok")),o.closeDeviceDialog();const{devices:_}=await m.list();o.setDevices(_??[])}catch(_){this._err=_.message}finally{this._busy=!1}}render(){const s=o.deviceDialog.editing;return d`
+      <dialog id="dlg" @close=${()=>o.closeDeviceDialog()}>
+        <h2>${s?"Edit device":"Add device"}</h2>
+        <div class="form-row">
+          <label for="name">Name</label>
+          <input id="name" placeholder="Bedroom fan" />
+        </div>
+        <div class="form-row">
+          <label for="category">Category</label>
+          <select id="category">
+            ${Et.map(e=>d`<option value=${e}>${e}</option>`)}
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="manufacturer">Manufacturer (optional)</label>
+          <input id="manufacturer" placeholder="Broadlink, ESPHome, ..." />
+        </div>
+        <div class="form-row">
+          <label for="model">Model (optional)</label>
+          <input id="model" placeholder="RM4 Pro, FRM97, ..." />
+        </div>
+        <div class="form-row">
+          <label for="tx">Transmitter</label>
+          <div class="tx-row">
+            <select id="tx">
+              <option>${this._txLoading?"Loading…":"(empty)"}</option>
+            </select>
+            <button
+              class="secondary"
+              type="button"
+              @click=${()=>this._loadTransmitters((s==null?void 0:s.transmitter_entity_ids)??null)}
+            >
+              ↻
+            </button>
+          </div>
+        </div>
+        ${this._err?d`<div class="err">${this._err}</div>`:""}
+        <div class="dialog-actions">
+          <button class="secondary" type="button" @click=${this._cancel}>
+            Cancel
+          </button>
+          <button type="button" @click=${this._save} ?disabled=${this._busy}>
+            ${this._busy?"Saving…":"Save"}
+          </button>
+        </div>
+      </dialog>
+    `}};g.styles=[A,w`
+      dialog {
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+        min-width: 420px;
+        max-width: 90vw;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+      .form-row label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dialog-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      .tx-row {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .tx-row select {
+        flex: 1;
+      }
+      h2 {
+        margin: 0 0 16px;
+      }
+      .err {
+        color: var(--danger);
+        font-size: 12px;
+      }
+    `];x([f()],g.prototype,"_tick",2);x([f()],g.prototype,"_txLoading",2);x([f()],g.prototype,"_transmitters",2);x([f()],g.prototype,"_err",2);x([f()],g.prototype,"_busy",2);x([M("#dlg")],g.prototype,"_dlg",2);x([M("#name")],g.prototype,"_nameEl",2);x([M("#category")],g.prototype,"_categoryEl",2);x([M("#manufacturer")],g.prototype,"_manufacturerEl",2);x([M("#model")],g.prototype,"_modelEl",2);x([M("#tx")],g.prototype,"_txEl",2);g=x([E("rune-device-dialog")],g);var At=Object.defineProperty,kt=Object.getOwnPropertyDescriptor,Y=(s,e,t,r)=>{for(var i=r>1?void 0:r?kt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&At(e,t,i),i};let L=class extends y{constructor(){super(...arguments),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>{var e;const s=((e=this._dlg)==null?void 0:e.open)??!1;this._tick++,queueMicrotask(()=>{const t=this._dlg;t&&(o.learnDialog.open&&!s?t.showModal():!o.learnDialog.open&&s&&t.close())})})}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}_cancel(){o.closeLearnDialog()}async _start(){const{deviceId:s,commandKey:e}=o.learnDialog;if(!(!s||!e)){o.updateLearn({status:"Capturing… press the button on your remote NOW"}),this._busy=!0;try{const t=await m.learnCommand({device_id:s,command_key:e,timeout_s:15});t!=null&&t.captured?o.updateLearn({status:`Captured: ${t.captured.protocol_label??"raw"} @ ${t.carrier_frequency_hz} Hz`,captured:t.captured,rawTimings:t.raw_timings,carrierHz:t.carrier_frequency_hz}):o.updateLearn({status:"No signal captured"})}catch(t){o.updateLearn({status:`Failed: ${t.message}`})}finally{this._busy=!1}}}async _save(){const{deviceId:s,commandKey:e,captured:t,rawTimings:r}=o.learnDialog;if(!(!s||!t||!r)){this._saving=!0;try{const{device:i}=await m.getDevice(s),a={...i.commands??{}};a[e]={key:e,label:e.replace(/_/g," ").replace(/^./,l=>l.toUpperCase()),category:"custom",signal_category:{...t.signal_category},payload:{...t.payload,raw_timings:r}},await m.updateDevice({device_id:s,commands:a}),o.pushToast(`Learned "${e}"`,"ok"),o.closeLearnDialog();const{devices:n}=await m.list();o.setDevices(n??[])}catch(i){o.pushToast(i.message,"err")}finally{this._saving=!1}}}render(){var n;this._tick;const s=o.learnDialog,e=s.rawTimings,t=e?JSON.stringify(e.slice(0,30))+(e.length>30?"…":""):"—",i=`${((n=o.devices.find(l=>l.id===s.deviceId))==null?void 0:n.name)??"—"} → ${s.commandKey}`,a=s.captured!==null&&!this._saving;return d`
+      <dialog id="dlg" @close=${()=>o.closeLearnDialog()}>
+        <h2>Learn command</h2>
+        <div class="help">
+          Point your remote at the receiver and press the button you want
+          to capture. RUNE records the raw timings and writes them into
+          the command slot.
+        </div>
+        <div class="form-row">
+          <label>Command</label>
+          <div><strong>${i}</strong></div>
+        </div>
+        <div class="form-row">
+          <label>Status</label>
+          <div class="status">${s.status}</div>
+        </div>
+        <div class="form-row">
+          <label>Captured timings</label>
+          <pre>${t}</pre>
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary" type="button" @click=${this._cancel}>
+            Cancel
+          </button>
+          <button type="button" @click=${this._start} ?disabled=${this._busy}>
+            ${this._busy?"Capturing…":"Start learn"}
+          </button>
+          <button type="button" @click=${this._save} ?disabled=${!a}>
+            ${this._saving?"Saving…":"Save & close"}
+          </button>
+        </div>
+      </dialog>
+    `}};L.styles=[A,w`
+      dialog {
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+        min-width: 420px;
+        max-width: 90vw;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+      h2 {
+        margin: 0 0 16px;
+      }
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+      .form-row label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dialog-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 16px;
+      }
+      pre {
+        background: var(--bg-2);
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        overflow-x: auto;
+      }
+      .status {
+        font-family: monospace;
+      }
+    `];Y([f()],L.prototype,"_tick",2);Y([f()],L.prototype,"_busy",2);Y([f()],L.prototype,"_saving",2);Y([M("#dlg")],L.prototype,"_dlg",2);L=Y([E("rune-learn-dialog")],L);var Ct=Object.defineProperty,St=Object.getOwnPropertyDescriptor,He=(s,e,t,r)=>{for(var i=r>1?void 0:r?St(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&Ct(e,t,i),i};let re=class extends y{constructor(){super(...arguments),this._tick=0,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>{this._tick++})}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}_select(s){o.setSection(s)}_renderSection(){switch(o.section){case"sniffer":return d`<rune-sniffer-view></rune-sniffer-view>`;case"actions":return d`<rune-actions-view></rune-actions-view>`;case"settings":return d`<rune-settings-view></rune-settings-view>`;case"devices":default:return d`<rune-devices-view></rune-devices-view>`}}render(){return this._tick,d`
+      <nav>
+        <div class="brand">
+          <h1>RUNE <span class="pill">v${o.version}</span></h1>
+        </div>
+        ${["devices","sniffer","actions","settings"].map(s=>d`
+            <button
+              class="nav-item ${o.section===s?"active":""}"
+              data-section=${s}
+              @click=${()=>this._select(s)}
+            >
+              ${s[0].toUpperCase()}${s.slice(1)}
+            </button>
+          `)}
+      </nav>
+      <main>${this._renderSection()}</main>
+      <rune-toast-stack></rune-toast-stack>
+      <rune-device-dialog></rune-device-dialog>
+      <rune-learn-dialog></rune-learn-dialog>
+    `}};re.styles=[A,w`
+      :host {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        min-height: 100vh;
+        background: var(--bg);
+      }
+      nav {
+        background: var(--bg-2);
+        border-right: 1px solid var(--border);
+        padding: 16px 0;
+      }
+      .brand {
+        padding: 0 20px 16px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 12px;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .pill {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 10px;
+        border: 1px solid var(--border);
+        margin-left: 4px;
+      }
+      .nav-item {
+        display: block;
+        padding: 10px 20px;
+        color: var(--muted);
+        text-decoration: none;
+        cursor: pointer;
+        border: 0;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        font-size: 13px;
+      }
+      .nav-item:hover {
+        background: var(--bg);
+        color: var(--text);
+      }
+      .nav-item.active {
+        background: var(--bg);
+        color: var(--primary);
+        border-left: 3px solid var(--primary);
+      }
+      main {
+        padding: 24px;
+        overflow-y: auto;
+        max-height: 100vh;
+      }
+    `];He([f()],re.prototype,"_tick",2);re=He([E("rune-app")],re);</script>
+  </head>
+  <body>
+    <rune-app></rune-app>
+  </body>
 </html>

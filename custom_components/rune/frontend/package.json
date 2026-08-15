@@ -1,0 +1,24 @@
+{
+  "name": "rune-frontend",
+  "private": true,
+  "version": "0.3.2",
+  "type": "module",
+  "description": "RUNE Home Assistant panel — Lit SPA bundled for the iframe target.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build --config vite.spa.config.ts && vite build --config vite.shim.config.ts",
+    "build:spa": "vite build --config vite.spa.config.ts",
+    "build:shim": "vite build --config vite.shim.config.ts",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vite": "^5.4.0",
+    "vite-plugin-singlefile": "^2.0.0"
+  },
+  "packageManager": "pnpm@11.16.0"
+}

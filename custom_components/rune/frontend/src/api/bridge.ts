@@ -1,0 +1,160 @@
+// postMessage bridge to the HA parent window.
+//
+// Mirrors the protocol defined in ``src/shim.ts``. Every call returns
+// a promise; the parent replies with ``rune-bridge-result`` carrying
+// the same numeric id. If no reply arrives within ``BRIDGE_TIMEOUT_MS``
+// the promise rejects so the UI doesn't hang forever on a stuck bridge.
+
+const BRIDGE_TIMEOUT_MS = 8000;
+
+interface PendingResolver {
+  resolve: (value: unknown) => void;
+  reject: (reason: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+const pending = new Map<number, PendingResolver>();
+let nextId = 1;
+
+interface BridgeResultMessage {
+  type: "rune-bridge-result";
+  id: number;
+  result?: unknown;
+  error?: string;
+}
+
+window.addEventListener("message", (event: MessageEvent) => {
+  const data = (event.data ?? {}) as Partial<BridgeResultMessage>;
+  if (!data || data.type !== "rune-bridge-result") return;
+  if (typeof data.id !== "number") return;
+  const r = pending.get(data.id);
+  if (!r) return;
+  pending.delete(data.id);
+  if (typeof data.error === "string") r.reject(new Error(data.error));
+  else r.resolve(data.result);
+});
+
+function bridgeCall(
+  payload: Record<string, unknown>,
+): Promise<unknown> {
+  const id = nextId++;
+  return new Promise<unknown>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (pending.has(id)) {
+        pending.delete(id);
+        reject(new Error("bridge timeout (no response from HA)"));
+      }
+    }, BRIDGE_TIMEOUT_MS);
+    const resolver: PendingResolver = {
+      timer,
+      resolve: (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      reject: (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    };
+    pending.set(id, resolver);
+    window.parent.postMessage({ type: "rune-bridge", id, ...payload }, "*");
+  });
+}
+
+// Typed wrappers around the WS API surface used by the SPA.
+
+import type {
+  ActionBinding,
+  DeviceSummary,
+  LearnResult,
+  ListResponse,
+  Remote,
+  RxEntity,
+  TxEntity,
+} from "../types.js";
+
+export const api = {
+  list: (): Promise<ListResponse> =>
+    bridgeCall({ kind: "ws", message: { type: "rune/list" } }) as Promise<ListResponse>,
+
+  getDevice: (id: string): Promise<{ device: DeviceSummary }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/device/get", device_id: id },
+    }) as Promise<{ device: DeviceSummary }>,
+
+  createDevice: (
+    payload: Record<string, unknown>,
+  ): Promise<{ device: DeviceSummary }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/device/create", ...payload },
+    }) as Promise<{ device: DeviceSummary }>,
+
+  updateDevice: (
+    payload: Record<string, unknown>,
+  ): Promise<{ device: DeviceSummary }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/device/update", ...payload },
+    }) as Promise<{ device: DeviceSummary }>,
+
+  deleteDevice: (id: string): Promise<{ ok: true }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/device/delete", device_id: id },
+    }) as Promise<{ ok: true }>,
+
+  learnCommand: (payload: Record<string, unknown>): Promise<LearnResult> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/command/learn", ...payload },
+    }) as Promise<LearnResult>,
+
+  listSniffer: (): Promise<{ remotes: Remote[] }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/sniffer/list" },
+    }) as Promise<{ remotes: Remote[] }>,
+
+  dismissRemote: (remoteId: string): Promise<{ ok: true }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/sniffer/dismiss", remote_id: remoteId },
+    }) as Promise<{ ok: true }>,
+
+  listActions: (): Promise<{ actions: ActionBinding[] }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/action/list" },
+    }) as Promise<{ actions: ActionBinding[] }>,
+
+  transmitters: (): Promise<{ transmitters: TxEntity[] }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/transmitter/list" },
+    }) as Promise<{ transmitters: TxEntity[] }>,
+
+  receivers: (): Promise<{ receivers: RxEntity[] }> =>
+    bridgeCall({
+      kind: "ws",
+      message: { type: "rune/receiver/list" },
+    }) as Promise<{ receivers: RxEntity[] }>,
+
+  sendCommand: (
+    deviceId: string,
+    commandKey: string,
+  ): Promise<true> =>
+    bridgeCall({
+      kind: "service",
+      domain: "rune",
+      service: "send_command",
+      service_data: { device_id: deviceId, command_key: commandKey },
+    }) as Promise<true>,
+};
+
+// Read version injected by the panel loader. Falls back to "0" if HA
+// hasn't supplied it yet.
+export const panelVersion: string =
+  (window as unknown as { __RUNE_PANEL_VERSION__?: string })
+    .__RUNE_PANEL_VERSION__ ?? "0";
