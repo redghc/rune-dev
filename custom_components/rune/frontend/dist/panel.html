@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>RUNE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --primary: #03a9f4;
+      --bg: #1f1f1f;
+      --card: #2c2c2c;
+      --text: #e1e1e1;
+      --muted: #999;
+      --border: #3a3a3a;
+      --danger: #f44336;
+      --ok: #4caf50;
+    }
+    body {
+      font-family: Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 400; }
+    h2 { margin: 24px 0 12px; font-size: 18px; font-weight: 500; color: var(--muted); }
+    .subtitle { color: var(--muted); margin-bottom: 24px; }
+    .toolbar {
+      display: flex; gap: 8px; margin-bottom: 16px; align-items: center;
+    }
+    .toolbar .grow { flex: 1; }
+    button {
+      background: var(--primary); color: white; border: 0; padding: 8px 16px;
+      border-radius: 4px; cursor: pointer; font-size: 14px; font-family: inherit;
+    }
+    button.secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    button.danger { background: var(--danger); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    input, select {
+      background: var(--card); color: var(--text); border: 1px solid var(--border);
+      padding: 8px; border-radius: 4px; font-size: 14px; font-family: inherit;
+    }
+    .empty {
+      text-align: center; padding: 48px; color: var(--muted);
+      border: 2px dashed var(--border); border-radius: 8px;
+    }
+    .device {
+      background: var(--card); border-radius: 8px; padding: 16px; margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .device h3 { margin: 0 0 4px; font-size: 18px; }
+    .device .meta { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .commands {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+    }
+    .cmd {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      padding: 8px; cursor: pointer; font-family: inherit; color: var(--text);
+      font-size: 13px; text-align: center; transition: background 0.1s;
+    }
+    .cmd:hover { background: var(--primary); color: white; border-color: var(--primary); }
+    .cmd:active { transform: scale(0.97); }
+    .flash { background: var(--ok) !important; color: white !important; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--border); padding: 12px 20px;
+      border-radius: 8px; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    dialog {
+      background: var(--card); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 24px; min-width: 360px;
+    }
+    dialog::backdrop { background: rgba(0,0,0,0.6); }
+    .form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .form-row label { font-size: 12px; color: var(--muted); }
+    .form-row input, .form-row select { width: 100%; }
+    .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .tx-row { display: flex; gap: 4px; align-items: center; }
+    .tx-row select { flex: 1; }
+    .toast.err { border-color: var(--danger); }
+    .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      background: var(--bg); color: var(--muted); font-size: 11px;
+      border: 1px solid var(--border); margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>RUNE <span class="pill">v0.2</span></h1>
+  <div class="subtitle">Remote Universal Network Engine — your IR + RF devices</div>
+
+  <div class="toolbar">
+    <button id="add-btn">+ Add device</button>
+    <button id="refresh-btn" class="secondary">Refresh</button>
+    <span class="grow"></span>
+    <span id="status" style="color: var(--muted); font-size: 12px;"></span>
+  </div>
+
+  <div id="list"></div>
+
+  <div id="toast" class="toast"></div>
+
+  <dialog id="add-dialog">
+    <h2 style="margin: 0 0 16px;">Add device</h2>
+    <div class="form-row">
+      <label for="add-name">Name</label>
+      <input id="add-name" placeholder="Bedroom fan">
+    </div>
+    <div class="form-row">
+      <label for="add-category">Category</label>
+      <select id="add-category">
+        <option value="fan">Fan</option>
+        <option value="climate">Climate</option>
+        <option value="light">Light</option>
+        <option value="cover">Cover</option>
+        <option value="media_player">Media player</option>
+        <option value="switch">Switch</option>
+        <option value="remote">Remote</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="add-tx">Transmitter entity</label>
+      <div class="tx-row">
+        <select id="add-tx"><option>Loading…</option></select>
+        <button id="refresh-tx" class="secondary" type="button">↻</button>
+      </div>
+    </div>
+    <div id="add-error" style="color: var(--danger); font-size: 12px;"></div>
+    <div class="dialog-actions">
+      <button class="secondary" type="button" id="add-cancel">Cancel</button>
+      <button type="button" id="add-save">Save</button>
+    </div>
+  </dialog>
+
+  <script>
+    // ----- RUNE <-> HA bridge (iframe postMessage) -----
+    // The SPA runs inside an iframe whose parent is the HA frontend.
+    // HA WebSocket APIs aren't directly available here, so the parent
+    // provides a bridge: we post { type:"rune-bridge", kind, ... } and
+    // get back { type:"rune-bridge-result", id, result|error }.
+    const _pending = new Map();
+    let _nextId = 1;
+
+    window.addEventListener("message", (event) => {
+      const data = event.data || {};
+      if (data.type !== "rune-bridge-result") return;
+      const resolver = _pending.get(data.id);
+      if (!resolver) return;
+      _pending.delete(data.id);
+      if (data.error) resolver.reject(new Error(data.error));
+      else resolver.resolve(data.result);
+    });
+
+    function bridgeCall(kind, payload) {
+      const id = _nextId++;
+      window.parent.postMessage({ type: "rune-bridge", kind, id, ...payload }, "*");
+      return new Promise((resolve, reject) => {
+        _pending.set(id, { resolve, reject });
+      });
+    }
+
+    const ws = {
+      list: () => bridgeCall("ws", { message: { type: "rune/list" } }),
+      getDevice: (id) => bridgeCall("ws", { message: { type: "rune/device/get", device_id: id } }),
+      deleteDevice: (id) => bridgeCall("ws", { message: { type: "rune/device/delete", device_id: id } }),
+      transmitters: () => bridgeCall("ws", { message: { type: "rune/transmitter/list" } }),
+      receivers: () => bridgeCall("ws", { message: { type: "rune/receiver/list" } }),
+      createDevice: (payload) => bridgeCall("ws", {
+        message: { type: "rune/device/create", ...payload },
+      }),
+      sendCommand: (device_id, command_key) => bridgeCall("service", {
+        domain: "rune",
+        service: "send_command",
+        service_data: { device_id, command_key },
+      }),
+    };
+
+    // ----- Toast -----
+    const toastEl = document.getElementById("toast");
+    let toastTimer;
+    function toast(msg, err) {
+      toastEl.textContent = msg;
+      toastEl.classList.toggle("err", !!err);
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
+    }
+
+    // ----- Render -----
+    const listEl = document.getElementById("list");
+
+    function el(tag, attrs, children) {
+      const node = document.createElement(tag);
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          if (k === "class") node.className = v;
+          else if (k === "on") {
+            for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
+          } else if (k === "html") node.innerHTML = v;
+          else node.setAttribute(k, v);
+        }
+      }
+      if (children) for (const c of children) node.appendChild(c);
+      return node;
+    }
+
+    async function loadDevices() {
+      document.getElementById("status").textContent = "Loading…";
+      try {
+        const { devices } = await ws.list();
+        render(devices);
+        document.getElementById("status").textContent =
+          devices.length === 0 ? "No devices yet" : `${devices.length} device(s)`;
+      } catch (err) {
+        toast("Failed to load devices: " + err.message, true);
+      }
+    }
+
+    function render(devices) {
+      listEl.innerHTML = "";
+      if (!devices.length) {
+        listEl.appendChild(el("div", { class: "empty" }, [
+          document.createTextNode("No devices yet. Click + Add device to create one."),
+        ]));
+        return;
+      }
+      for (const d of devices) {
+        const card = el("div", { class: "device" });
+        const header = el("div", {}, [
+          el("h3", {}, [document.createTextNode(d.name)]),
+          el("span", { class: "meta" }, [
+            document.createTextNode(
+              `${d.category} • ${d.command_count} command(s) • tx: ${(d.transmitter_entity_ids || []).join(", ") || "—"}`,
+            ),
+          ]),
+        ]);
+        const delBtn = el("button", { class: "secondary danger", on: {
+          click: async () => {
+            if (!confirm(`Delete device "${d.name}"?`)) return;
+            try { await ws.deleteDevice(d.id); toast("Deleted"); loadDevices(); }
+            catch (e) { toast(e.message, true); }
+          },
+        }}, [document.createTextNode("Delete")]);
+        const head = el("div", { style: "display:flex;justify-content:space-between;align-items:flex-start;" }, [
+          el("div", {}, [el("h3", {}, [document.createTextNode(d.name)]),
+                          el("div", { class: "meta" }, [
+                            document.createTextNode(
+                              `${d.category} • ${d.command_count} command(s) • ` +
+                              `tx: ${(d.transmitter_entity_ids || []).join(", ") || "—"}`
+                            ),
+                          ])]),
+          delBtn,
+        ]);
+        card.appendChild(head);
+
+        const cmdsEl = el("div", { class: "commands" });
+        // Fetch full device detail to know command keys.
+        try {
+          const { device } = await ws.getDevice(d.id);
+          const keys = Object.keys(device.commands || {});
+          if (!keys.length) {
+            cmdsEl.appendChild(el("div", { class: "meta" }, [
+              document.createTextNode("(no commands learned yet — Phase 7 wizard)"),
+            ]));
+          } else {
+            for (const k of keys) {
+              const cmdEl = el("div", { class: "cmd" }, [
+                document.createTextNode(device.commands[k].label || k),
+              ]);
+              cmdEl.addEventListener("click", async () => {
+                try {
+                  await ws.sendCommand(d.id, k);
+                  cmdEl.classList.add("flash");
+                  setTimeout(() => cmdEl.classList.remove("flash"), 280);
+                } catch (err) { toast(err.message, true); }
+              });
+              cmdsEl.appendChild(cmdEl);
+            }
+          }
+        } catch (err) {
+          cmdsEl.appendChild(el("div", { class: "meta" }, [
+            document.createTextNode("(failed to load commands)"),
+          ]));
+        }
+        card.appendChild(cmdsEl);
+        listEl.appendChild(card);
+      }
+    }
+
+    // ----- Add device dialog -----
+    const dlg = document.getElementById("add-dialog");
+    const addBtn = document.getElementById("add-btn");
+    const refreshBtn = document.getElementById("refresh-btn");
+    const refreshTxBtn = document.getElementById("refresh-tx");
+    const addCancel = document.getElementById("add-cancel");
+    const addSave = document.getElementById("add-save");
+    const addError = document.getElementById("add-error");
+
+    async function loadTransmitters() {
+      const sel = document.getElementById("add-tx");
+      sel.innerHTML = "<option>Loading…</option>";
+      try {
+        const { transmitters } = await ws.transmitters();
+        sel.innerHTML = "";
+        if (!transmitters.length) {
+          sel.innerHTML = "<option>(no IR/RF emitters in HA)</option>";
+          return;
+        }
+        for (const t of transmitters) {
+          const opt = document.createElement("option");
+          opt.value = t.entity_id;
+          opt.textContent = `${t.entity_id} (${t.state})`;
+          sel.appendChild(opt);
+        }
+      } catch (err) {
+        sel.innerHTML = `<option>${err.message}</option>`;
+      }
+    }
+
+    addBtn.addEventListener("click", async () => {
+      document.getElementById("add-name").value = "";
+      addError.textContent = "";
+      await loadTransmitters();
+      dlg.showModal();
+    });
+    addCancel.addEventListener("click", () => dlg.close());
+    refreshBtn.addEventListener("click", loadDevices);
+    refreshTxBtn.addEventListener("click", loadTransmitters);
+
+    addSave.addEventListener("click", async () => {
+      const name = document.getElementById("add-name").value.trim();
+      const category = document.getElementById("add-category").value;
+      const tx = document.getElementById("add-tx").value;
+      if (!name) { addError.textContent = "Name is required"; return; }
+      if (!tx || tx.startsWith("(")) { addError.textContent = "Pick a transmitter"; return; }
+      addSave.disabled = true;
+      try {
+        const result = await ws.createDevice({
+          name, category, transmitter: tx,
+        });
+        if (result.error) throw new Error(result.error.message);
+        dlg.close();
+        toast("Device created — go to Phase 7 wizard to learn commands");
+        loadDevices();
+      } catch (err) {
+        addError.textContent = err.message;
+      } finally {
+        addSave.disabled = false;
+      }
+    });
+
+    loadDevices();
+  </script>
+</body>
+</html>

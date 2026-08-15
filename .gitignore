@@ -8,6 +8,8 @@ __pycache__/
 .Python
 build/
 dist/
+# RUNE panel assets are hand-written (no build step) — must ship with repo
+!custom_components/rune/frontend/dist/
 *.egg-info/
 *.egg
 .eggs/
