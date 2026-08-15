@@ -22,6 +22,8 @@ export class RuneApp extends LitElement {
       :host {
         display: grid;
         grid-template-columns: 220px 1fr;
+        grid-template-rows: 100vh;
+        height: 100%;
         min-height: 100vh;
         background: var(--bg);
       }
@@ -29,6 +31,8 @@ export class RuneApp extends LitElement {
         background: var(--bg-2);
         border-right: 1px solid var(--border);
         padding: 16px 0;
+        height: 100%;
+        overflow-y: auto;
       }
       .brand {
         padding: 0 20px 16px;
@@ -75,6 +79,7 @@ export class RuneApp extends LitElement {
       main {
         padding: 24px;
         overflow-y: auto;
+        height: 100%;
         max-height: 100vh;
       }
     `,

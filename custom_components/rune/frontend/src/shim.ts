@@ -64,6 +64,13 @@ class RunePanel extends HTMLElement {
     if (this._iframe) return;
     const root = this.attachShadow({ mode: "open" });
 
+    // ``:host { display: block }`` so the panel stretches to fill the
+    // slot HA gives us. Without it the host collapses to ``inline``
+    // and the iframe's ``height: 100%`` has nothing to fill against.
+    const style = document.createElement("style");
+    style.textContent = `:host{display:block;width:100%;height:100%;}:host>iframe{display:block;width:100%;height:100%;min-height:100vh;border:0;}`;
+    root.appendChild(style);
+
     const errorEl = document.createElement("div");
     errorEl.style.cssText =
       "padding:16px;font:14px/1.4 system-ui;color:#b71c1c;background:#ffebee;display:none;white-space:pre-wrap;";
@@ -72,7 +79,7 @@ class RunePanel extends HTMLElement {
 
     const iframe = document.createElement("iframe");
     iframe.src = "/rune/panel.html";
-    iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+    iframe.style.cssText = "width:100%;height:100%;min-height:100vh;border:0;display:block;";
     iframe.title = "RUNE";
     iframe.addEventListener("error", () => {
       errorEl.textContent = `RUNE: failed to load ${iframe.src}`;
@@ -105,7 +112,18 @@ class RunePanel extends HTMLElement {
         this._hass
           .callWS(data.message)
           .then((result) => reply({ result: result === undefined ? null : result }))
-          .catch((err) => reply({ error: String((err as Error)?.message ?? err) }));
+          .catch((err) => {
+            const raw = String((err as Error)?.message ?? err);
+            // HA returns ``"Unknown command"`` (or
+            // ``"Unknown command: rune/..."`` on newer builds) when the
+            // ``rune/*`` WebSocket handlers aren't registered yet —
+            // usually because HA wasn't restarted after the
+            // integration was installed or updated.
+            const hint = /unknown command/i.test(raw)
+              ? `${raw} — reload the RUNE integration (Developer Tools → YAML → Reload) or restart Home Assistant.`
+              : raw;
+            reply({ error: hint });
+          });
       } else if (
         data.kind === "service" &&
         typeof data.domain === "string" &&

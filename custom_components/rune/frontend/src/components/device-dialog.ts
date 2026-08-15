@@ -71,31 +71,27 @@ export class RuneDeviceDialog extends LitElement {
   @state() private _tick = 0;
   @state() private _txLoading = false;
   @state() private _transmitters: TxEntity[] = [];
+  @state() private _selectedTx = "";
   @state() private _err = "";
   @state() private _busy = false;
   private _unsub: (() => void) | null = null;
+  private _lastEditingId: string | null = null;
   @query("#dlg") private _dlg!: HTMLDialogElement;
   @query("#name") private _nameEl!: HTMLInputElement;
   @query("#category") private _categoryEl!: HTMLSelectElement;
   @query("#manufacturer") private _manufacturerEl!: HTMLInputElement;
   @query("#model") private _modelEl!: HTMLInputElement;
-  @query("#tx") private _txEl!: HTMLSelectElement;
 
   connectedCallback(): void {
     super.connectedCallback();
     this._unsub = subscribe(() => {
       const wasOpen = this._dlg?.open ?? false;
       this._tick++;
-      // Open / close the native <dialog> when store toggles. Done in
-      // updated() so we know the dialog element exists.
       queueMicrotask(() => {
         const dlg = this._dlg;
         if (!dlg) return;
-        if (store.deviceDialog.open && !wasOpen) {
-          dlg.showModal();
-        } else if (!store.deviceDialog.open && wasOpen) {
-          dlg.close();
-        }
+        if (store.deviceDialog.open && !wasOpen) dlg.showModal();
+        else if (!store.deviceDialog.open && wasOpen) dlg.close();
       });
     });
   }
@@ -109,77 +105,47 @@ export class RuneDeviceDialog extends LitElement {
     void _changed;
     void this._tick;
     const editing = store.deviceDialog.editing;
-    // Populate form fields once the dialog becomes visible. We set
-    // them imperatively to avoid re-rendering <select> state which
-    // can lose the user's open dropdown.
-    if (this._dlg?.open) {
+    const editingId = editing?.id ?? null;
+    if (this._dlg?.open && editingId !== this._lastEditingId) {
+      this._lastEditingId = editingId;
+      this._selectedTx = editing?.transmitter_entity_ids?.[0] ?? "";
       if (editing) {
-        if (this._nameEl && document.activeElement !== this._nameEl) {
-          this._nameEl.value = editing.name;
-        }
-        if (this._categoryEl && document.activeElement !== this._categoryEl) {
-          this._categoryEl.value = editing.category;
-        }
-        if (this._manufacturerEl && document.activeElement !== this._manufacturerEl) {
-          this._manufacturerEl.value = editing.manufacturer ?? "";
-        }
-        if (this._modelEl && document.activeElement !== this._modelEl) {
-          this._modelEl.value = editing.model ?? "";
-        }
+        if (this._nameEl) this._nameEl.value = editing.name;
+        if (this._categoryEl) this._categoryEl.value = editing.category;
+        if (this._manufacturerEl) this._manufacturerEl.value = editing.manufacturer ?? "";
+        if (this._modelEl) this._modelEl.value = editing.model ?? "";
       } else {
-        if (this._nameEl && document.activeElement !== this._nameEl) {
-          this._nameEl.value = "";
-        }
-        if (this._categoryEl && document.activeElement !== this._categoryEl) {
-          this._categoryEl.value = "fan";
-        }
-        if (this._manufacturerEl && document.activeElement !== this._manufacturerEl) {
-          this._manufacturerEl.value = "";
-        }
-        if (this._modelEl && document.activeElement !== this._modelEl) {
-          this._modelEl.value = "";
-        }
+        if (this._nameEl) this._nameEl.value = "";
+        if (this._categoryEl) this._categoryEl.value = "fan";
+        if (this._manufacturerEl) this._manufacturerEl.value = "";
+        if (this._modelEl) this._modelEl.value = "";
       }
-      void this._loadTransmitters(editing?.transmitter_entity_ids ?? null);
+      void this._loadTransmitters();
     }
   }
 
-  private async _loadTransmitters(selected: string[] | null): Promise<void> {
+  private async _loadTransmitters(): Promise<void> {
     this._txLoading = true;
     try {
       const { transmitters } = await api.transmitters();
       this._transmitters = transmitters ?? [];
-      // Sync the <select> with loaded options.
-      queueMicrotask(() => {
-        if (!this._txEl) return;
-        this._txEl.innerHTML = "";
-        if (!this._transmitters.length) {
-          const opt = document.createElement("option");
-          opt.value = "";
-          opt.textContent = "(no IR/RF emitters in HA)";
-          this._txEl.appendChild(opt);
-          return;
-        }
-        for (const t of this._transmitters) {
-          const opt = document.createElement("option");
-          opt.value = t.entity_id;
-          opt.textContent = `${t.entity_id} (${t.state})`;
-          if (selected && selected.includes(t.entity_id)) opt.selected = true;
-          this._txEl.appendChild(opt);
-        }
-      });
+      if (!this._selectedTx && this._transmitters.length > 0) {
+        this._selectedTx = this._transmitters[0]?.entity_id ?? "";
+      }
     } catch (err) {
       this._transmitters = [];
-      queueMicrotask(() => {
-        if (!this._txEl) return;
-        this._txEl.innerHTML = `<option>${(err as Error).message}</option>`;
-      });
+      this._err = (err as Error).message;
     } finally {
       this._txLoading = false;
     }
   }
 
+  private _onTxChange(ev: Event): void {
+    this._selectedTx = (ev.target as HTMLSelectElement).value;
+  }
+
   private _cancel(): void {
+    this._lastEditingId = null;
     store.closeDeviceDialog();
   }
 
@@ -188,14 +154,14 @@ export class RuneDeviceDialog extends LitElement {
     const editing = store.deviceDialog.editing;
     const name = this._nameEl?.value.trim() ?? "";
     const category = this._categoryEl?.value ?? "fan";
-    const tx = this._txEl?.value ?? "";
+    const tx = this._selectedTx;
     const manufacturer = this._manufacturerEl?.value.trim() ?? "";
     const model = this._modelEl?.value.trim() ?? "";
     if (!name) {
       this._err = "Name is required";
       return;
     }
-    if (!tx || tx.startsWith("(")) {
+    if (!tx) {
       this._err = "Pick a transmitter";
       return;
     }
@@ -216,6 +182,7 @@ export class RuneDeviceDialog extends LitElement {
         await api.createDevice(payload);
         store.pushToast("Created", "ok");
       }
+      this._lastEditingId = null;
       store.closeDeviceDialog();
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
@@ -224,6 +191,23 @@ export class RuneDeviceDialog extends LitElement {
     } finally {
       this._busy = false;
     }
+  }
+
+  private _renderTxOptions() {
+    if (this._txLoading) {
+      return html`<option value="" ?selected=${this._selectedTx === ""}>Loading…</option>`;
+    }
+    if (this._transmitters.length === 0) {
+      return html`<option value="" ?selected=${this._selectedTx === ""}>
+        (no IR/RF emitters in HA)
+      </option>`;
+    }
+    return this._transmitters.map(
+      (t) =>
+        html`<option value=${t.entity_id} ?selected=${this._selectedTx === t.entity_id}>
+          ${t.entity_id} (${t.state})
+        </option>`,
+    );
   }
 
   render() {
@@ -252,13 +236,14 @@ export class RuneDeviceDialog extends LitElement {
         <div class="form-row">
           <label for="tx">Transmitter</label>
           <div class="tx-row">
-            <select id="tx">
-              <option>${this._txLoading ? "Loading…" : "(empty)"}</option>
+            <select id="tx" @change=${this._onTxChange}>
+              ${this._renderTxOptions()}
             </select>
             <button
               class="secondary"
               type="button"
-              @click=${() => this._loadTransmitters(editing?.transmitter_entity_ids ?? null)}
+              @click=${this._loadTransmitters}
+              ?disabled=${this._txLoading}
             >
               ↻
             </button>

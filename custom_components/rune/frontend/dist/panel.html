@@ -9,6 +9,7 @@
       body {
         margin: 0;
         padding: 0;
+        height: 100%;
         min-height: 100vh;
         background: #1f1f1f;
         color: #e1e1e1;
@@ -504,7 +505,7 @@
                   </div>
                 `)}
       </div>
-    `}};W([L()],Le.prototype,`_tick`,void 0),Le=W([I(`rune-settings-view`)],Le);var Re=[`fan`,`climate`,`light`,`cover`,`media_player`,`switch`,`remote`],Q=class extends F{constructor(...e){super(...e),this._tick=0,this._txLoading=!1,this._transmitters=[],this._err=``,this._busy=!1,this._unsub=null}static{this.styles=[U,o`
+    `}};W([L()],Le.prototype,`_tick`,void 0),Le=W([I(`rune-settings-view`)],Le);var Re=[`fan`,`climate`,`light`,`cover`,`media_player`,`switch`,`remote`],Q=class extends F{constructor(...e){super(...e),this._tick=0,this._txLoading=!1,this._transmitters=[],this._selectedTx=``,this._err=``,this._busy=!1,this._unsub=null,this._lastEditingId=null}static{this.styles=[U,o`
       dialog {
         background: var(--card);
         color: var(--text);
@@ -548,9 +549,13 @@
         color: var(--danger);
         font-size: 12px;
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=V(()=>{let e=this._dlg?.open??!1;this._tick++,queueMicrotask(()=>{let t=this._dlg;t&&(z.deviceDialog.open&&!e?t.showModal():!z.deviceDialog.open&&e&&t.close())})})}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}updated(e){this._tick;let t=z.deviceDialog.editing;this._dlg?.open&&(t?(this._nameEl&&document.activeElement!==this._nameEl&&(this._nameEl.value=t.name),this._categoryEl&&document.activeElement!==this._categoryEl&&(this._categoryEl.value=t.category),this._manufacturerEl&&document.activeElement!==this._manufacturerEl&&(this._manufacturerEl.value=t.manufacturer??``),this._modelEl&&document.activeElement!==this._modelEl&&(this._modelEl.value=t.model??``)):(this._nameEl&&document.activeElement!==this._nameEl&&(this._nameEl.value=``),this._categoryEl&&document.activeElement!==this._categoryEl&&(this._categoryEl.value=`fan`),this._manufacturerEl&&document.activeElement!==this._manufacturerEl&&(this._manufacturerEl.value=``),this._modelEl&&document.activeElement!==this._modelEl&&(this._modelEl.value=``)),this._loadTransmitters(t?.transmitter_entity_ids??null))}async _loadTransmitters(e){this._txLoading=!0;try{let{transmitters:t}=await q.transmitters();this._transmitters=t??[],queueMicrotask(()=>{if(this._txEl){if(this._txEl.innerHTML=``,!this._transmitters.length){let e=document.createElement(`option`);e.value=``,e.textContent=`(no IR/RF emitters in HA)`,this._txEl.appendChild(e);return}for(let t of this._transmitters){let n=document.createElement(`option`);n.value=t.entity_id,n.textContent=`${t.entity_id} (${t.state})`,e&&e.includes(t.entity_id)&&(n.selected=!0),this._txEl.appendChild(n)}}})}catch(e){this._transmitters=[],queueMicrotask(()=>{this._txEl&&(this._txEl.innerHTML=`<option>${e.message}</option>`)})}finally{this._txLoading=!1}}_cancel(){z.closeDeviceDialog()}async _save(){this._err=``;let e=z.deviceDialog.editing,t=this._nameEl?.value.trim()??``,n=this._categoryEl?.value??`fan`,r=this._txEl?.value??``,i=this._manufacturerEl?.value.trim()??``,a=this._modelEl?.value.trim()??``;if(!t){this._err=`Name is required`;return}if(!r||r.startsWith(`(`)){this._err=`Pick a transmitter`;return}let o={name:t,category:n,transmitter:r,manufacturer:i,model:a,discrete_speed_count:n===`fan`?3:0};this._busy=!0;try{e?(await q.updateDevice({device_id:e.id,...o}),z.pushToast(`Updated`,`ok`)):(await q.createDevice(o),z.pushToast(`Created`,`ok`)),z.closeDeviceDialog();let{devices:t}=await q.list();z.setDevices(t??[])}catch(e){this._err=e.message}finally{this._busy=!1}}render(){let e=z.deviceDialog.editing;return E`
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=V(()=>{let e=this._dlg?.open??!1;this._tick++,queueMicrotask(()=>{let t=this._dlg;t&&(z.deviceDialog.open&&!e?t.showModal():!z.deviceDialog.open&&e&&t.close())})})}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}updated(e){this._tick;let t=z.deviceDialog.editing,n=t?.id??null;this._dlg?.open&&n!==this._lastEditingId&&(this._lastEditingId=n,this._selectedTx=t?.transmitter_entity_ids?.[0]??``,t?(this._nameEl&&(this._nameEl.value=t.name),this._categoryEl&&(this._categoryEl.value=t.category),this._manufacturerEl&&(this._manufacturerEl.value=t.manufacturer??``),this._modelEl&&(this._modelEl.value=t.model??``)):(this._nameEl&&(this._nameEl.value=``),this._categoryEl&&(this._categoryEl.value=`fan`),this._manufacturerEl&&(this._manufacturerEl.value=``),this._modelEl&&(this._modelEl.value=``)),this._loadTransmitters())}async _loadTransmitters(){this._txLoading=!0;try{let{transmitters:e}=await q.transmitters();this._transmitters=e??[],!this._selectedTx&&this._transmitters.length>0&&(this._selectedTx=this._transmitters[0]?.entity_id??``)}catch(e){this._transmitters=[],this._err=e.message}finally{this._txLoading=!1}}_onTxChange(e){this._selectedTx=e.target.value}_cancel(){this._lastEditingId=null,z.closeDeviceDialog()}async _save(){this._err=``;let e=z.deviceDialog.editing,t=this._nameEl?.value.trim()??``,n=this._categoryEl?.value??`fan`,r=this._selectedTx,i=this._manufacturerEl?.value.trim()??``,a=this._modelEl?.value.trim()??``;if(!t){this._err=`Name is required`;return}if(!r){this._err=`Pick a transmitter`;return}let o={name:t,category:n,transmitter:r,manufacturer:i,model:a,discrete_speed_count:n===`fan`?3:0};this._busy=!0;try{e?(await q.updateDevice({device_id:e.id,...o}),z.pushToast(`Updated`,`ok`)):(await q.createDevice(o),z.pushToast(`Created`,`ok`)),this._lastEditingId=null,z.closeDeviceDialog();let{devices:t}=await q.list();z.setDevices(t??[])}catch(e){this._err=e.message}finally{this._busy=!1}}_renderTxOptions(){return this._txLoading?E`<option value="" ?selected=${this._selectedTx===``}>Loading…</option>`:this._transmitters.length===0?E`<option value="" ?selected=${this._selectedTx===``}>
+        (no IR/RF emitters in HA)
+      </option>`:this._transmitters.map(e=>E`<option value=${e.entity_id} ?selected=${this._selectedTx===e.entity_id}>
+          ${e.entity_id} (${e.state})
+        </option>`)}render(){return E`
       <dialog id="dlg" @close=${()=>z.closeDeviceDialog()}>
-        <h2>${e?`Edit device`:`Add device`}</h2>
+        <h2>${z.deviceDialog.editing?`Edit device`:`Add device`}</h2>
         <div class="form-row">
           <label for="name">Name</label>
           <input id="name" placeholder="Bedroom fan" />
@@ -572,13 +577,14 @@
         <div class="form-row">
           <label for="tx">Transmitter</label>
           <div class="tx-row">
-            <select id="tx">
-              <option>${this._txLoading?`Loading…`:`(empty)`}</option>
+            <select id="tx" @change=${this._onTxChange}>
+              ${this._renderTxOptions()}
             </select>
             <button
               class="secondary"
               type="button"
-              @click=${()=>this._loadTransmitters(e?.transmitter_entity_ids??null)}
+              @click=${this._loadTransmitters}
+              ?disabled=${this._txLoading}
             >
               ↻
             </button>
@@ -592,7 +598,7 @@
           </button>
         </div>
       </dialog>
-    `}};W([L()],Q.prototype,`_tick`,void 0),W([L()],Q.prototype,`_txLoading`,void 0),W([L()],Q.prototype,`_transmitters`,void 0),W([L()],Q.prototype,`_err`,void 0),W([L()],Q.prototype,`_busy`,void 0),W([R(`#dlg`)],Q.prototype,`_dlg`,void 0),W([R(`#name`)],Q.prototype,`_nameEl`,void 0),W([R(`#category`)],Q.prototype,`_categoryEl`,void 0),W([R(`#manufacturer`)],Q.prototype,`_manufacturerEl`,void 0),W([R(`#model`)],Q.prototype,`_modelEl`,void 0),W([R(`#tx`)],Q.prototype,`_txEl`,void 0),Q=W([I(`rune-device-dialog`)],Q);var $=class extends F{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}static{this.styles=[U,o`
+    `}};W([L()],Q.prototype,`_tick`,void 0),W([L()],Q.prototype,`_txLoading`,void 0),W([L()],Q.prototype,`_transmitters`,void 0),W([L()],Q.prototype,`_selectedTx`,void 0),W([L()],Q.prototype,`_err`,void 0),W([L()],Q.prototype,`_busy`,void 0),W([R(`#dlg`)],Q.prototype,`_dlg`,void 0),W([R(`#name`)],Q.prototype,`_nameEl`,void 0),W([R(`#category`)],Q.prototype,`_categoryEl`,void 0),W([R(`#manufacturer`)],Q.prototype,`_manufacturerEl`,void 0),W([R(`#model`)],Q.prototype,`_modelEl`,void 0),Q=W([I(`rune-device-dialog`)],Q);var $=class extends F{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}static{this.styles=[U,o`
       dialog {
         background: var(--card);
         color: var(--text);
@@ -667,6 +673,8 @@
       :host {
         display: grid;
         grid-template-columns: 220px 1fr;
+        grid-template-rows: 100vh;
+        height: 100%;
         min-height: 100vh;
         background: var(--bg);
       }
@@ -674,6 +682,8 @@
         background: var(--bg-2);
         border-right: 1px solid var(--border);
         padding: 16px 0;
+        height: 100%;
+        overflow-y: auto;
       }
       .brand {
         padding: 0 20px 16px;
@@ -720,6 +730,7 @@
       main {
         padding: 24px;
         overflow-y: auto;
+        height: 100%;
         max-height: 100vh;
       }
     `]}connectedCallback(){super.connectedCallback(),this._unsub=V(()=>{this._tick++})}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}_select(e){z.setSection(e)}_renderSection(){switch(z.section){case`sniffer`:return E`<rune-sniffer-view></rune-sniffer-view>`;case`actions`:return E`<rune-actions-view></rune-actions-view>`;case`settings`:return E`<rune-settings-view></rune-settings-view>`;default:return E`<rune-devices-view></rune-devices-view>`}}render(){return this._tick,E`
