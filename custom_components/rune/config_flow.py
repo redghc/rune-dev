@@ -47,7 +47,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 CATEGORY_OPTIONS = [
-    selector.SelectOptionDict(value=c.value, label=c.value.title())
+    {"value": c.value, "label": c.value.title()}
     for c in (
         EntityCategory.FAN,
         EntityCategory.CLIMATE,
@@ -142,25 +142,21 @@ class RuneOptionsFlow(OptionsFlow):
             if selection == "manage_devices":
                 return await self.async_step_manage_devices()
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("action"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                selector.SelectOptionDict(
-                                    value="add_device", label="Add device"
-                                ),
-                                selector.SelectOptionDict(
-                                    value="manage_devices", label="Manage devices"
-                                ),
-                            ]
-                        )
-                    ),
-                }
-            ),
-        )
+            return self.async_show_form(
+                step_id="init",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required("action"): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    {"value": "add_device", "label": "Add device"},
+                                    {"value": "manage_devices", "label": "Manage devices"},
+                                ]
+                            )
+                        ),
+                    }
+                ),
+            )
 
     # ------------------------------------------------------------------
     # Add device wizard
