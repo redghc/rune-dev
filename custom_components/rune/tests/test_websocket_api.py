@@ -279,7 +279,12 @@ class TestRegistryShape:
             "list",
             "device/get",
             "device/create",
+            "device/update",
             "device/delete",
+            "command/learn",
+            "sniffer/list",
+            "sniffer/dismiss",
+            "action/list",
             "transmitter/list",
             "receiver/list",
         }

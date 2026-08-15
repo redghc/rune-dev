@@ -22,10 +22,14 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from custom_components.rune.const import WS_PREFIX
+from custom_components.rune.const import DOMAIN, WS_PREFIX
 from custom_components.rune.domain.errors import (
     ActionError,
+    CaptureError,
+    CaptureProviderUnavailableError,
+    CaptureTimeoutError,
     CommandNotLearnedError,
+    UnsupportedHardwareError,
 )
 from custom_components.rune.domain.models import RuneDevice
 
@@ -241,6 +245,276 @@ async def _ws_device_delete(
         raise ActionError("device_id is required")
     removed = await (await ctx.device_repository()).delete(device_id)
     return {"removed": removed}
+
+
+@_register("device/update")
+async def _ws_device_update(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Update an existing RuneDevice.
+
+    Fields the SPA sends as kwargs (any subset):
+
+    - ``device_id`` (required)
+    - ``name``, ``manufacturer``, ``model``
+    - ``transmitter_entity_ids`` (list, replaces existing)
+    - ``receiver_entity_ids`` (list, replaces existing)
+    - ``discrete_speed_count`` (int)
+    - ``power_sensor_entity_id``, ``power_off_below_w``, ``power_on_above_w``
+    """
+    from custom_components.rune.domain.models import RuneDevice
+
+    device_id = msg.get("device_id")
+    if not device_id:
+        raise ActionError("device_id is required")
+
+    repo = await ctx.device_repository()
+    device = await repo.get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+
+    updated = RuneDevice(
+        id=device.id,
+        name=msg.get("name", device.name),
+        category=device.category,
+        manufacturer=msg.get("manufacturer", device.manufacturer),
+        model=msg.get("model", device.model),
+        transmitter_entity_ids=msg.get(
+            "transmitter_entity_ids", device.transmitter_entity_ids
+        ),
+        receiver_entity_ids=msg.get(
+            "receiver_entity_ids", device.receiver_entity_ids
+        ),
+        speed_mode=device.speed_mode,
+        discrete_speed_count=int(
+            msg.get("discrete_speed_count", device.discrete_speed_count)
+        ),
+        power_sensor_entity_id=msg.get(
+            "power_sensor_entity_id", device.power_sensor_entity_id
+        ),
+        power_off_below_w=msg.get("power_off_below_w", device.power_off_below_w),
+        power_on_above_w=msg.get("power_on_above_w", device.power_on_above_w),
+        temperature_sensor_entity_id=device.temperature_sensor_entity_id,
+        humidity_sensor_entity_id=device.humidity_sensor_entity_id,
+        climate_matrix=device.climate_matrix,
+        commands=device.commands,
+        actions=device.actions,
+        version=device.version,
+        created_at=device.created_at,
+        updated_at=device.updated_at,
+    )
+    await repo.upsert(updated)
+    return {"device": updated.to_dict()}
+
+
+@_register("command/learn")
+async def _ws_command_learn(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Start a learn session for a (device_id, command_key) pair.
+
+    Blocks until the capture completes or times out. Returns the
+    raw timings captured so the SPA can show them and the caller can
+    persist the new PulseCommand via ``rune/device/update``.
+
+    Required fields:
+
+    - ``device_id`` — id of the device.
+    - ``command_key`` — which command to fill in.
+    - ``timeout_s`` — optional, default 15.
+    """
+
+    device_id = msg.get("device_id")
+    command_key = msg.get("command_key")
+    if not device_id or not command_key:
+        raise ActionError("device_id and command_key are required")
+
+    orchestrator = ctx.hass.data.get(DOMAIN, {}).get(
+        next(iter(ctx.hass.data.get(DOMAIN, {})), {}), {}
+    ).get("capture_orchestrator")
+    if orchestrator is None:
+        # Fall back: look across all entries
+        for entry_data in ctx.hass.data.get(DOMAIN, {}).values():
+            if isinstance(entry_data, dict) and "capture_orchestrator" in entry_data:
+                orchestrator = entry_data["capture_orchestrator"]
+                break
+
+    if orchestrator is None:
+        raise UnsupportedHardwareError(
+            "No capture orchestrator registered; restart HA"
+        )
+
+    device = await (await ctx.device_repository()).get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+
+    # Pick the first RF receiver attached to the device, else any
+    # known receiver from HA. Phase 7 will pick based on signal
+    # transport category.
+    from custom_components.rune.adapters.capture.providers import NativeIRCaptureProvider
+
+    receiver_entity_id = (
+        device.receiver_entity_ids[0]
+        if device.receiver_entity_ids
+        else _list_receiver_entities(ctx.hass)[0]["entity_id"]
+        if _list_receiver_entities(ctx.hass)
+        else None
+    )
+    if not receiver_entity_id:
+        raise CaptureProviderUnavailableError(
+            "No IR/RF receiver configured for this device"
+        )
+
+    provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
+
+    timeout_s = float(msg.get("timeout_s", 15.0))
+    try:
+        await orchestrator.start_capture(
+            provider,
+            session_id=f"{device_id}.{command_key}",
+            timeout_s=timeout_s,
+        )
+    except Exception as err:
+        if isinstance(err, (CaptureError, CaptureTimeoutError)):
+            raise ActionError(f"Capture failed: {err}") from err
+        raise
+
+    # Block until the result lands.
+    import asyncio
+
+    deadline = asyncio.get_event_loop().time() + timeout_s + 1
+    while asyncio.get_event_loop().time() < deadline:
+        result = orchestrator.get_session_result(f"{device_id}.{command_key}")
+        if result is not None:
+            return {
+                "captured": result.to_dict(),
+                "raw_timings": list(result.raw_timings),
+                "carrier_frequency_hz": result.signal_category.carrier_frequency_hz,
+            }
+        await asyncio.sleep(0.1)
+    raise ActionError("Capture timed out without a result")
+
+
+@_register("sniffer/list")
+async def _ws_sniffer_list(
+    ctx: RuneWebSocketContext, _msg: dict[str, Any]
+) -> dict[str, Any]:
+    """List every unknown remote and its signals.
+
+    Used by the SPA's Sniffer tab to show what the engine has caught.
+    """
+    repo = ctx.hass.data.get(DOMAIN, {})
+    if not repo:
+        return {"remotes": []}
+
+    # Find the first signal repository across all entries.
+    signal_repo = None
+    for entry_data in repo.values():
+        if isinstance(entry_data, dict):
+            signal_repo = entry_data.get("signal_repository")
+            if signal_repo is not None:
+                break
+
+    if signal_repo is None:
+        return {"remotes": []}
+
+    remotes = await signal_repo.load_remotes()
+    return {
+        "remotes": [
+            {
+                "id": r.id,
+                "label": r.label,
+                "protocol_label": r.protocol_label,
+                "device_address": r.device_address,
+                "dismissed": r.dismissed,
+                "signal_count": len(r.signals),
+                "signals": [
+                    {
+                        "id": s.id,
+                        "fingerprint": s.fingerprint,
+                        "byte_hash": s.byte_hash,
+                        "decoded_fingerprint": s.decoded_fingerprint,
+                        "protocol_label": s.protocol_label,
+                        "code_hex": s.code_hex,
+                        "hit_count": s.hit_count,
+                        "first_seen": s.first_seen,
+                        "last_seen": s.last_seen,
+                        "alias": s.alias,
+                    }
+                    for s in r.signals
+                ],
+            }
+            for r in remotes
+        ]
+    }
+
+
+@_register("sniffer/dismiss")
+async def _ws_sniffer_dismiss(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Dismiss a remote so it stops appearing in the Sniffer tab."""
+    remote_id = msg.get("remote_id")
+    if not remote_id:
+        raise ActionError("remote_id is required")
+
+    repo = ctx.hass.data.get(DOMAIN, {})
+    signal_repo = None
+    for entry_data in repo.values():
+        if isinstance(entry_data, dict):
+            signal_repo = entry_data.get("signal_repository")
+            if signal_repo is not None:
+                break
+    if signal_repo is None:
+        raise ActionError("Sniffer not wired")
+
+    remotes = await signal_repo.load_remotes()
+    for remote in remotes:
+        if remote.id == remote_id:
+            from dataclasses import replace
+
+            updated = replace(remote, dismissed=not remote.dismissed)
+            await signal_repo.upsert_remote(updated)
+            return {"dismissed": updated.dismissed}
+
+    raise CommandNotLearnedError(f"Unknown remote {remote_id!r}")
+
+
+@_register("action/list")
+async def _ws_action_list(
+    ctx: RuneWebSocketContext, _msg: dict[str, Any]
+) -> dict[str, Any]:
+    """List every action binding."""
+    from custom_components.rune.adapters.storage.memory import (
+        InMemoryActionRepository,
+    )
+
+    # The action store is built per-entry. Walk the hass.data to
+    # collect every entry's actions and merge them.
+    actions: list[dict[str, Any]] = []
+    for entry_data in ctx.hass.data.get(DOMAIN, {}).values():
+        if not isinstance(entry_data, dict):
+            continue
+        action_repo = entry_data.get("action_repository")
+        if action_repo is None:
+            continue
+        loaded = await action_repo.load()
+        actions.extend(a.to_dict() for a in loaded)
+
+    # Stub an empty repo to use the to_dict path uniformly even
+    # when no actions are stored (tests / first boot).
+    if not actions:
+        InMemoryActionRepository()
+
+    return {"actions": actions}
+
+
+@_register("transmitter/list")
+async def _ws_transmitter_list(
+    ctx: RuneWebSocketContext, _msg: dict[str, Any]
+) -> dict[str, Any]:
+    """List every HA entity that can act as a transmitter."""
+    return {"transmitters": _list_transmitter_entities(ctx.hass)}
 
 
 @_register("transmitter/list")

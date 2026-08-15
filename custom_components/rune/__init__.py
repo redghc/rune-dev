@@ -72,7 +72,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-__version__ = "0.2.9"
+__version__ = "0.3.0"
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,18 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
         # Refreshed on every entry reload and on every successful
         # ``rune.device/create`` call.
         "_flow_devices_cache": [],
+        # The capture orchestrator + sniffer engine are wired per-entry
+        # so the Learn command button in the SPA can drive a capture
+        # session, and so the Sniffer tab has live data.
+        "capture_orchestrator": None,  # populated below
+        "sniffer_engine": None,         # populated below
     }
+
+    # 2.5. Wire the sniffer engine + capture orchestrator. We do this
+    #      before forwarding to platforms so any capture triggered
+    #      during platform setup (rare, but possible) lands in the
+    #      store before the SPA's first render.
+    await _start_capture_pipeline(hass, entry, coordinator)
 
     # 3. Forward to each platform. HA instantiates the platform module
     #    on demand; the module's ``async_setup_entry`` builds entities.
@@ -156,6 +167,88 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
     await _register_panel(hass, entry)
 
     return True
+
+
+async def _start_capture_pipeline(
+    hass: Any, entry: Any, coordinator: Any
+) -> None:
+    """Wire the capture orchestrator + sniffer engine for this entry.
+
+    The orchestrator drives one-shot captures (Learn command). The
+    sniffer engine subscribes to every known receiver and feeds
+    arriving signals into the signal store. Both are stored on the
+    entry data so the SPA + WS commands can reach them.
+    """
+    from custom_components.rune.adapters.capture.orchestrator import (
+        CaptureOrchestrator,
+    )
+    from custom_components.rune.adapters.receivers.factory import (
+        select_receiver,
+    )
+    from custom_components.rune.sniffer.engine import SnifferEngine
+    from custom_components.rune.sniffer.mirror import MirrorLog
+
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+
+    # ---- Capture orchestrator ----
+    orchestrator = CaptureOrchestrator(hass)
+    entry_data["capture_orchestrator"] = orchestrator
+
+    # ---- Mirror log shared by the sniffer + the TX gate ----
+    mirror = MirrorLog()
+    coordinator._tx_gate._mirror = mirror  # share with the TX gate
+
+    # ---- Sniffer engine ----
+    repo = entry_data["signal_repository"]
+    sniffer = SnifferEngine(repository=repo, mirror=mirror)
+
+    # Subscribe to every receiver configured on every device.
+    devices = await entry_data["device_repository"].load()
+    receivers: list[Any] = []
+    for device in devices:
+        for receiver_id in device.receiver_entity_ids:
+            try:
+                receiver = select_receiver(hass, receiver_id, transport=None)
+            except Exception as err:
+                _LOGGER.debug(
+                    "rune: skipping receiver %s (%s)", receiver_id, err
+                )
+                continue
+            receivers.append(receiver)
+
+    # Also scan the HA state machine for any entity registered as an
+    # IR/RF receiver (so the sniffer works even before the user has
+    # configured receivers on devices).
+    for state in hass.states.async_all():
+        domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
+        if domain not in ("infrared", "esphome"):
+            continue
+        # Skip if we already subscribed to this id.
+        if any(r.receiver_entity_id == state.entity_id for r in receivers):
+            continue
+        try:
+            transport = None  # let the factory infer IR vs RF
+            receiver = select_receiver(hass, state.entity_id, transport=transport)
+        except Exception as err:
+            _LOGGER.debug(
+                "rune: skipping auto-discovered receiver %s (%s)",
+                state.entity_id,
+                err,
+            )
+            continue
+        receivers.append(receiver)
+
+    if receivers:
+        try:
+            await sniffer.start(receivers)
+        except Exception as err:
+            _LOGGER.warning("rune: sniffer engine failed to start: %s", err)
+
+    entry_data["sniffer_engine"] = sniffer
+    _LOGGER.info(
+        "rune: capture pipeline ready (orchestrator + sniffer with %d receiver(s))",
+        len(receivers),
+    )
 
 
 async def _register_panel(hass: Any, entry: Any) -> None:
@@ -260,7 +353,7 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             sidebar_title=PANEL_TITLE,
             sidebar_icon=PANEL_ICON,
             frontend_url_path=PANEL_URL,
-            config={"entry_id": entry.entry_id},
+            config={"entry_id": entry.entry_id, "version": __version__},
             require_admin=False,  # MVP: every user can manage devices
             embed_iframe=False,
             trust_external=False,
@@ -292,6 +385,15 @@ async def async_unload_entry(hass: Any, entry: Any) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, platforms_list)
     if not unloaded:
         return False
+
+    # Stop the sniffer engine (it owns subscriptions we need to drop).
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    sniffer = entry_data.get("sniffer_engine")
+    if sniffer is not None:
+        try:
+            await sniffer.stop()
+        except Exception as err:
+            _LOGGER.debug("rune: sniffer stop failed: %s", err)
 
     # Remove the entry's data.
     hass.data[DOMAIN].pop(entry.entry_id, None)

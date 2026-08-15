@@ -23,6 +23,13 @@ class RunePanel extends HTMLElement {
 
   setConfig(config) {
     this._config = config || {};
+    // Mirror the version into the iframe URL so SPA users always
+    // load the bundle matching the integration version (cache-bust).
+    if (this._iframe) this._iframe.src = this._iframe.src.split("?")[0] + "?v=" + (this._version || Date.now());
+  }
+
+  set panelVersion(version) {
+    this._version = version || "0";
   }
 
   connectedCallback() {
@@ -45,7 +52,7 @@ class RunePanel extends HTMLElement {
     wrap.appendChild(errorEl);
 
     const iframe = document.createElement("iframe");
-    iframe.src = "/rune/panel.html";
+    iframe.src = "/rune/panel.html?v=" + (this._version || Date.now());
     iframe.style.cssText = "width:100%;height:100%;border:0;display:block;flex:1;";
     iframe.title = "RUNE";
     iframe.addEventListener("error", () => {

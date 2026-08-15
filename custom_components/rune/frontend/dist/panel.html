@@ -8,110 +8,265 @@
     :root {
       --primary: #03a9f4;
       --bg: #1f1f1f;
+      --bg-2: #252525;
       --card: #2c2c2c;
       --text: #e1e1e1;
-      --muted: #999;
+      --muted: #9aa0a6;
       --border: #3a3a3a;
       --danger: #f44336;
       --ok: #4caf50;
+      --warn: #ff9800;
     }
+    * { box-sizing: border-box; }
     body {
       font-family: Roboto, "Helvetica Neue", sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 24px;
-      max-width: 920px;
-      margin: 0 auto;
+      margin: 0; padding: 0;
+      min-height: 100vh;
     }
-    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 400; }
-    h2 { margin: 24px 0 12px; font-size: 18px; font-weight: 500; color: var(--muted); }
-    .subtitle { color: var(--muted); margin-bottom: 24px; }
-    .toolbar {
-      display: flex; gap: 8px; margin-bottom: 16px; align-items: center;
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
     }
+    nav {
+      background: var(--bg-2);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    .brand {
+      padding: 0 20px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 500; }
+    .brand .pill {
+      display: inline-block; padding: 1px 6px; border-radius: 8px;
+      background: var(--bg); color: var(--muted); font-size: 10px;
+      border: 1px solid var(--border); margin-left: 4px;
+    }
+    .nav-item {
+      display: block; padding: 10px 20px; color: var(--muted);
+      text-decoration: none; cursor: pointer; border: 0; background: transparent;
+      width: 100%; text-align: left; font: inherit;
+    }
+    .nav-item:hover { background: var(--bg); color: var(--text); }
+    .nav-item.active { background: var(--bg); color: var(--primary); border-left: 3px solid var(--primary); }
+    main { padding: 24px; overflow-y: auto; max-height: 100vh; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
     .toolbar .grow { flex: 1; }
     button {
-      background: var(--primary); color: white; border: 0; padding: 8px 16px;
-      border-radius: 4px; cursor: pointer; font-size: 14px; font-family: inherit;
+      background: var(--primary); color: white; border: 0; padding: 8px 14px;
+      border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px;
     }
     button.secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
     button.danger { background: var(--danger); }
+    button.warn { background: var(--warn); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    input, select {
+    input, select, textarea {
       background: var(--card); color: var(--text); border: 1px solid var(--border);
-      padding: 8px; border-radius: 4px; font-size: 14px; font-family: inherit;
+      padding: 8px; border-radius: 4px; font: inherit; font-size: 13px;
+      width: 100%;
     }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
     .empty {
-      text-align: center; padding: 48px; color: var(--muted);
+      text-align: center; padding: 60px 20px; color: var(--muted);
       border: 2px dashed var(--border); border-radius: 8px;
     }
     .device {
-      background: var(--card); border-radius: 8px; padding: 16px; margin-bottom: 12px;
-      border: 1px solid var(--border);
+      background: var(--card); border-radius: 8px; padding: 16px;
+      margin-bottom: 12px; border: 1px solid var(--border);
     }
-    .device h3 { margin: 0 0 4px; font-size: 18px; }
-    .device .meta { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .device-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 12px; gap: 8px;
+    }
+    .device h3 { margin: 0 0 4px; font-size: 16px; font-weight: 500; }
+    .device .meta { color: var(--muted); font-size: 12px; }
+    .device .actions { display: flex; gap: 4px; }
+    .device .actions button { padding: 4px 10px; font-size: 12px; }
     .commands {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 6px;
     }
     .cmd {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-      padding: 8px; cursor: pointer; font-family: inherit; color: var(--text);
-      font-size: 13px; text-align: center; transition: background 0.1s;
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px;
+      padding: 8px; cursor: pointer; font: inherit; color: var(--text);
+      font-size: 12px; text-align: center; transition: all 0.1s;
     }
     .cmd:hover { background: var(--primary); color: white; border-color: var(--primary); }
     .cmd:active { transform: scale(0.97); }
-    .flash { background: var(--ok) !important; color: white !important; }
+    .cmd.flash { background: var(--ok) !important; color: white !important; }
+    .cmd .learn {
+      display: block; font-size: 10px; color: var(--muted); margin-top: 4px;
+    }
+    .cmd:hover .learn { color: rgba(255,255,255,0.7); }
     .toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
       background: var(--card); border: 1px solid var(--border); padding: 12px 20px;
-      border-radius: 8px; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+      border-radius: 8px; opacity: 0; transition: opacity 0.2s;
+      pointer-events: none; z-index: 1000; max-width: 80%;
     }
     .toast.show { opacity: 1; }
+    .toast.err { border-color: var(--danger); color: #ff8a80; }
+    .toast.ok { border-color: var(--ok); color: #b9f6ca; }
     dialog {
       background: var(--card); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 24px; min-width: 360px;
+      border-radius: 8px; padding: 24px; min-width: 420px; max-width: 90vw;
     }
     dialog::backdrop { background: rgba(0,0,0,0.6); }
     .form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .form-row label { font-size: 12px; color: var(--muted); }
-    .form-row input, .form-row select { width: 100%; }
     .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
     .tx-row { display: flex; gap: 4px; align-items: center; }
     .tx-row select { flex: 1; }
-    .toast.err { border-color: var(--danger); }
-    .pill {
-      display: inline-block; padding: 2px 8px; border-radius: 12px;
-      background: var(--bg); color: var(--muted); font-size: 11px;
-      border: 1px solid var(--border); margin-left: 8px;
+    .badge {
+      display: inline-block; padding: 1px 8px; border-radius: 10px;
+      background: var(--bg-2); color: var(--muted); font-size: 11px;
+      border: 1px solid var(--border); margin-left: 6px;
     }
+    .badge.protocol { color: var(--primary); border-color: var(--primary); }
+    .signal-card {
+      background: var(--card); border-radius: 6px; padding: 10px;
+      margin-bottom: 6px; border: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .signal-card .info { font-size: 13px; }
+    .signal-card .meta { color: var(--muted); font-size: 11px; }
+    .remote-card {
+      background: var(--card); border-radius: 8px; padding: 12px;
+      margin-bottom: 12px; border: 1px solid var(--border);
+    }
+    .remote-card h4 { margin: 0 0 8px; font-size: 14px; }
+    .remote-card.dismissed { opacity: 0.5; }
+    .action-card {
+      background: var(--card); border-radius: 6px; padding: 10px;
+      margin-bottom: 6px; border: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px;
+    }
+    .stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .stat-card .value { font-size: 24px; font-weight: 500; }
+    .status-dot {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      margin-right: 6px; background: var(--muted);
+    }
+    .status-dot.ok { background: var(--ok); }
+    .status-dot.err { background: var(--danger); }
+    pre {
+      background: var(--bg-2); padding: 8px; border-radius: 4px;
+      font-size: 11px; overflow-x: auto;
+    }
+    .help {
+      background: var(--bg-2); border-left: 3px solid var(--primary);
+      padding: 10px 14px; border-radius: 4px; font-size: 12px;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .help code { background: var(--bg); padding: 1px 5px; border-radius: 3px; }
   </style>
 </head>
 <body>
-  <h1>RUNE <span class="pill">v0.2</span></h1>
-  <div class="subtitle">Remote Universal Network Engine — your IR + RF devices</div>
+  <div class="layout">
+    <nav>
+      <div class="brand">
+        <h1>RUNE <span class="pill" id="version-pill">v0</span></h1>
+      </div>
+      <button class="nav-item active" data-section="devices">Devices</button>
+      <button class="nav-item" data-section="sniffer">Sniffer</button>
+      <button class="nav-item" data-section="actions">Actions</button>
+      <button class="nav-item" data-section="settings">Settings</button>
+    </nav>
+    <main>
+      <!-- ====== DEVICES ====== -->
+      <section id="section-devices">
+        <div class="toolbar">
+          <h2 style="margin: 0; font-weight: 400;">Devices</h2>
+          <span class="grow"></span>
+          <button id="add-device-btn">+ Add device</button>
+          <button id="refresh-devices-btn" class="secondary">Refresh</button>
+        </div>
+        <div id="devices-list"></div>
+      </section>
 
-  <div class="toolbar">
-    <button id="add-btn">+ Add device</button>
-    <button id="refresh-btn" class="secondary">Refresh</button>
-    <span class="grow"></span>
-    <span id="status" style="color: var(--muted); font-size: 12px;"></span>
+      <!-- ====== SNIFFER ====== -->
+      <section id="section-sniffer" style="display:none;">
+        <div class="toolbar">
+          <h2 style="margin: 0; font-weight: 400;">Sniffer</h2>
+          <span class="grow"></span>
+          <button id="refresh-sniffer-btn" class="secondary">Refresh</button>
+        </div>
+        <div class="help">
+          Live signals captured from every receiver you've configured. The
+          sniffer listens on each receiver entity automatically once you add
+          a device. Assign a signal to a device command via the
+          <code>Actions</code> tab, or dismiss the whole remote here.
+        </div>
+        <div id="sniffer-list"></div>
+      </section>
+
+      <!-- ====== ACTIONS ====== -->
+      <section id="section-actions" style="display:none;">
+        <div class="toolbar">
+          <h2 style="margin: 0; font-weight: 400;">Actions</h2>
+          <span class="grow"></span>
+        </div>
+        <div class="help">
+          Action bindings connect a captured signal to a side-effect:
+          fire a pulse on a device, call a service, activate a scene, run
+          a script, or fire an event. Bindings are managed programmatically
+          (the API is stable; a UI editor lands in v0.4).
+        </div>
+        <div id="actions-list"></div>
+      </section>
+
+      <!-- ====== SETTINGS ====== -->
+      <section id="section-settings" style="display:none;">
+        <h2 style="margin: 0 0 16px; font-weight: 400;">Settings</h2>
+        <div class="status-grid">
+          <div class="stat-card">
+            <div class="label">Integration</div>
+            <div class="value" style="font-size:18px;">RUNE</div>
+            <div class="meta" id="stat-version" style="margin-top:6px;"></div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Devices</div>
+            <div class="value" id="stat-devices">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Sniffer signals</div>
+            <div class="value" id="stat-signals">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Action bindings</div>
+            <div class="value" id="stat-actions">—</div>
+          </div>
+        </div>
+        <h3 style="margin-top:24px;">Available transmitters</h3>
+        <div id="settings-transmitters" class="status-grid"></div>
+        <h3 style="margin-top:24px;">Available receivers</h3>
+        <div id="settings-receivers" class="status-grid"></div>
+      </section>
+    </main>
   </div>
-
-  <div id="list"></div>
 
   <div id="toast" class="toast"></div>
 
-  <dialog id="add-dialog">
-    <h2 style="margin: 0 0 16px;">Add device</h2>
+  <!-- ====== DIALOGS ====== -->
+  <dialog id="device-dialog">
+    <h2 id="device-dialog-title" style="margin: 0 0 16px;">Add device</h2>
+    <input type="hidden" id="device-id">
     <div class="form-row">
-      <label for="add-name">Name</label>
-      <input id="add-name" placeholder="Bedroom fan">
+      <label for="device-name">Name</label>
+      <input id="device-name" placeholder="Bedroom fan">
     </div>
     <div class="form-row">
-      <label for="add-category">Category</label>
-      <select id="add-category">
+      <label for="device-category">Category</label>
+      <select id="device-category">
         <option value="fan">Fan</option>
         <option value="climate">Climate</option>
         <option value="light">Light</option>
@@ -122,84 +277,134 @@
       </select>
     </div>
     <div class="form-row">
-      <label for="add-tx">Transmitter entity</label>
+      <label for="device-manufacturer">Manufacturer (optional)</label>
+      <input id="device-manufacturer" placeholder="Broadlink, ESPHome, ...">
+    </div>
+    <div class="form-row">
+      <label for="device-model">Model (optional)</label>
+      <input id="device-model" placeholder="RM4 Pro, FRM97, ...">
+    </div>
+    <div class="form-row">
+      <label for="device-tx">Transmitter</label>
       <div class="tx-row">
-        <select id="add-tx"><option>Loading…</option></select>
-        <button id="refresh-tx" class="secondary" type="button">↻</button>
+        <select id="device-tx"><option>Loading…</option></select>
+        <button id="refresh-tx-btn" class="secondary" type="button">↻</button>
       </div>
     </div>
-    <div id="add-error" style="color: var(--danger); font-size: 12px;"></div>
+    <div id="device-dialog-error" style="color: var(--danger); font-size: 12px;"></div>
     <div class="dialog-actions">
-      <button class="secondary" type="button" id="add-cancel">Cancel</button>
-      <button type="button" id="add-save">Save</button>
+      <button class="secondary" type="button" id="device-cancel-btn">Cancel</button>
+      <button type="button" id="device-save-btn">Save</button>
+    </div>
+  </dialog>
+
+  <dialog id="learn-dialog">
+    <h2 style="margin: 0 0 16px;">Learn command</h2>
+    <input type="hidden" id="learn-device-id">
+    <input type="hidden" id="learn-command-key">
+    <div class="help">
+      Point your remote at the receiver and press the button you want to
+      capture. RUNE records the raw timings and writes them into the
+      command slot.
+    </div>
+    <div class="form-row">
+      <label>Command</label>
+      <div><strong id="learn-target">—</strong></div>
+    </div>
+    <div class="form-row">
+      <label>Status</label>
+      <div id="learn-status" style="font-family: monospace;">Idle</div>
+    </div>
+    <div class="form-row">
+      <label>Captured timings</label>
+      <pre id="learn-timings" style="max-height:120px;">—</pre>
+    </div>
+    <div class="dialog-actions">
+      <button class="secondary" type="button" id="learn-cancel-btn">Cancel</button>
+      <button type="button" id="learn-start-btn">Start learn</button>
+      <button type="button" id="learn-save-btn" disabled>Save & close</button>
     </div>
   </dialog>
 
   <script>
-    // ----- RUNE <-> HA bridge (iframe postMessage) -----
-    // The SPA runs inside an iframe whose parent is the HA frontend.
-    // HA WebSocket APIs aren't directly available here, so the parent
-    // provides a bridge: we post { type:"rune-bridge", kind, ... } and
-    // get back { type:"rune-bridge-result", id, result|error }.
+    // ===== RUNE <-> HA bridge =====
+    // Runs inside an iframe whose parent is the HA frontend. We
+    // can't call hass.callWS directly here, so the parent shim
+    // bridges every call via postMessage.
     const _pending = new Map();
     let _nextId = 1;
 
     window.addEventListener("message", (event) => {
       const data = event.data || {};
       if (data.type !== "rune-bridge-result") return;
-      const resolver = _pending.get(data.id);
-      if (!resolver) return;
+      const r = _pending.get(data.id);
+      if (!r) return;
       _pending.delete(data.id);
-      if (data.error) resolver.reject(new Error(data.error));
-      else resolver.resolve(data.result);
+      if (data.error) r.reject(new Error(data.error));
+      else r.resolve(data.result);
     });
 
     function bridgeCall(kind, payload) {
       const id = _nextId++;
-      window.parent.postMessage({ type: "rune-bridge", kind, id, ...payload }, "*");
-      return new Promise((resolve, reject) => {
-        _pending.set(id, { resolve, reject });
-      });
+      window.parent.postMessage(
+        { type: "rune-bridge", kind, id, ...payload },
+        "*"
+      );
+      return new Promise((resolve, reject) => _pending.set(id, { resolve, reject }));
     }
 
     const ws = {
       list: () => bridgeCall("ws", { message: { type: "rune/list" } }),
-      getDevice: (id) => bridgeCall("ws", { message: { type: "rune/device/get", device_id: id } }),
-      deleteDevice: (id) => bridgeCall("ws", { message: { type: "rune/device/delete", device_id: id } }),
-      transmitters: () => bridgeCall("ws", { message: { type: "rune/transmitter/list" } }),
-      receivers: () => bridgeCall("ws", { message: { type: "rune/receiver/list" } }),
-      createDevice: (payload) => bridgeCall("ws", {
-        message: { type: "rune/device/create", ...payload },
-      }),
-      sendCommand: (device_id, command_key) => bridgeCall("service", {
-        domain: "rune",
-        service: "send_command",
-        service_data: { device_id, command_key },
-      }),
+      getDevice: (id) =>
+        bridgeCall("ws", { message: { type: "rune/device/get", device_id: id } }),
+      createDevice: (payload) =>
+        bridgeCall("ws", { message: { type: "rune/device/create", ...payload } }),
+      updateDevice: (payload) =>
+        bridgeCall("ws", { message: { type: "rune/device/update", ...payload } }),
+      deleteDevice: (id) =>
+        bridgeCall("ws", { message: { type: "rune/device/delete", device_id: id } }),
+      learnCommand: (payload) =>
+        bridgeCall("ws", {
+          message: { type: "rune/command/learn", ...payload },
+        }),
+      listSniffer: () =>
+        bridgeCall("ws", { message: { type: "rune/sniffer/list" } }),
+      dismissRemote: (remote_id) =>
+        bridgeCall("ws", { message: { type: "rune/sniffer/dismiss", remote_id } }),
+      listActions: () =>
+        bridgeCall("ws", { message: { type: "rune/action/list" } }),
+      transmitters: () =>
+        bridgeCall("ws", { message: { type: "rune/transmitter/list" } }),
+      receivers: () =>
+        bridgeCall("ws", { message: { type: "rune/receiver/list" } }),
+      sendCommand: (device_id, command_key) =>
+        bridgeCall("service", {
+          domain: "rune",
+          service: "send_command",
+          service_data: { device_id, command_key },
+        }),
     };
 
-    // ----- Toast -----
+    // ===== UI helpers =====
     const toastEl = document.getElementById("toast");
     let toastTimer;
-    function toast(msg, err) {
+    function toast(msg, kind) {
       toastEl.textContent = msg;
-      toastEl.classList.toggle("err", !!err);
+      toastEl.classList.remove("err", "ok");
+      if (kind === "err") toastEl.classList.add("err");
+      if (kind === "ok") toastEl.classList.add("ok");
       toastEl.classList.add("show");
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
     }
-
-    // ----- Render -----
-    const listEl = document.getElementById("list");
 
     function el(tag, attrs, children) {
       const node = document.createElement(tag);
       if (attrs) {
         for (const [k, v] of Object.entries(attrs)) {
           if (k === "class") node.className = v;
-          else if (k === "on") {
-            for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
-          } else if (k === "html") node.innerHTML = v;
+          else if (k === "on") for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
+          else if (k === "html") node.innerHTML = v;
           else node.setAttribute(k, v);
         }
       }
@@ -207,100 +412,157 @@
       return node;
     }
 
+    // ===== Navigation =====
+    document.querySelectorAll(".nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const section = btn.dataset.section;
+        for (const s of ["devices", "sniffer", "actions", "settings"]) {
+          document.getElementById("section-" + s).style.display = s === section ? "" : "none";
+        }
+        if (section === "sniffer") loadSniffer();
+        if (section === "actions") loadActions();
+        if (section === "settings") loadSettings();
+      });
+    });
+
+    // ===== DEVICES =====
+    let _devices = [];
+
     async function loadDevices() {
-      document.getElementById("status").textContent = "Loading…";
       try {
         const { devices } = await ws.list();
-        render(devices);
-        document.getElementById("status").textContent =
-          devices.length === 0 ? "No devices yet" : `${devices.length} device(s)`;
-      } catch (err) {
-        toast("Failed to load devices: " + err.message, true);
-      }
+        _devices = devices || [];
+        renderDevices();
+        updateStats();
+      } catch (err) { toast("Load devices: " + err.message, "err"); }
     }
 
-    function render(devices) {
-      listEl.innerHTML = "";
-      if (!devices.length) {
-        listEl.appendChild(el("div", { class: "empty" }, [
-          document.createTextNode("No devices yet. Click + Add device to create one."),
+    function renderDevices() {
+      const list = document.getElementById("devices-list");
+      list.innerHTML = "";
+      if (!_devices.length) {
+        list.appendChild(el("div", { class: "empty" }, [
+          el("div", {}, [document.createTextNode("No devices yet.")]),
+          el("div", { style: "margin-top:8px;font-size:12px;" }, [
+            document.createTextNode("Click + Add device to create one, or use the config flow."),
+          ]),
         ]));
         return;
       }
-      for (const d of devices) {
-        const card = el("div", { class: "device" });
-        const header = el("div", {}, [
-          el("h3", {}, [document.createTextNode(d.name)]),
-          el("span", { class: "meta" }, [
-            document.createTextNode(
-              `${d.category} • ${d.command_count} command(s) • tx: ${(d.transmitter_entity_ids || []).join(", ") || "—"}`,
-            ),
-          ]),
-        ]);
-        const delBtn = el("button", { class: "secondary danger", on: {
-          click: async () => {
-            if (!confirm(`Delete device "${d.name}"?`)) return;
-            try { await ws.deleteDevice(d.id); toast("Deleted"); loadDevices(); }
-            catch (e) { toast(e.message, true); }
-          },
-        }}, [document.createTextNode("Delete")]);
-        const head = el("div", { style: "display:flex;justify-content:space-between;align-items:flex-start;" }, [
-          el("div", {}, [el("h3", {}, [document.createTextNode(d.name)]),
-                          el("div", { class: "meta" }, [
-                            document.createTextNode(
-                              `${d.category} • ${d.command_count} command(s) • ` +
-                              `tx: ${(d.transmitter_entity_ids || []).join(", ") || "—"}`
-                            ),
-                          ])]),
-          delBtn,
-        ]);
-        card.appendChild(head);
-
-        const cmdsEl = el("div", { class: "commands" });
-        // Fetch full device detail to know command keys.
-        try {
-          const { device } = await ws.getDevice(d.id);
-          const keys = Object.keys(device.commands || {});
-          if (!keys.length) {
-            cmdsEl.appendChild(el("div", { class: "meta" }, [
-              document.createTextNode("(no commands learned yet — Phase 7 wizard)"),
-            ]));
-          } else {
-            for (const k of keys) {
-              const cmdEl = el("div", { class: "cmd" }, [
-                document.createTextNode(device.commands[k].label || k),
-              ]);
-              cmdEl.addEventListener("click", async () => {
-                try {
-                  await ws.sendCommand(d.id, k);
-                  cmdEl.classList.add("flash");
-                  setTimeout(() => cmdEl.classList.remove("flash"), 280);
-                } catch (err) { toast(err.message, true); }
-              });
-              cmdsEl.appendChild(cmdEl);
-            }
-          }
-        } catch (err) {
-          cmdsEl.appendChild(el("div", { class: "meta" }, [
-            document.createTextNode("(failed to load commands)"),
-          ]));
-        }
-        card.appendChild(cmdsEl);
-        listEl.appendChild(card);
-      }
+      for (const d of _devices) list.appendChild(renderDeviceCard(d));
     }
 
-    // ----- Add device dialog -----
-    const dlg = document.getElementById("add-dialog");
-    const addBtn = document.getElementById("add-btn");
-    const refreshBtn = document.getElementById("refresh-btn");
-    const refreshTxBtn = document.getElementById("refresh-tx");
-    const addCancel = document.getElementById("add-cancel");
-    const addSave = document.getElementById("add-save");
-    const addError = document.getElementById("add-error");
+    function renderDeviceCard(d) {
+      const tx = (d.transmitter_entity_ids || []).join(", ") || "—";
+      const meta = `${d.category} • ${d.command_count} command(s) • tx: ${tx}`;
+      const head = el("div", { class: "device-head" }, [
+        el("div", {}, [
+          el("h3", {}, [document.createTextNode(d.name)]),
+          el("div", { class: "meta" }, [document.createTextNode(meta)]),
+        ]),
+        el("div", { class: "actions" }, [
+          el("button", { class: "secondary", on: { click: () => openDeviceDialog(d) } }, [
+            document.createTextNode("Edit"),
+          ]),
+          el("button", { class: "danger", on: { click: () => deleteDevice(d) } }, [
+            document.createTextNode("Delete"),
+          ]),
+        ]),
+      ]);
+      const cmdsEl = el("div", { class: "commands" });
+      for (const c of d.commands || []) cmdsEl.appendChild(renderCommandButton(d, c));
+      cmdsEl.appendChild(el("button", {
+        class: "cmd",
+        style: "border-style:dashed;color:var(--muted);",
+        on: { click: () => openLearnDialog(d) },
+      }, [
+        document.createTextNode("+ Learn command"),
+      ]));
+      return el("div", { class: "device" }, [head, cmdsEl]);
+    }
 
-    async function loadTransmitters() {
-      const sel = document.getElementById("add-tx");
+    function renderCommandButton(d, c) {
+      const btn = el("button", {
+        class: "cmd",
+        title: `Send "${c.label || c.key}" to ${d.name}`,
+        on: { click: () => sendPulse(d, c, btn) },
+      }, [document.createTextNode(c.label || c.key)]);
+      return btn;
+    }
+
+    async function sendPulse(d, c, btn) {
+      try {
+        await ws.sendCommand(d.id, c.key);
+        btn.classList.add("flash");
+        setTimeout(() => btn.classList.remove("flash"), 280);
+        toast(`Sent ${c.label || c.key}`, "ok");
+      } catch (err) { toast(err.message, "err"); }
+    }
+
+    async function deleteDevice(d) {
+      if (!confirm(`Delete device "${d.name}"?`)) return;
+      try {
+        await ws.deleteDevice(d.id);
+        toast("Deleted", "ok");
+        await loadDevices();
+      } catch (err) { toast(err.message, "err"); }
+    }
+
+    // ===== Device dialog (add + edit) =====
+    const dlg = document.getElementById("device-dialog");
+    let _editing = null;
+
+    async function openDeviceDialog(d) {
+      _editing = d || null;
+      document.getElementById("device-dialog-title").textContent =
+        d ? "Edit device" : "Add device";
+      document.getElementById("device-id").value = d ? d.id : "";
+      document.getElementById("device-name").value = d ? d.name : "";
+      document.getElementById("device-category").value = d ? d.category : "fan";
+      document.getElementById("device-manufacturer").value = d ? (d.manufacturer || "") : "";
+      document.getElementById("device-model").value = d ? (d.model || "") : "";
+      document.getElementById("device-dialog-error").textContent = "";
+      await loadTransmitters(d ? d.transmitter_entity_ids : null);
+      dlg.showModal();
+    }
+
+    document.getElementById("add-device-btn").addEventListener("click", () => openDeviceDialog());
+    document.getElementById("device-cancel-btn").addEventListener("click", () => dlg.close());
+    document.getElementById("refresh-devices-btn").addEventListener("click", loadDevices);
+    document.getElementById("refresh-tx-btn").addEventListener("click", () =>
+      loadTransmitters(_editing ? _editing.transmitter_entity_ids : null)
+    );
+    document.getElementById("device-save-btn").addEventListener("click", async () => {
+      const errEl = document.getElementById("device-dialog-error");
+      errEl.textContent = "";
+      const name = document.getElementById("device-name").value.trim();
+      const category = document.getElementById("device-category").value;
+      const tx = document.getElementById("device-tx").value;
+      const manufacturer = document.getElementById("device-manufacturer").value.trim();
+      const model = document.getElementById("device-model").value.trim();
+      if (!name) { errEl.textContent = "Name is required"; return; }
+      if (!tx || tx.startsWith("(")) { errEl.textContent = "Pick a transmitter"; return; }
+      const payload = {
+        name, category, transmitter: tx, manufacturer, model,
+        discrete_speed_count: category === "fan" ? 3 : 0,
+      };
+      try {
+        if (_editing) {
+          await ws.updateDevice({ device_id: _editing.id, ...payload });
+          toast("Updated", "ok");
+        } else {
+          await ws.createDevice(payload);
+          toast("Created", "ok");
+        }
+        dlg.close();
+        await loadDevices();
+      } catch (err) { errEl.textContent = err.message; }
+    });
+
+    async function loadTransmitters(selected) {
+      const sel = document.getElementById("device-tx");
       sel.innerHTML = "<option>Loading…</option>";
       try {
         const { transmitters } = await ws.transmitters();
@@ -313,6 +575,7 @@
           const opt = document.createElement("option");
           opt.value = t.entity_id;
           opt.textContent = `${t.entity_id} (${t.state})`;
+          if (selected && selected.includes(t.entity_id)) opt.selected = true;
           sel.appendChild(opt);
         }
       } catch (err) {
@@ -320,38 +583,225 @@
       }
     }
 
-    addBtn.addEventListener("click", async () => {
-      document.getElementById("add-name").value = "";
-      addError.textContent = "";
-      await loadTransmitters();
-      dlg.showModal();
-    });
-    addCancel.addEventListener("click", () => dlg.close());
-    refreshBtn.addEventListener("click", loadDevices);
-    refreshTxBtn.addEventListener("click", loadTransmitters);
+    // ===== SNIFFER =====
+    let _remotes = [];
 
-    addSave.addEventListener("click", async () => {
-      const name = document.getElementById("add-name").value.trim();
-      const category = document.getElementById("add-category").value;
-      const tx = document.getElementById("add-tx").value;
-      if (!name) { addError.textContent = "Name is required"; return; }
-      if (!tx || tx.startsWith("(")) { addError.textContent = "Pick a transmitter"; return; }
-      addSave.disabled = true;
+    async function loadSniffer() {
       try {
-        const result = await ws.createDevice({
-          name, category, transmitter: tx,
-        });
-        if (result.error) throw new Error(result.error.message);
-        dlg.close();
-        toast("Device created — go to Phase 7 wizard to learn commands");
-        loadDevices();
-      } catch (err) {
-        addError.textContent = err.message;
-      } finally {
-        addSave.disabled = false;
+        const { remotes } = await ws.listSniffer();
+        _remotes = remotes || [];
+        renderSniffer();
+        updateStats();
+      } catch (err) { toast("Load sniffer: " + err.message, "err"); }
+    }
+
+    function renderSniffer() {
+      const list = document.getElementById("sniffer-list");
+      list.innerHTML = "";
+      const visible = _remotes.filter((r) => !r.dismissed);
+      if (!visible.length) {
+        list.appendChild(el("div", { class: "empty" }, [
+          document.createTextNode("No captured signals yet."),
+        ]));
+        return;
       }
+      for (const r of visible) {
+        const card = el("div", { class: "remote-card" + (r.dismissed ? " dismissed" : "") }, [
+          el("h4", {}, [
+            document.createTextNode(r.label || r.protocol_label || r.id),
+            el("span", { class: "badge protocol" }, [
+              document.createTextNode(r.protocol_label || "unknown"),
+            ]),
+            el("span", { class: "badge" }, [
+              document.createTextNode(`${r.signal_count} signal(s)`),
+            ]),
+          ]),
+        ]);
+        for (const s of r.signals) {
+          card.appendChild(el("div", { class: "signal-card" }, [
+            el("div", { class: "info" }, [
+              document.createTextNode(s.alias || s.fingerprint || s.id),
+            ]),
+            el("div", { class: "meta" }, [
+              document.createTextNode(
+                `hits: ${s.hit_count} · last: ${s.last_seen} · ${s.decoded_fingerprint || "—"}`
+              ),
+            ]),
+          ]),
+        ]));
+        card.appendChild(el("button", {
+          class: "secondary",
+          on: { click: () => dismissRemote(r) },
+        }, [document.createTextNode(r.dismissed ? "Re-activate" : "Dismiss remote")]));
+        list.appendChild(card);
+      }
+    }
+
+    async function dismissRemote(r) {
+      try {
+        await ws.dismissRemote(r.id);
+        await loadSniffer();
+      } catch (err) { toast(err.message, "err"); }
+    }
+
+    document.getElementById("refresh-sniffer-btn").addEventListener("click", loadSniffer);
+
+    // ===== ACTIONS =====
+    let _actions = [];
+    async function loadActions() {
+      try {
+        const { actions } = await ws.listActions();
+        _actions = actions || [];
+        renderActions();
+        updateStats();
+      } catch (err) { toast("Load actions: " + err.message, "err"); }
+    }
+
+    function renderActions() {
+      const list = document.getElementById("actions-list");
+      list.innerHTML = "";
+      if (!_actions.length) {
+        list.appendChild(el("div", { class: "empty" }, [
+          document.createTextNode("No action bindings yet."),
+        ]));
+        return;
+      }
+      for (const a of _actions) {
+        list.appendChild(el("div", { class: "action-card" }, [
+          el("div", { class: "info" }, [
+            el("strong", {}, [document.createTextNode(a.name || a.id)]),
+            el("div", { class: "meta" }, [
+              document.createTextNode(
+                `${a.target.kind} · signal ${a.signal_id.slice(0, 8)}… · min_hits: ${a.min_hits}`
+              ),
+            ]),
+          ]),
+        ]));
+      }
+    }
+
+    // ===== SETTINGS =====
+    async function loadSettings() {
+      try {
+        const [{ transmitters }, { receivers }, { devices }] = await Promise.all([
+          ws.transmitters(), ws.receivers(), ws.list(),
+        ]);
+        renderSettings({ transmitters, receivers, devices: devices || [] });
+      } catch (err) { toast("Load settings: " + err.message, "err"); }
+    }
+
+    function renderSettings({ transmitters, receivers, devices }) {
+      const txList = document.getElementById("settings-transmitters");
+      txList.innerHTML = "";
+      if (!transmitters.length) {
+        txList.appendChild(el("div", { class: "empty" }, [
+          document.createTextNode("No IR/RF emitters found."),
+        ]));
+      } else {
+        for (const t of transmitters) {
+          txList.appendChild(el("div", { class: "stat-card" }, [
+            el("div", { class: "label" }, [document.createTextNode(t.entity_id)]),
+            el("div", { class: "value", style: "font-size:14px;" }, [
+              el("span", { class: "status-dot ok" }, []),
+              document.createTextNode(" " + t.state),
+            ]),
+          ]));
+        }
+      }
+      const rxList = document.getElementById("settings-receivers");
+      rxList.innerHTML = "";
+      if (!receivers.length) {
+        rxList.appendChild(el("div", { class: "empty" }, [
+          document.createTextNode("No IR/RF receivers found."),
+        ]));
+      } else {
+        for (const r of receivers) {
+          rxList.appendChild(el("div", { class: "stat-card" }, [
+            el("div", { class: "label" }, [document.createTextNode(r.entity_id)]),
+            el("div", { class: "value", style: "font-size:14px;" }, [
+              el("span", { class: "status-dot ok" }, []),
+              document.createTextNode(" " + r.state),
+            ]),
+          ]));
+        }
+      }
+    }
+
+    function updateStats() {
+      document.getElementById("stat-devices").textContent = _devices.length;
+      const signalTotal = (_remotes || []).reduce((acc, r) => acc + r.signals.length, 0);
+      document.getElementById("stat-signals").textContent = signalTotal;
+      document.getElementById("stat-actions").textContent = (_actions || []).length;
+    }
+
+    // ===== Learn command dialog =====
+    const learnDlg = document.getElementById("learn-dialog");
+    let _learnContext = null;
+
+    async function openLearnDialog(d) {
+      const key = prompt(
+        `Learn which command on "${d.name}"?\n\n` +
+        `Enter a command key (e.g. "off", "speed_2", "power_on"):`,
+        "off"
+      );
+      if (!key) return;
+      _learnContext = { device: d, key: key.trim() };
+      document.getElementById("learn-device-id").value = d.id;
+      document.getElementById("learn-command-key").value = _learnContext.key;
+      document.getElementById("learn-target").textContent =
+        `${d.name} → ${_learnContext.key}`;
+      document.getElementById("learn-status").textContent = "Idle — click Start learn";
+      document.getElementById("learn-timings").textContent = "—";
+      document.getElementById("learn-save-btn").disabled = true;
+      learnDlg.showModal();
+    }
+
+    document.getElementById("learn-cancel-btn").addEventListener("click", () => learnDlg.close());
+    document.getElementById("learn-start-btn").addEventListener("click", async () => {
+      const status = document.getElementById("learn-status");
+      const timingsEl = document.getElementById("learn-timings");
+      const saveBtn = document.getElementById("learn-save-btn");
+      try {
+        status.textContent = "Capturing… press the button on your remote NOW";
+        const result = await ws.learnCommand({
+          device_id: _learnContext.device.id,
+          command_key: _learnContext.key,
+          timeout_s: 15,
+        });
+        if (result && result.captured) {
+          status.textContent = `Captured: ${result.captured.protocol_label || "raw"} @ ${result.carrier_frequency_hz} Hz`;
+          timingsEl.textContent = JSON.stringify(result.raw_timings.slice(0, 30)) +
+            (result.raw_timings.length > 30 ? "…" : "");
+          saveBtn.disabled = false;
+          _learnContext.captured = result.captured;
+          _learnContext.raw_timings = result.raw_timings;
+        } else {
+          status.textContent = "No signal captured";
+        }
+      } catch (err) { status.textContent = "Failed: " + err.message; }
+    });
+    document.getElementById("learn-save-btn").addEventListener("click", async () => {
+      if (!_learnContext || !_learnContext.captured) return;
+      try {
+        // Persist the captured command back into the device via update.
+        const device = await ws.getDevice(_learnContext.device.id);
+        const commands = { ...(device.device.commands || {}) };
+        commands[_learnContext.key] = {
+          key: _learnContext.key,
+          label: _learnContext.key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+          category: "custom",
+          signal_category: { ..._learnContext.captured.signal_category },
+          payload: { ..._learnContext.captured.payload, raw_timings: _learnContext.raw_timings },
+        };
+        await ws.updateDevice({ device_id: _learnContext.device.id, commands });
+        toast(`Learned "${_learnContext.key}"`, "ok");
+        learnDlg.close();
+        await loadDevices();
+      } catch (err) { toast(err.message, "err"); }
     });
 
+    // ===== Init =====
+    document.getElementById("version-pill").textContent = "v" + (__VERSION__ || "0");
     loadDevices();
   </script>
 </body>
