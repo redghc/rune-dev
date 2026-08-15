@@ -28,8 +28,9 @@ PANEL_STATIC_PATH = "/rune_panel_static"
 PANEL_JS_FILENAME = "rune-panel.js"
 PANEL_HTML_FILENAME = "rune-panel.html"
 
-# Platform names forwarded to HA. Strings (not the HA ``Platform``
-# enum) so the constant can be imported without HA core.
+# Platform names forwarded to HA. Lowercase identifiers used as
+# documentation; the runtime lookup uses ``Platform.<NAME>``
+# constants in ``async_setup_entry``.
 PLATFORMS = [
     "fan",
     "climate",

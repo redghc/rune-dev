@@ -34,7 +34,6 @@ from custom_components.rune.adapters.tx_gate import TxGate
 from custom_components.rune.const import (
     DOMAIN,
     MANUFACTURER,
-    PLATFORMS,
 )
 from custom_components.rune.migrations import (
     LATEST_ACTION_VERSION,
@@ -92,10 +91,6 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
 
     On success, the coordinator lives in ``hass.data[DOMAIN][entry_id]``.
     """
-    # Local imports keep the module importable without HA core
-    # (CI / tests / dev environments).
-    from homeassistant.const import Platform
-
     hass.data.setdefault(DOMAIN, {})
 
     # 1. Repositories with on-disk migration.
@@ -127,7 +122,18 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
 
     # 3. Forward to each platform. HA instantiates the platform module
     #    on demand; the module's ``async_setup_entry`` builds entities.
-    platforms_list = [getattr(Platform, p) for p in PLATFORMS]
+    from homeassistant.const import Platform
+
+    platforms_list = [
+        Platform.FAN,
+        Platform.CLIMATE,
+        Platform.LIGHT,
+        Platform.COVER,
+        Platform.MEDIA_PLAYER,
+        Platform.SWITCH,
+        Platform.BUTTON,
+        Platform.REMOTE,
+    ]
     await hass.config_entries.async_forward_entry_setups(entry, platforms_list)
 
     # 4. Services.
@@ -226,7 +232,16 @@ async def async_unload_entry(hass: Any, entry: Any) -> bool:
     """Tear down a RUNE entry."""
     from homeassistant.const import Platform
 
-    platforms_list = [getattr(Platform, p) for p in PLATFORMS]
+    platforms_list = [
+        Platform.FAN,
+        Platform.CLIMATE,
+        Platform.LIGHT,
+        Platform.COVER,
+        Platform.MEDIA_PLAYER,
+        Platform.SWITCH,
+        Platform.BUTTON,
+        Platform.REMOTE,
+    ]
     unloaded = await hass.config_entries.async_unload_platforms(entry, platforms_list)
     if not unloaded:
         return False
