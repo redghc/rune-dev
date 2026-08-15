@@ -169,9 +169,10 @@ async def _register_panel(hass: Any, entry: Any) -> None:
     if the panel can't be mounted.
     """
     try:
+        from pathlib import Path
+
         from homeassistant.components import panel_custom
         from homeassistant.components.http import StaticPathConfig
-        from homeassistant.loader import async_get_integration
 
         from custom_components.rune.const import (
             PANEL_HTML_FILENAME,
@@ -182,15 +183,25 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             PANEL_URL,
         )
 
-        integration = await async_get_integration(hass, DOMAIN)
+        # Resolve asset paths relative to THIS package. Using
+        # ``Path(__file__).parent`` is more reliable than
+        # ``async_get_integration(hass, DOMAIN).file_path`` because it
+        # doesn't depend on the integration loader having populated
+        # the registry yet when ``async_setup_entry`` runs.
+        package_root = Path(__file__).parent
+        js_path = str(package_root / "frontend" / "dist" / PANEL_JS_FILENAME)
+        html_path = str(package_root / "frontend" / "dist" / PANEL_HTML_FILENAME)
 
         # Two static assets:
         # - The JS module that registers the ``<rune-panel>`` custom element
         # - The HTML that the iframe inside that element loads
         js_url = f"{PANEL_STATIC_PATH}/{PANEL_JS_FILENAME}"
-        js_path = f"{integration.file_path}/frontend/dist/{PANEL_JS_FILENAME}"
         html_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
-        html_path = f"{integration.file_path}/frontend/dist/{PANEL_HTML_FILENAME}"
+
+        # Cache-bust the JS module so HA always loads the latest bundle
+        # after a restart. Use a stable string (the package version)
+        # rather than time.time() so HACS / browser caches behave.
+        module_url = f"{js_url}?v=0.2.6"
 
         await hass.http.async_register_static_paths(
             [
@@ -213,14 +224,16 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             require_admin=True,
             embed_iframe=False,
             trust_external=False,
-            module_url=f"{js_url}?v=0.2.1",
+            module_url=module_url,
         )
 
         _LOGGER.info(
-            "rune: sidebar panel registered at %s (module %s, iframe %s)",
+            "rune: sidebar panel registered at %s (module %s -> %s, iframe %s -> %s)",
             PANEL_URL,
-            js_url,
+            module_url,
+            js_path,
             html_url,
+            html_path,
         )
     except Exception as err:
         _LOGGER.warning(
