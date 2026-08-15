@@ -9,29 +9,29 @@ importers:
   .:
     dependencies:
       lit:
-        specifier: ^3.3.0
+        specifier: ^3.3.3
         version: 3.3.3
     devDependencies:
       '@ianvs/prettier-plugin-sort-imports':
-        specifier: ^4.7.0
+        specifier: ^4.7.1
         version: 4.7.1(prettier@3.9.6)
       knip:
-        specifier: ^6.32.0
+        specifier: ^6.32.2
         version: 6.32.2
       oxlint:
         specifier: ^1.78.0
         version: 1.78.0
       prettier:
-        specifier: ^3.9.0
+        specifier: ^3.9.6
         version: 3.9.6
       typescript:
-        specifier: ^5.9.0
+        specifier: ^5.9.3
         version: 5.9.3
       vite:
-        specifier: ^5.4.0
+        specifier: ^5.4.21
         version: 5.4.21
       vite-plugin-singlefile:
-        specifier: ^2.0.0
+        specifier: ^2.3.3
         version: 2.3.3(rollup@4.62.4)(vite@5.4.21)
 
 packages:
