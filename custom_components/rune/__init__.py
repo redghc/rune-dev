@@ -72,7 +72,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 
 
 # ---------------------------------------------------------------------------
@@ -170,19 +170,25 @@ async def _register_panel(hass: Any, entry: Any) -> None:
     setup — the integration remains usable via the options flow even
     if the panel can't be mounted.
     """
-    from pathlib import Path
+    try:
+        from pathlib import Path
 
-    from homeassistant.components import panel_custom
-    from homeassistant.components.http import StaticPathConfig
+        from homeassistant.components import panel_custom
+        from homeassistant.components.http import StaticPathConfig
 
-    from custom_components.rune.const import (
-        PANEL_HTML_FILENAME,
-        PANEL_ICON,
-        PANEL_JS_FILENAME,
-        PANEL_STATIC_PATH,
-        PANEL_TITLE,
-        PANEL_URL,
-    )
+        from custom_components.rune.const import (
+            PANEL_HTML_FILENAME,
+            PANEL_ICON,
+            PANEL_JS_FILENAME,
+            PANEL_STATIC_PATH,
+            PANEL_TITLE,
+            PANEL_URL,
+        )
+    except Exception as err:
+        _LOGGER.error(
+            "rune: failed to import HA panel dependencies: %s", err
+        )
+        return
 
     # Resolve asset paths relative to THIS package. Using
     # ``Path(__file__).parent`` is more reliable than
@@ -255,7 +261,7 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             sidebar_icon=PANEL_ICON,
             frontend_url_path=PANEL_URL,
             config={"entry_id": entry.entry_id},
-            require_admin=True,
+            require_admin=False,  # MVP: every user can manage devices
             embed_iframe=False,
             trust_external=False,
             module_url=module_url,
