@@ -25,6 +25,7 @@ PANEL_TITLE = "RUNE"
 PANEL_ICON = "mdi:remote"
 PANEL_URL = "rune-panel"
 PANEL_STATIC_PATH = "/rune_panel_static"
+PANEL_JS_FILENAME = "rune-panel.js"
 PANEL_HTML_FILENAME = "rune-panel.html"
 
 # Platform names forwarded to HA. Strings (not the HA ``Platform``

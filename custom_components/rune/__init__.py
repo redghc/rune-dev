@@ -168,24 +168,33 @@ async def _register_panel(hass: Any, entry: Any) -> None:
         from custom_components.rune.const import (
             PANEL_HTML_FILENAME,
             PANEL_ICON,
+            PANEL_JS_FILENAME,
             PANEL_STATIC_PATH,
             PANEL_TITLE,
             PANEL_URL,
         )
 
         integration = await async_get_integration(hass, DOMAIN)
-        # StaticPathConfig requires a URL path and a filesystem path.
-        # The integration's ``file`` attribute points to the package
-        # root; the panel HTML sits under ``frontend/dist/``.
-        static_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
-        static_path = f"{integration.file_path}/frontend/dist/{PANEL_HTML_FILENAME}"
+
+        # Two static assets:
+        # - The JS module that registers the ``<rune-panel>`` custom element
+        # - The HTML that the iframe inside that element loads
+        js_url = f"{PANEL_STATIC_PATH}/{PANEL_JS_FILENAME}"
+        js_path = f"{integration.file_path}/frontend/dist/{PANEL_JS_FILENAME}"
+        html_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
+        html_path = f"{integration.file_path}/frontend/dist/{PANEL_HTML_FILENAME}"
 
         await hass.http.async_register_static_paths(
             [
-                StaticPathConfig(static_url, static_path, cache_headers=False),
+                StaticPathConfig(js_url, js_path, cache_headers=False),
+                StaticPathConfig(html_url, html_path, cache_headers=False),
             ]
         )
 
+        # The panel framework requires a JS module that registers a
+        # custom element matching ``webcomponent_name``. The HTML
+        # itself is loaded as an iframe inside that element so the
+        # UI can be authored as plain HTML+JS with no build step.
         await panel_custom.async_register_panel(
             hass,
             webcomponent_name="rune-panel",
@@ -196,13 +205,14 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             require_admin=True,
             embed_iframe=False,
             trust_external=False,
-            module_url=f"{static_url}?v=0.2.0",
+            module_url=f"{js_url}?v=0.2.1",
         )
 
         _LOGGER.info(
-            "rune: sidebar panel registered at %s (static %s)",
+            "rune: sidebar panel registered at %s (module %s, iframe %s)",
             PANEL_URL,
-            static_url,
+            js_url,
+            html_url,
         )
     except Exception as err:
         _LOGGER.warning(
