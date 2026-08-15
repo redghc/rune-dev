@@ -23,7 +23,6 @@ export default defineConfig({
         entryFileNames: "panel.js",
         assetFileNames: "panel-assets/[name].[ext]",
         format: "iife",
-        inlineDynamicImports: true,
       },
     },
     target: "es2022",

@@ -41,7 +41,6 @@ export default defineConfig({
       input: resolve(srcDir, "index.html"),
       output: {
         entryFileNames: "[name].js",
-        inlineDynamicImports: true,
       },
     },
   },
