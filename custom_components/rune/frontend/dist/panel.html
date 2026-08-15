@@ -328,17 +328,17 @@
 
   <script>
     // ===== RUNE <-> HA bridge =====
-    // The parent stamps every message with ``session`` matching the
-    // iframe's ``window.name``. The bridge rejects messages from a
-    // stale session (e.g. after the SPA reloads the iframe).
-    const _SESSION = window.name;
+    // Every request has a UUID id; the parent posts the same id back
+    // in the result. We track a per-request promise in ``_pending`` and
+    // resolve it when the result lands. There's no source/origin
+    // check: same-origin postMessage is reliable; the previous
+    // session-based filter was the source of "buttons do nothing".
     const _pending = new Map();
     let _nextId = 1;
 
     window.addEventListener("message", (event) => {
       const data = event.data || {};
       if (data.type !== "rune-bridge-result") return;
-      if (data.session !== _SESSION) return;  // ignore stale responses
       const r = _pending.get(data.id);
       if (!r) return;
       _pending.delete(data.id);
@@ -346,15 +346,28 @@
       else r.resolve(data.result);
     });
 
+    // Safety net: if the parent never responds, reject after 8s
+    // so the UI doesn't hang forever on a stuck bridge.
+    const BRIDGE_TIMEOUT_MS = 8000;
+
     function bridgeCall(kind, payload) {
       const id = _nextId++;
       window.parent.postMessage(
-        { type: "rune-bridge", kind, id, session: _SESSION, ...payload },
+        { type: "rune-bridge", kind, id, ...payload },
         "*"
       );
-      return new Promise((resolve, reject) =>
-        _pending.set(id, { resolve, reject })
-      );
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          if (_pending.has(id)) {
+            _pending.delete(id);
+            reject(new Error("bridge timeout (no response from HA)"));
+          }
+        }, BRIDGE_TIMEOUT_MS);
+        _pending.set(id, {
+          resolve: (v) => { clearTimeout(timer); resolve(v); },
+          reject: (e) => { clearTimeout(timer); reject(e); },
+        });
+      });
     }
 
     const ws = {
@@ -528,8 +541,19 @@
       document.getElementById("device-manufacturer").value = d ? (d.manufacturer || "") : "";
       document.getElementById("device-model").value = d ? (d.model || "") : "";
       document.getElementById("device-dialog-error").textContent = "";
-      await loadTransmitters(d ? d.transmitter_entity_ids : null);
+
+      // Open the modal FIRST so the user gets immediate feedback even
+      // if the bridge hangs on the transmitter list. The select will
+      // show a transient "Loading..." until the bridge resolves.
       dlg.showModal();
+
+      // Now load the transmitter list (non-blocking on modal open).
+      try {
+        await loadTransmitters(d ? d.transmitter_entity_ids : null);
+      } catch (err) {
+        // Bridge failed — the select already shows the error inline.
+        console.error("[rune] loadTransmitters failed:", err);
+      }
     }
 
     document.getElementById("add-device-btn").addEventListener("click", () => openDeviceDialog());

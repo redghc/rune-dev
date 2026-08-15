@@ -15,37 +15,26 @@
 //   parent -> iframe:  { type: "rune-bridge-result", id: <uuid>,
 //                        result: <json> | error: <string> }
 //
-// The bridge tracks the current iframe via a session id stamped on
-// the iframe's window.name, so we don't need ``event.source`` (which
-// can be stale after a reload) — we match on the session id instead.
+// No source/origin checks: the iframe is same-origin, and the parent
+// trusts every message that lands on the listener. (Same-origin
+// postMessage is reliable across reloads — only the ``event.source``
+// reference becomes stale, which we don't use.)
 (function () {
-  const SESSION_KEY = "__rune_iframe_session__";
-
-  function newSessionId() {
-    return "rune-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
-  }
-
   class RunePanel extends HTMLElement {
     constructor() {
       super();
       this._config = null;
       this._hass = null;
       this._iframe = null;
-      this._session = newSessionId();
       this._listeners = [];
     }
 
     set hass(hass) {
       this._hass = hass;
-      // No-op: iframe's bridge detects ``hass`` via the parent
-      // reference inside the listener closure.
     }
 
     setConfig(config) {
       this._config = config || {};
-      // Don't reload the iframe — the bridge survives a config
-      // change because we resolve calls against the live
-      // ``iframe.contentWindow`` each time.
     }
 
     set panelVersion(version) {
@@ -56,7 +45,7 @@
       if (this._iframe) return;
       const root = this.attachShadow({ mode: "open" });
 
-      // ---- error surface (visible to the operator if the SPA fails) ----
+      // ---- error surface (visible if the SPA fails) ----
       const errorEl = document.createElement("div");
       errorEl.style.cssText =
         "padding:16px;font:14px/1.4 system-ui;color:#b71c1c;background:#ffebee;display:none;white-space:pre-wrap;";
@@ -65,8 +54,7 @@
 
       // ---- iframe ----
       const iframe = document.createElement("iframe");
-      iframe.name = this._session;  // iframe-side window.name match
-      iframe.src = "/rune/panel.html?v=" + this._session;
+      iframe.src = "/rune/panel.html";
       iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
       iframe.title = "RUNE";
       iframe.addEventListener("error", () => {
@@ -78,37 +66,46 @@
       this._iframe = iframe;
 
       // ---- postMessage bridge ----
-      // Match by ``event.data.session`` (which the iframe copies from
-      // its own ``window.name``) instead of ``event.source``. The
-      // latter is the *first* window that sent the message; if the
-      // iframe reloads, the cached reference is stale and a fresh
-      // iframe's messages never match. Session id is set once per
-      // iframe mount and never changes.
+      // The listener is added to ``window`` so the iframe can reach
+      // the parent regardless of how HA wraps the custom element.
       const onMsg = (event) => {
         const data = event.data || {};
         if (typeof data !== "object") return;
         if (data.type !== "rune-bridge") return;
-        if (data.session !== this._session) return;
 
         const id = data.id;
+        // Always reply through the LIVE contentWindow so the
+        // Promise on the iframe side resolves even if the iframe
+        // was reloaded mid-request.
         const reply = (payload) => {
-          // Always reply through the LIVE contentWindow so the
-          // Promise on the iframe side resolves even if the iframe
-          // was reloaded mid-request.
           const win = iframe.contentWindow;
-          if (win) win.postMessage({ type: "rune-bridge-result", id, ...payload }, "*");
+          if (win) {
+            win.postMessage(
+              { type: "rune-bridge-result", id, ...payload },
+              "*"
+            );
+          }
         };
 
-        if (!this._hass) return reply({ error: "hass not yet set" });
+        if (!this._hass) {
+          reply({ error: "hass not yet set" });
+          return;
+        }
 
         if (data.kind === "ws") {
-          this._hass.callWS(data.message)
+          this._hass
+            .callWS(data.message)
             .then((result) => reply({ result: result === undefined ? null : result }))
-            .catch((err) => reply({ error: String((err && err.message) || err) }));
+            .catch((err) =>
+              reply({ error: String((err && err.message) || err) })
+            );
         } else if (data.kind === "service") {
-          this._hass.callService(data.domain, data.service, data.service_data || {})
+          this._hass
+            .callService(data.domain, data.service, data.service_data || {})
             .then(() => reply({ result: true }))
-            .catch((err) => reply({ error: String((err && err.message) || err) }));
+            .catch((err) =>
+              reply({ error: String((err && err.message) || err) })
+            );
         } else {
           reply({ error: "unknown bridge kind: " + data.kind });
         }
