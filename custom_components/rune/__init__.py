@@ -72,7 +72,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 
 
 # ---------------------------------------------------------------------------
@@ -193,10 +193,7 @@ async def _register_panel(hass: Any, entry: Any) -> None:
     js_path = package_root / "frontend" / "dist" / PANEL_JS_FILENAME
     html_path = package_root / "frontend" / "dist" / PANEL_HTML_FILENAME
 
-    # Refuse to register if the asset files don't exist on disk —
-    # this prevents the "Unable to load custom panel" error that
-    # happens when HA caches a panel registration pointing at a
-    # missing file (e.g. during a partial deploy).
+    # Refuse to register if the asset files don't exist on disk.
     if not js_path.is_file():
         _LOGGER.error(
             "rune: cannot register sidebar panel — JS shim not found at %s",
@@ -210,42 +207,45 @@ async def _register_panel(hass: Any, entry: Any) -> None:
         )
         return
 
-    # First, clean up any prior registration from a previous load.
-    # HA caches panel registrations across reloads; if we don't drop
-    # the old one we end up with a stale URL pointing at a moved or
-    # deleted file.
-    try:
-        await panel_custom.async_remove_panel(hass, PANEL_URL)
-    except Exception as err:
-        _LOGGER.debug("rune: prior panel removal skipped: %s", err)
-
     js_url = f"{PANEL_STATIC_PATH}/{PANEL_JS_FILENAME}"
     html_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
 
-    # Cache-bust the JS module so HA always loads the latest bundle
-    # after a restart. The version string MUST change every time the
-    # shim is updated or HA keeps loading the old cached file.
+    # Static path registration is **stateful** — HA keeps the path
+    # across reloads and rejects duplicates with ``ValueError``.
+    # Make it idempotent: skip paths that are already registered.
+    existing_paths = set(hass.http._static_paths) if hasattr(hass.http, "_static_paths") else set()
+    new_static_paths = []
+    for url, fs_path in (
+        (js_url, js_path),
+        (html_url, html_path),
+    ):
+        if url in existing_paths:
+            _LOGGER.debug("rune: static path %s already registered; skipping", url)
+            continue
+        new_static_paths.append(StaticPathConfig(url, str(fs_path)))
+
+    if new_static_paths:
+        try:
+            await hass.http.async_register_static_paths(new_static_paths)
+            _LOGGER.info(
+                "rune: registered static paths: %s",
+                [c.url_path for c in new_static_paths],
+            )
+        except Exception as err:
+            _LOGGER.error("rune: failed to register static paths: %s", err)
+            return
+
+    # Panel registration is also stateful — HA keeps the panel
+    # across reloads. Remove + re-register so an updated module_url
+    # (different cache-buster) actually replaces the old one.
     from custom_components.rune import __version__
 
     module_url = f"{js_url}?v={__version__}"
 
     try:
-        await hass.http.async_register_static_paths(
-            [
-                StaticPathConfig(js_url, str(js_path)),
-                StaticPathConfig(html_url, str(html_path)),
-            ]
-        )
-        _LOGGER.info(
-            "rune: registered static assets at %s and %s (paths %s, %s)",
-            js_url,
-            html_url,
-            js_path,
-            html_path,
-        )
+        await panel_custom.async_remove_panel(hass, PANEL_URL)
     except Exception as err:
-        _LOGGER.error("rune: failed to register static paths: %s", err)
-        return
+        _LOGGER.debug("rune: no prior panel to remove: %s", err)
 
     try:
         await panel_custom.async_register_panel(
