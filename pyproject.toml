@@ -114,9 +114,36 @@ ignore = [
 "custom_components/rune/__init__.py" = [
     "PLC0415",  # lazy HA imports inside lifecycle functions
 ]
+"custom_components/rune/_platform_support/**/*.py" = [
+    "PLC0415",  # lazy HA imports inside lifecycle functions
+]
 "custom_components/rune/config_flow.py" = [
     "PLC0415",  # lazy HA imports inside step methods
 ]
 "custom_components/rune/websocket_api.py" = [
     "PLC0415",  # lazy HA imports inside registration
+]
+"custom_components/rune/fan.py" = [
+    "PLC0415",  # lazy HA imports inside entity properties
+]
+"custom_components/rune/climate.py" = [
+    "PLC0415",
+]
+"custom_components/rune/cover.py" = [
+    "PLC0415",
+]
+"custom_components/rune/light.py" = [
+    "PLC0415",
+]
+"custom_components/rune/media_player.py" = [
+    "PLC0415",
+]
+"custom_components/rune/remote.py" = [
+    "PLC0415",
+]
+"custom_components/rune/switch.py" = [
+    "PLC0415",
+]
+"custom_components/rune/button.py" = [
+    "PLC0415",
 ]

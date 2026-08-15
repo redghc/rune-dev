@@ -12,5 +12,5 @@
     "loggers": ["custom_components.rune"],
     "quality_scale": "silver",
     "requirements": [],
-    "version": "0.2.3"
+    "version": "0.2.4"
 }

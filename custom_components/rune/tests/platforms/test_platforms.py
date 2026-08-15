@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.rune.climate import RuneClimateEntity
+from custom_components.rune.cover import RuneCoverEntity
 from custom_components.rune.domain.enums import (
     CommandCategory,
     EntityCategory,
@@ -13,12 +15,10 @@ from custom_components.rune.domain.models import (
     PulsePayload,
     RuneDevice,
 )
-from custom_components.rune.platforms.climate import RuneClimateEntity
-from custom_components.rune.platforms.cover import RuneCoverEntity
-from custom_components.rune.platforms.light import RuneLightEntity
-from custom_components.rune.platforms.media_player import RuneMediaPlayerEntity
-from custom_components.rune.platforms.remote import RuneRemoteEntity
-from custom_components.rune.platforms.switch import RuneSwitchEntity
+from custom_components.rune.light import RuneLightEntity
+from custom_components.rune.media_player import RuneMediaPlayerEntity
+from custom_components.rune.remote import RuneRemoteEntity
+from custom_components.rune.switch import RuneSwitchEntity
 
 
 def _command(key: str, *, category: CommandCategory = CommandCategory.CUSTOM) -> PulseCommand:

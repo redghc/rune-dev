@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.rune._platform_support._base import RunePlatformBase
 from custom_components.rune.domain.enums import EntityCategory
 from custom_components.rune.domain.models import RuneDevice
-from custom_components.rune.platforms._base import RunePlatformBase
 
 
 def _device(

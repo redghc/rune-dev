@@ -13,7 +13,7 @@ from custom_components.rune.domain.models import (
     PulsePayload,
     RuneDevice,
 )
-from custom_components.rune.platforms.fan import RuneFanEntity
+from custom_components.rune.fan import RuneFanEntity
 
 
 def _command(key: str) -> PulseCommand:
@@ -120,7 +120,7 @@ class TestFanPlatformBuilder:
         from custom_components.rune.adapters.storage.memory import (
             InMemoryDeviceRepository,
         )
-        from custom_components.rune.platforms.fan import RuneFanPlatform
+        from custom_components.rune.fan import RuneFanPlatform
 
         fan = _fan_device()
         light = RuneDevice(

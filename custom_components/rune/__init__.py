@@ -29,6 +29,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from custom_components.rune._platform_support._coordinator import (
+    DevicePlatformCoordinator,
+)
 from custom_components.rune.adapters.transmitters.factory import select_transmitter
 from custom_components.rune.adapters.tx_gate import TxGate
 from custom_components.rune.const import (
@@ -43,7 +46,6 @@ from custom_components.rune.migrations import (
     migrate_devices,
     migrate_signals,
 )
-from custom_components.rune.platforms._coordinator import DevicePlatformCoordinator
 
 
 def _build_repositories(hass: Any) -> tuple[Any, Any, Any]:

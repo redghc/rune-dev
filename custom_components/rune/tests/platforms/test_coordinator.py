@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from custom_components.rune._platform_support._coordinator import DevicePlatformCoordinator
 from custom_components.rune.adapters.storage.memory import (
     InMemoryActionRepository,
     InMemoryDeviceRepository,
@@ -36,7 +37,6 @@ from custom_components.rune.domain.models import (
     PulsePayload,
     RuneDevice,
 )
-from custom_components.rune.platforms._coordinator import DevicePlatformCoordinator
 
 
 def _command(

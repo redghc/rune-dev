@@ -16,8 +16,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from custom_components.rune._platform_support._base import RunePlatformBase
 from custom_components.rune.domain.enums import EntityCategory
-from custom_components.rune.platforms._base import RunePlatformBase
 
 if TYPE_CHECKING:
     pass

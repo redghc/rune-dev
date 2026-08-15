@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.rune.button import RunePulseButtonEntity
 from custom_components.rune.domain.enums import (
     CommandCategory,
     EntityCategory,
@@ -13,7 +14,6 @@ from custom_components.rune.domain.models import (
     PulsePayload,
     RuneDevice,
 )
-from custom_components.rune.platforms.button import RunePulseButtonEntity
 
 
 def _command(key: str = "power_on") -> PulseCommand:
@@ -100,6 +100,7 @@ class TestButtonPlatformBuilder:
         from custom_components.rune.adapters.storage.memory import (
             InMemoryDeviceRepository,
         )
+        from custom_components.rune.button import RuneButtonPlatform
         from custom_components.rune.domain.enums import (
             CommandCategory,
             SignalCategory,
@@ -108,7 +109,6 @@ class TestButtonPlatformBuilder:
             PulseCommand,
             PulsePayload,
         )
-        from custom_components.rune.platforms.button import RuneButtonPlatform
 
         def _make_cmd(key: str) -> PulseCommand:
             return PulseCommand(
