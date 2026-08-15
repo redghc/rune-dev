@@ -1,3 +1,15 @@
+// Typed wrappers around the WS API surface used by the SPA.
+
+import type {
+  ActionBinding,
+  DeviceSummary,
+  LearnResult,
+  ListResponse,
+  Remote,
+  RxEntity,
+  TxEntity,
+} from "../types.js";
+
 // postMessage bridge to the HA parent window.
 //
 // Mirrors the protocol defined in ``src/shim.ts``. Every call returns
@@ -34,9 +46,7 @@ window.addEventListener("message", (event: MessageEvent) => {
   else r.resolve(data.result);
 });
 
-function bridgeCall(
-  payload: Record<string, unknown>,
-): Promise<unknown> {
+function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
   const id = nextId++;
   return new Promise<unknown>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -61,18 +71,6 @@ function bridgeCall(
   });
 }
 
-// Typed wrappers around the WS API surface used by the SPA.
-
-import type {
-  ActionBinding,
-  DeviceSummary,
-  LearnResult,
-  ListResponse,
-  Remote,
-  RxEntity,
-  TxEntity,
-} from "../types.js";
-
 export const api = {
   list: (): Promise<ListResponse> =>
     bridgeCall({ kind: "ws", message: { type: "rune/list" } }) as Promise<ListResponse>,
@@ -83,17 +81,13 @@ export const api = {
       message: { type: "rune/device/get", device_id: id },
     }) as Promise<{ device: DeviceSummary }>,
 
-  createDevice: (
-    payload: Record<string, unknown>,
-  ): Promise<{ device: DeviceSummary }> =>
+  createDevice: (payload: Record<string, unknown>): Promise<{ device: DeviceSummary }> =>
     bridgeCall({
       kind: "ws",
       message: { type: "rune/device/create", ...payload },
     }) as Promise<{ device: DeviceSummary }>,
 
-  updateDevice: (
-    payload: Record<string, unknown>,
-  ): Promise<{ device: DeviceSummary }> =>
+  updateDevice: (payload: Record<string, unknown>): Promise<{ device: DeviceSummary }> =>
     bridgeCall({
       kind: "ws",
       message: { type: "rune/device/update", ...payload },
@@ -141,10 +135,7 @@ export const api = {
       message: { type: "rune/receiver/list" },
     }) as Promise<{ receivers: RxEntity[] }>,
 
-  sendCommand: (
-    deviceId: string,
-    commandKey: string,
-  ): Promise<true> =>
+  sendCommand: (deviceId: string, commandKey: string): Promise<true> =>
     bridgeCall({
       kind: "service",
       domain: "rune",
@@ -152,9 +143,3 @@ export const api = {
       service_data: { device_id: deviceId, command_key: commandKey },
     }) as Promise<true>,
 };
-
-// Read version injected by the panel loader. Falls back to "0" if HA
-// hasn't supplied it yet.
-export const panelVersion: string =
-  (window as unknown as { __RUNE_PANEL_VERSION__?: string })
-    .__RUNE_PANEL_VERSION__ ?? "0";

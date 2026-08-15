@@ -6,16 +6,26 @@
   "description": "RUNE Home Assistant panel — Lit SPA bundled for the iframe target.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build --config vite.spa.config.ts && vite build --config vite.shim.config.ts",
+    "build": "pnpm typecheck && pnpm lint && pnpm format:check && vite build --config vite.spa.config.ts && vite build --config vite.shim.config.ts",
     "build:spa": "vite build --config vite.spa.config.ts",
     "build:shim": "vite build --config vite.shim.config.ts",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
+    "knip": "knip",
+    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build"
   },
   "dependencies": {
     "lit": "^3.3.0"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+    "knip": "^6.32.0",
+    "oxlint": "^1.78.0",
+    "prettier": "^3.9.0",
     "typescript": "^5.9.0",
     "vite": "^5.4.0",
     "vite-plugin-singlefile": "^2.0.0"

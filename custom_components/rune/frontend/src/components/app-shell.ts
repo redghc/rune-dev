@@ -1,7 +1,11 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+
+import { store, subscribe } from "../state/store.js";
 import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe, type Section } from "../state/store.js";
+
+import type { Section } from "../state/store.js";
+
 import "./toast-stack.js";
 import "./devices-view.js";
 import "./sniffer-view.js";

@@ -46,6 +46,13 @@ node_modules/
 .eslintcache
 .vite/
 *.tsbuildinfo
+.prettierignore
+.prettier.cache
+.oxlintrc.cache
+knip-report.json
+knip-reports/
+package-lock.json
+yarn.lock
 
 # ---------------------------------------------------------------------------
 # Testing & coverage

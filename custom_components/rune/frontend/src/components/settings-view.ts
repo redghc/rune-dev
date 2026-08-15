@@ -1,8 +1,9 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
 
 @customElement("rune-settings-view")
 export class RuneSettingsView extends LitElement {
@@ -86,10 +87,7 @@ export class RuneSettingsView extends LitElement {
 
   render() {
     void this._tick;
-    const signalTotal = store.remotes.reduce(
-      (acc, r) => acc + r.signals.length,
-      0,
-    );
+    const signalTotal = store.remotes.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <h2>Settings</h2>
       <div class="status-grid">
@@ -113,33 +111,37 @@ export class RuneSettingsView extends LitElement {
       </div>
       <h3>Available transmitters</h3>
       <div class="status-grid">
-        ${store.transmitters.length === 0
-          ? html`<div class="empty">No IR/RF emitters found.</div>`
-          : store.transmitters.map(
-              (t) => html`
-                <div class="stat-card">
-                  <div class="label">${t.entity_id}</div>
-                  <div class="value" style="font-size:14px;">
-                    <span class="status-dot ok"></span>${t.state}
+        ${
+          store.transmitters.length === 0
+            ? html`<div class="empty">No IR/RF emitters found.</div>`
+            : store.transmitters.map(
+                (t) => html`
+                  <div class="stat-card">
+                    <div class="label">${t.entity_id}</div>
+                    <div class="value" style="font-size:14px;">
+                      <span class="status-dot ok"></span>${t.state}
+                    </div>
                   </div>
-                </div>
-              `,
-            )}
+                `,
+              )
+        }
       </div>
       <h3>Available receivers</h3>
       <div class="status-grid">
-        ${store.receivers.length === 0
-          ? html`<div class="empty">No IR/RF receivers found.</div>`
-          : store.receivers.map(
-              (r) => html`
-                <div class="stat-card">
-                  <div class="label">${r.entity_id}</div>
-                  <div class="value" style="font-size:14px;">
-                    <span class="status-dot ok"></span>${r.state}
+        ${
+          store.receivers.length === 0
+            ? html`<div class="empty">No IR/RF receivers found.</div>`
+            : store.receivers.map(
+                (r) => html`
+                  <div class="stat-card">
+                    <div class="label">${r.entity_id}</div>
+                    <div class="value" style="font-size:14px;">
+                      <span class="status-dot ok"></span>${r.state}
+                    </div>
                   </div>
-                </div>
-              `,
-            )}
+                `,
+              )
+        }
       </div>
     `;
   }

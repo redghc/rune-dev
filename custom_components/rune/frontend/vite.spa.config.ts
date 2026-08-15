@@ -1,9 +1,12 @@
-import { defineConfig, type Plugin } from "vite";
-import { viteSingleFile } from "vite-plugin-singlefile";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
-import { rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { rename } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { defineConfig } from "vite";
+import { viteSingleFile } from "vite-plugin-singlefile";
+
+import type { Plugin } from "vite";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const srcDir = resolve(__dirname, "src");

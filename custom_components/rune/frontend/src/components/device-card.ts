@@ -1,8 +1,10 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
+
 import type { DeviceSummary, PulseCommand } from "../types.js";
 
 @customElement("rune-device-card")
@@ -147,9 +149,7 @@ export class RuneDeviceCard extends LitElement {
               </button>
             `,
           )}
-          <button class="cmd placeholder" @click=${this._learn}>
-            + Learn command
-          </button>
+          <button class="cmd placeholder" @click=${this._learn}>+ Learn command</button>
         </div>
       </div>
     `;

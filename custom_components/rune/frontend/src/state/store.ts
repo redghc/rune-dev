@@ -5,6 +5,7 @@
 import type {
   ActionBinding,
   DeviceSummary,
+  LearnResult,
   Remote,
   RxEntity,
   TxEntity,
@@ -28,7 +29,7 @@ export interface LearnDialogState {
   deviceId: string | null;
   commandKey: string;
   status: string;
-  captured: import("../types.js").LearnResult["captured"] | null;
+  captured: LearnResult["captured"] | null;
   rawTimings: number[] | null;
   carrierHz: number | null;
 }

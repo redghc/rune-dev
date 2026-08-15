@@ -1,7 +1,8 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
+
 import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
 
 @customElement("rune-toast-stack")
 export class RuneToastStack extends LitElement {
@@ -65,11 +66,7 @@ export class RuneToastStack extends LitElement {
     void this._tick;
     return html`
       <div class="stack">
-        ${store.toasts.map(
-          (t) => html`
-            <div class="toast ${t.kind ?? ""}">${t.text}</div>
-          `,
-        )}
+        ${store.toasts.map((t) => html` <div class="toast ${t.kind ?? ""}">${t.text}</div> `)}
       </div>
     `;
   }

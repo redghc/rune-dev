@@ -1,8 +1,9 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
 
 @customElement("rune-actions-view")
 export class RuneActionsView extends LitElement {
@@ -81,26 +82,27 @@ export class RuneActionsView extends LitElement {
         </button>
       </div>
       <div class="help">
-        Action bindings connect a captured signal to a side-effect: fire a
-        pulse on a device, call a service, activate a scene, run a script,
-        or fire an event. Bindings are managed programmatically (the API
-        is stable; a UI editor lands in v0.4).
+        Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a
+        service, activate a scene, run a script, or fire an event. Bindings are managed
+        programmatically (the API is stable; a UI editor lands in v0.4).
       </div>
-      ${actions.length === 0
-        ? html`<div class="empty">No action bindings yet.</div>`
-        : actions.map(
-            (a) => html`
-              <div class="action-card">
-                <div class="info">
-                  <strong>${a.name ?? a.id}</strong>
-                  <div class="meta">
-                    ${a.target.kind} · signal ${a.signal_id.slice(0, 8)}… ·
-                    min_hits: ${a.min_hits}
+      ${
+        actions.length === 0
+          ? html`<div class="empty">No action bindings yet.</div>`
+          : actions.map(
+              (a) => html`
+                <div class="action-card">
+                  <div class="info">
+                    <strong>${a.name ?? a.id}</strong>
+                    <div class="meta">
+                      ${a.target.kind} · signal ${a.signal_id.slice(0, 8)}… · min_hits:
+                      ${a.min_hits}
+                    </div>
                   </div>
                 </div>
-              </div>
-            `,
-          )}
+              `,
+            )
+      }
     `;
   }
 }

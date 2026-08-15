@@ -3,13 +3,7 @@
 // in ``custom_components/rune/domain``. Keep field names identical.
 
 export type DeviceCategory =
-  | "fan"
-  | "climate"
-  | "light"
-  | "cover"
-  | "media_player"
-  | "switch"
-  | "remote";
+  "fan" | "climate" | "light" | "cover" | "media_player" | "switch" | "remote";
 
 export interface PulseCommand {
   key: string;

@@ -104,12 +104,8 @@ class RunePanel extends HTMLElement {
       if (data.kind === "ws" && data.message) {
         this._hass
           .callWS(data.message)
-          .then((result) =>
-            reply({ result: result === undefined ? null : result }),
-          )
-          .catch((err) =>
-            reply({ error: String((err as Error)?.message ?? err) }),
-          );
+          .then((result) => reply({ result: result === undefined ? null : result }))
+          .catch((err) => reply({ error: String((err as Error)?.message ?? err) }));
       } else if (
         data.kind === "service" &&
         typeof data.domain === "string" &&
@@ -118,9 +114,7 @@ class RunePanel extends HTMLElement {
         this._hass
           .callService(data.domain, data.service, data.service_data ?? {})
           .then(() => reply({ result: true }))
-          .catch((err) =>
-            reply({ error: String((err as Error)?.message ?? err) }),
-          );
+          .catch((err) => reply({ error: String((err as Error)?.message ?? err) }));
       } else {
         reply({ error: `unknown bridge kind: ${data.kind}` });
       }

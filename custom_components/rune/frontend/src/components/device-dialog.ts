@@ -1,8 +1,10 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
+
 import type { DeviceCategory, TxEntity } from "../types.js";
 
 const CATEGORIES: DeviceCategory[] = [
@@ -118,10 +120,7 @@ export class RuneDeviceDialog extends LitElement {
         if (this._categoryEl && document.activeElement !== this._categoryEl) {
           this._categoryEl.value = editing.category;
         }
-        if (
-          this._manufacturerEl &&
-          document.activeElement !== this._manufacturerEl
-        ) {
+        if (this._manufacturerEl && document.activeElement !== this._manufacturerEl) {
           this._manufacturerEl.value = editing.manufacturer ?? "";
         }
         if (this._modelEl && document.activeElement !== this._modelEl) {
@@ -134,10 +133,7 @@ export class RuneDeviceDialog extends LitElement {
         if (this._categoryEl && document.activeElement !== this._categoryEl) {
           this._categoryEl.value = "fan";
         }
-        if (
-          this._manufacturerEl &&
-          document.activeElement !== this._manufacturerEl
-        ) {
+        if (this._manufacturerEl && document.activeElement !== this._manufacturerEl) {
           this._manufacturerEl.value = "";
         }
         if (this._modelEl && document.activeElement !== this._modelEl) {
@@ -242,9 +238,7 @@ export class RuneDeviceDialog extends LitElement {
         <div class="form-row">
           <label for="category">Category</label>
           <select id="category">
-            ${CATEGORIES.map(
-              (c) => html`<option value=${c}>${c}</option>`,
-            )}
+            ${CATEGORIES.map((c) => html`<option value=${c}>${c}</option>`)}
           </select>
         </div>
         <div class="form-row">
@@ -264,8 +258,7 @@ export class RuneDeviceDialog extends LitElement {
             <button
               class="secondary"
               type="button"
-              @click=${() =>
-                this._loadTransmitters(editing?.transmitter_entity_ids ?? null)}
+              @click=${() => this._loadTransmitters(editing?.transmitter_entity_ids ?? null)}
             >
               ↻
             </button>
@@ -273,9 +266,7 @@ export class RuneDeviceDialog extends LitElement {
         </div>
         ${this._err ? html`<div class="err">${this._err}</div>` : ""}
         <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>
-            Cancel
-          </button>
+          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
           <button type="button" @click=${this._save} ?disabled=${this._busy}>
             ${this._busy ? "Saving…" : "Save"}
           </button>

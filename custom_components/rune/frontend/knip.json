@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-json.json",
+  "entry": ["src/index.html", "src/shim.ts"],
+  "project": ["src/**/*.ts", "src/**/*.html", "*.config.ts"],
+  "vite": true,
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "files": "warn",
+    "dependencies": "warn",
+    "devDependencies": "warn",
+    "unlisted": "warn",
+    "unresolved": "warn",
+    "exports": "warn",
+    "nsExports": "warn",
+    "nsTypes": "warn",
+    "enumMembers": "warn",
+    "types": "warn"
+  }
+}

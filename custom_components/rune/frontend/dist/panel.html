@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -53,7 +53,7 @@
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
- */function M(s,e){return(t,r,i)=>{const a=n=>{var l;return((l=n.renderRoot)==null?void 0:l.querySelector(s))??null};return ot(t,r,{get(){return a(this)}})}}const A=w`
+ */function M(s,e){return(t,r,i)=>{const a=n=>{var l;return((l=n.renderRoot)==null?void 0:l.querySelector(s))??null};return ot(t,r,{get(){return a(this)}})}}const o={version:"0.3.2",section:"devices",devices:[],remotes:[],actions:[],transmitters:[],receivers:[],toasts:[],deviceDialog:{open:!1,editing:null},learnDialog:{open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},setSection(s){this.section=s,b()},pushToast(s,e){const t=Date.now()+Math.floor(Math.random()*1e3);this.toasts=[...this.toasts,{id:t,text:s,kind:e}],b(),setTimeout(()=>{this.toasts=this.toasts.filter(r=>r.id!==t),b()},2400)},openDeviceDialog(s=null){this.deviceDialog={open:!0,editing:s},b()},closeDeviceDialog(){this.deviceDialog={open:!1,editing:null},b()},openLearnDialog(s,e){this.learnDialog={open:!0,deviceId:s,commandKey:e,status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},closeLearnDialog(){this.learnDialog={open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},updateLearn(s){this.learnDialog={...this.learnDialog,...s},b()},setDevices(s){this.devices=s,b()},setRemotes(s){this.remotes=s,b()},setActions(s){this.actions=s,b()},setTransmitters(s){this.transmitters=s,b()},setReceivers(s){this.receivers=s,b()}},de=new Set;function D(s){return de.add(s),()=>de.delete(s)}function b(){for(const s of de)s()}const A=w`
   :host {
     --primary: #03a9f4;
     --bg: #1f1f1f;
@@ -144,11 +144,9 @@
     padding: 1px 5px;
     border-radius: 3px;
   }
-`,o={version:"0.3.2",section:"devices",devices:[],remotes:[],actions:[],transmitters:[],receivers:[],toasts:[],deviceDialog:{open:!1,editing:null},learnDialog:{open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},setSection(s){this.section=s,b()},pushToast(s,e){const t=Date.now()+Math.floor(Math.random()*1e3);this.toasts=[...this.toasts,{id:t,text:s,kind:e}],b(),setTimeout(()=>{this.toasts=this.toasts.filter(r=>r.id!==t),b()},2400)},openDeviceDialog(s=null){this.deviceDialog={open:!0,editing:s},b()},closeDeviceDialog(){this.deviceDialog={open:!1,editing:null},b()},openLearnDialog(s,e){this.learnDialog={open:!0,deviceId:s,commandKey:e,status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},closeLearnDialog(){this.learnDialog={open:!1,deviceId:null,commandKey:"",status:"Idle — click Start learn",captured:null,rawTimings:null,carrierHz:null},b()},updateLearn(s){this.learnDialog={...this.learnDialog,...s},b()},setDevices(s){this.devices=s,b()},setRemotes(s){this.remotes=s,b()},setActions(s){this.actions=s,b()},setTransmitters(s){this.transmitters=s,b()},setReceivers(s){this.receivers=s,b()}},de=new Set;function D(s){return de.add(s),()=>de.delete(s)}function b(){for(const s of de)s()}var lt=Object.defineProperty,ct=Object.getOwnPropertyDescriptor,Ue=(s,e,t,r)=>{for(var i=r>1?void 0:r?ct(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&lt(e,t,i),i};let se=class extends y{constructor(){super(...arguments),this._tick=0,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++)}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}render(){return this._tick,d`
+`;var lt=Object.defineProperty,ct=Object.getOwnPropertyDescriptor,Ue=(s,e,t,r)=>{for(var i=r>1?void 0:r?ct(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&lt(e,t,i),i};let se=class extends y{constructor(){super(...arguments),this._tick=0,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>this._tick++)}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}render(){return this._tick,d`
       <div class="stack">
-        ${o.toasts.map(s=>d`
-            <div class="toast ${s.kind??""}">${s.text}</div>
-          `)}
+        ${o.toasts.map(s=>d` <div class="toast ${s.kind??""}">${s.text}</div> `)}
       </div>
     `}};se.styles=[A,w`
       .stack {
@@ -212,9 +210,7 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
                 ${r.label??r.key}
               </button>
             `)}
-          <button class="cmd placeholder" @click=${this._learn}>
-            + Learn command
-          </button>
+          <button class="cmd placeholder" @click=${this._learn}>+ Learn command</button>
         </div>
       </div>
     `}};K.styles=[A,w`
@@ -292,11 +288,11 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
         </button>
       </div>
       ${s.length===0?d`<div class="empty">
-            <div>No devices yet.</div>
-            <div style="margin-top:8px;font-size:12px;">
-              Click + Add device to create one, or use the config flow.
-            </div>
-          </div>`:d`${s.map(e=>d`<rune-device-card .device=${e}></rune-device-card>`)}`}
+              <div>No devices yet.</div>
+              <div style="margin-top:8px;font-size:12px;">
+                Click + Add device to create one, or use the config flow.
+              </div>
+            </div>`:d`${s.map(e=>d`<rune-device-card .device=${e}></rune-device-card>`)}`}
     `}};F.styles=[A,w`
       .toolbar {
         display: flex;
@@ -320,32 +316,32 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
         </button>
       </div>
       <div class="help">
-        Live signals captured from every receiver you've configured. The
-        sniffer listens on each receiver entity automatically once you add
-        a device. Assign a signal to a device command via the
+        Live signals captured from every receiver you've configured. The sniffer listens on each
+        receiver entity automatically once you add a device. Assign a signal to a device command via
+        the
         <code>Actions</code> tab, or dismiss the whole remote here.
       </div>
       ${s.length===0?d`<div class="empty">No captured signals yet.</div>`:s.map(e=>d`
-              <div class="remote-card ${e.dismissed?"dismissed":""}">
-                <h4>
-                  ${e.label??e.protocol_label??e.id}
-                  <span class="badge protocol">${e.protocol_label??"unknown"}</span>
-                  <span class="badge">${e.signal_count} signal(s)</span>
-                </h4>
-                ${e.signals.map(t=>d`
-                    <div class="signal-card">
-                      <div class="info">${t.alias??t.fingerprint??t.id}</div>
-                      <div class="meta">
-                        hits: ${t.hit_count} · last: ${t.last_seen} ·
-                        ${t.decoded_fingerprint??"—"}
+                <div class="remote-card ${e.dismissed?"dismissed":""}">
+                  <h4>
+                    ${e.label??e.protocol_label??e.id}
+                    <span class="badge protocol">${e.protocol_label??"unknown"}</span>
+                    <span class="badge">${e.signal_count} signal(s)</span>
+                  </h4>
+                  ${e.signals.map(t=>d`
+                      <div class="signal-card">
+                        <div class="info">${t.alias??t.fingerprint??t.id}</div>
+                        <div class="meta">
+                          hits: ${t.hit_count} · last: ${t.last_seen} ·
+                          ${t.decoded_fingerprint??"—"}
+                        </div>
                       </div>
-                    </div>
-                  `)}
-                <button class="secondary" @click=${()=>this._dismiss(e)}>
-                  ${e.dismissed?"Re-activate":"Dismiss remote"}
-                </button>
-              </div>
-            `)}
+                    `)}
+                  <button class="secondary" @click=${()=>this._dismiss(e)}>
+                    ${e.dismissed?"Re-activate":"Dismiss remote"}
+                  </button>
+                </div>
+              `)}
     `}};J.styles=[A,w`
       .toolbar {
         display: flex;
@@ -414,22 +410,21 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
         </button>
       </div>
       <div class="help">
-        Action bindings connect a captured signal to a side-effect: fire a
-        pulse on a device, call a service, activate a scene, run a script,
-        or fire an event. Bindings are managed programmatically (the API
-        is stable; a UI editor lands in v0.4).
+        Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a
+        service, activate a scene, run a script, or fire an event. Bindings are managed
+        programmatically (the API is stable; a UI editor lands in v0.4).
       </div>
       ${s.length===0?d`<div class="empty">No action bindings yet.</div>`:s.map(e=>d`
-              <div class="action-card">
-                <div class="info">
-                  <strong>${e.name??e.id}</strong>
-                  <div class="meta">
-                    ${e.target.kind} · signal ${e.signal_id.slice(0,8)}… ·
-                    min_hits: ${e.min_hits}
+                <div class="action-card">
+                  <div class="info">
+                    <strong>${e.name??e.id}</strong>
+                    <div class="meta">
+                      ${e.target.kind} · signal ${e.signal_id.slice(0,8)}… · min_hits:
+                      ${e.min_hits}
+                    </div>
                   </div>
                 </div>
-              </div>
-            `)}
+              `)}
     `}};Z.styles=[A,w`
       .toolbar {
         display: flex;
@@ -485,24 +480,24 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
       <h3>Available transmitters</h3>
       <div class="status-grid">
         ${o.transmitters.length===0?d`<div class="empty">No IR/RF emitters found.</div>`:o.transmitters.map(e=>d`
-                <div class="stat-card">
-                  <div class="label">${e.entity_id}</div>
-                  <div class="value" style="font-size:14px;">
-                    <span class="status-dot ok"></span>${e.state}
+                  <div class="stat-card">
+                    <div class="label">${e.entity_id}</div>
+                    <div class="value" style="font-size:14px;">
+                      <span class="status-dot ok"></span>${e.state}
+                    </div>
                   </div>
-                </div>
-              `)}
+                `)}
       </div>
       <h3>Available receivers</h3>
       <div class="status-grid">
         ${o.receivers.length===0?d`<div class="empty">No IR/RF receivers found.</div>`:o.receivers.map(e=>d`
-                <div class="stat-card">
-                  <div class="label">${e.entity_id}</div>
-                  <div class="value" style="font-size:14px;">
-                    <span class="status-dot ok"></span>${e.state}
+                  <div class="stat-card">
+                    <div class="label">${e.entity_id}</div>
+                    <div class="value" style="font-size:14px;">
+                      <span class="status-dot ok"></span>${e.state}
+                    </div>
                   </div>
-                </div>
-              `)}
+                `)}
       </div>
     `}};ie.styles=[A,w`
       h2 {
@@ -586,9 +581,7 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
         </div>
         ${this._err?d`<div class="err">${this._err}</div>`:""}
         <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>
-            Cancel
-          </button>
+          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
           <button type="button" @click=${this._save} ?disabled=${this._busy}>
             ${this._busy?"Saving…":"Save"}
           </button>
@@ -638,13 +631,12 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
         color: var(--danger);
         font-size: 12px;
       }
-    `];x([f()],g.prototype,"_tick",2);x([f()],g.prototype,"_txLoading",2);x([f()],g.prototype,"_transmitters",2);x([f()],g.prototype,"_err",2);x([f()],g.prototype,"_busy",2);x([M("#dlg")],g.prototype,"_dlg",2);x([M("#name")],g.prototype,"_nameEl",2);x([M("#category")],g.prototype,"_categoryEl",2);x([M("#manufacturer")],g.prototype,"_manufacturerEl",2);x([M("#model")],g.prototype,"_modelEl",2);x([M("#tx")],g.prototype,"_txEl",2);g=x([E("rune-device-dialog")],g);var At=Object.defineProperty,kt=Object.getOwnPropertyDescriptor,Y=(s,e,t,r)=>{for(var i=r>1?void 0:r?kt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&At(e,t,i),i};let L=class extends y{constructor(){super(...arguments),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>{var e;const s=((e=this._dlg)==null?void 0:e.open)??!1;this._tick++,queueMicrotask(()=>{const t=this._dlg;t&&(o.learnDialog.open&&!s?t.showModal():!o.learnDialog.open&&s&&t.close())})})}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}_cancel(){o.closeLearnDialog()}async _start(){const{deviceId:s,commandKey:e}=o.learnDialog;if(!(!s||!e)){o.updateLearn({status:"Capturing… press the button on your remote NOW"}),this._busy=!0;try{const t=await m.learnCommand({device_id:s,command_key:e,timeout_s:15});t!=null&&t.captured?o.updateLearn({status:`Captured: ${t.captured.protocol_label??"raw"} @ ${t.carrier_frequency_hz} Hz`,captured:t.captured,rawTimings:t.raw_timings,carrierHz:t.carrier_frequency_hz}):o.updateLearn({status:"No signal captured"})}catch(t){o.updateLearn({status:`Failed: ${t.message}`})}finally{this._busy=!1}}}async _save(){const{deviceId:s,commandKey:e,captured:t,rawTimings:r}=o.learnDialog;if(!(!s||!t||!r)){this._saving=!0;try{const{device:i}=await m.getDevice(s),a={...i.commands??{}};a[e]={key:e,label:e.replace(/_/g," ").replace(/^./,l=>l.toUpperCase()),category:"custom",signal_category:{...t.signal_category},payload:{...t.payload,raw_timings:r}},await m.updateDevice({device_id:s,commands:a}),o.pushToast(`Learned "${e}"`,"ok"),o.closeLearnDialog();const{devices:n}=await m.list();o.setDevices(n??[])}catch(i){o.pushToast(i.message,"err")}finally{this._saving=!1}}}render(){var n;this._tick;const s=o.learnDialog,e=s.rawTimings,t=e?JSON.stringify(e.slice(0,30))+(e.length>30?"…":""):"—",i=`${((n=o.devices.find(l=>l.id===s.deviceId))==null?void 0:n.name)??"—"} → ${s.commandKey}`,a=s.captured!==null&&!this._saving;return d`
+    `];x([f()],g.prototype,"_tick",2);x([f()],g.prototype,"_txLoading",2);x([f()],g.prototype,"_transmitters",2);x([f()],g.prototype,"_err",2);x([f()],g.prototype,"_busy",2);x([M("#dlg")],g.prototype,"_dlg",2);x([M("#name")],g.prototype,"_nameEl",2);x([M("#category")],g.prototype,"_categoryEl",2);x([M("#manufacturer")],g.prototype,"_manufacturerEl",2);x([M("#model")],g.prototype,"_modelEl",2);x([M("#tx")],g.prototype,"_txEl",2);g=x([E("rune-device-dialog")],g);var At=Object.defineProperty,kt=Object.getOwnPropertyDescriptor,Y=(s,e,t,r)=>{for(var i=r>1?void 0:r?kt(e,t):e,a=s.length-1,n;a>=0;a--)(n=s[a])&&(i=(r?n(e,t,i):n(i))||i);return r&&i&&At(e,t,i),i};let L=class extends y{constructor(){super(...arguments),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}connectedCallback(){super.connectedCallback(),this._unsub=D(()=>{var e;const s=((e=this._dlg)==null?void 0:e.open)??!1;this._tick++,queueMicrotask(()=>{const t=this._dlg;t&&(o.learnDialog.open&&!s?t.showModal():!o.learnDialog.open&&s&&t.close())})})}disconnectedCallback(){var s;super.disconnectedCallback(),(s=this._unsub)==null||s.call(this)}_cancel(){o.closeLearnDialog()}async _start(){const{deviceId:s,commandKey:e}=o.learnDialog;if(!(!s||!e)){o.updateLearn({status:"Capturing… press the button on your remote NOW"}),this._busy=!0;try{const t=await m.learnCommand({device_id:s,command_key:e,timeout_s:15});t!=null&&t.captured?o.updateLearn({status:`Captured: ${t.captured.protocol_label??"raw"} @ ${t.carrier_frequency_hz} Hz`,captured:t.captured,rawTimings:t.raw_timings,carrierHz:t.carrier_frequency_hz}):o.updateLearn({status:"No signal captured"})}catch(t){o.updateLearn({status:`Failed: ${t.message}`})}finally{this._busy=!1}}}async _save(){const{deviceId:s,commandKey:e,captured:t,rawTimings:r}=o.learnDialog;if(!(!s||!t||!r)){this._saving=!0;try{const{device:i}=await m.getDevice(s),a={...i.commands};a[e]={key:e,label:e.replace(/_/g," ").replace(/^./,l=>l.toUpperCase()),category:"custom",signal_category:{...t.signal_category},payload:{...t.payload,raw_timings:r}},await m.updateDevice({device_id:s,commands:a}),o.pushToast(`Learned "${e}"`,"ok"),o.closeLearnDialog();const{devices:n}=await m.list();o.setDevices(n??[])}catch(i){o.pushToast(i.message,"err")}finally{this._saving=!1}}}render(){var n;this._tick;const s=o.learnDialog,e=s.rawTimings,t=e?JSON.stringify(e.slice(0,30))+(e.length>30?"…":""):"—",i=`${((n=o.devices.find(l=>l.id===s.deviceId))==null?void 0:n.name)??"—"} → ${s.commandKey}`,a=s.captured!==null&&!this._saving;return d`
       <dialog id="dlg" @close=${()=>o.closeLearnDialog()}>
         <h2>Learn command</h2>
         <div class="help">
-          Point your remote at the receiver and press the button you want
-          to capture. RUNE records the raw timings and writes them into
-          the command slot.
+          Point your remote at the receiver and press the button you want to capture. RUNE records
+          the raw timings and writes them into the command slot.
         </div>
         <div class="form-row">
           <label>Command</label>
@@ -659,9 +651,7 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):`,"off");s&&o.openLearnD
           <pre>${t}</pre>
         </div>
         <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>
-            Cancel
-          </button>
+          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
           <button type="button" @click=${this._start} ?disabled=${this._busy}>
             ${this._busy?"Capturing…":"Start learn"}
           </button>

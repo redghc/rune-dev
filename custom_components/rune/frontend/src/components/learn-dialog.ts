@@ -1,8 +1,9 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
 
 @customElement("rune-learn-dialog")
 export class RuneLearnDialog extends LitElement {
@@ -116,10 +117,7 @@ export class RuneLearnDialog extends LitElement {
     this._saving = true;
     try {
       const { device } = await api.getDevice(deviceId);
-      const commands = { ...(device.commands ?? {}) } as unknown as Record<
-        string,
-        Record<string, unknown>
-      >;
+      const commands = { ...device.commands } as unknown as Record<string, Record<string, unknown>>;
       commands[commandKey] = {
         key: commandKey,
         label: commandKey.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
@@ -146,17 +144,15 @@ export class RuneLearnDialog extends LitElement {
     const timingsText = timings
       ? JSON.stringify(timings.slice(0, 30)) + (timings.length > 30 ? "…" : "")
       : "—";
-    const deviceName =
-      store.devices.find((d) => d.id === ld.deviceId)?.name ?? "—";
+    const deviceName = store.devices.find((d) => d.id === ld.deviceId)?.name ?? "—";
     const target = `${deviceName} → ${ld.commandKey}`;
     const canSave = ld.captured !== null && !this._saving;
     return html`
       <dialog id="dlg" @close=${() => store.closeLearnDialog()}>
         <h2>Learn command</h2>
         <div class="help">
-          Point your remote at the receiver and press the button you want
-          to capture. RUNE records the raw timings and writes them into
-          the command slot.
+          Point your remote at the receiver and press the button you want to capture. RUNE records
+          the raw timings and writes them into the command slot.
         </div>
         <div class="form-row">
           <label>Command</label>
@@ -171,9 +167,7 @@ export class RuneLearnDialog extends LitElement {
           <pre>${timingsText}</pre>
         </div>
         <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>
-            Cancel
-          </button>
+          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
           <button type="button" @click=${this._start} ?disabled=${this._busy}>
             ${this._busy ? "Capturing…" : "Start learn"}
           </button>

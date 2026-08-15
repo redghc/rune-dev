@@ -1,8 +1,10 @@
-import { LitElement, html, css } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { sharedStyles } from "../styles/shared.js";
-import { store, subscribe } from "../state/store.js";
+
 import { api } from "../api/bridge.js";
+import { store, subscribe } from "../state/store.js";
+import { sharedStyles } from "../styles/shared.js";
+
 import type { Remote } from "../types.js";
 
 @customElement("rune-sniffer-view")
@@ -119,38 +121,40 @@ export class RuneSnifferView extends LitElement {
         </button>
       </div>
       <div class="help">
-        Live signals captured from every receiver you've configured. The
-        sniffer listens on each receiver entity automatically once you add
-        a device. Assign a signal to a device command via the
+        Live signals captured from every receiver you've configured. The sniffer listens on each
+        receiver entity automatically once you add a device. Assign a signal to a device command via
+        the
         <code>Actions</code> tab, or dismiss the whole remote here.
       </div>
-      ${visible.length === 0
-        ? html`<div class="empty">No captured signals yet.</div>`
-        : visible.map(
-            (r) => html`
-              <div class="remote-card ${r.dismissed ? "dismissed" : ""}">
-                <h4>
-                  ${r.label ?? r.protocol_label ?? r.id}
-                  <span class="badge protocol">${r.protocol_label ?? "unknown"}</span>
-                  <span class="badge">${r.signal_count} signal(s)</span>
-                </h4>
-                ${r.signals.map(
-                  (s) => html`
-                    <div class="signal-card">
-                      <div class="info">${s.alias ?? s.fingerprint ?? s.id}</div>
-                      <div class="meta">
-                        hits: ${s.hit_count} · last: ${s.last_seen} ·
-                        ${s.decoded_fingerprint ?? "—"}
+      ${
+        visible.length === 0
+          ? html`<div class="empty">No captured signals yet.</div>`
+          : visible.map(
+              (r) => html`
+                <div class="remote-card ${r.dismissed ? "dismissed" : ""}">
+                  <h4>
+                    ${r.label ?? r.protocol_label ?? r.id}
+                    <span class="badge protocol">${r.protocol_label ?? "unknown"}</span>
+                    <span class="badge">${r.signal_count} signal(s)</span>
+                  </h4>
+                  ${r.signals.map(
+                    (s) => html`
+                      <div class="signal-card">
+                        <div class="info">${s.alias ?? s.fingerprint ?? s.id}</div>
+                        <div class="meta">
+                          hits: ${s.hit_count} · last: ${s.last_seen} ·
+                          ${s.decoded_fingerprint ?? "—"}
+                        </div>
                       </div>
-                    </div>
-                  `,
-                )}
-                <button class="secondary" @click=${() => this._dismiss(r)}>
-                  ${r.dismissed ? "Re-activate" : "Dismiss remote"}
-                </button>
-              </div>
-            `,
-          )}
+                    `,
+                  )}
+                  <button class="secondary" @click=${() => this._dismiss(r)}>
+                    ${r.dismissed ? "Re-activate" : "Dismiss remote"}
+                  </button>
+                </div>
+              `,
+            )
+      }
     `;
   }
 }
