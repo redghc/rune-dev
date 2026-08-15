@@ -8,6 +8,11 @@ const srcDir = resolve(__dirname, "src");
 const distDir = resolve(__dirname, "dist");
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": srcDir,
+    },
+  },
   build: {
     outDir: distDir,
     emptyOutDir: false,

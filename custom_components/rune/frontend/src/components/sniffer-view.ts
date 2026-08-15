@@ -1,11 +1,11 @@
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
-import { api } from "../api/bridge.js";
-import { store, subscribe } from "../state/store.js";
-import { sharedStyles } from "../styles/shared.js";
+import { api } from "@/api/bridge.js";
+import { store, subscribe } from "@/state/store.js";
+import { sharedStyles } from "@/styles/shared.js";
 
-import type { Remote } from "../types.js";
+import type { Remote } from "@/types.js";
 
 @customElement("rune-sniffer-view")
 export class RuneSnifferView extends LitElement {

@@ -8,7 +8,7 @@ import type {
   Remote,
   RxEntity,
   TxEntity,
-} from "../types.js";
+} from "@/types.js";
 
 // postMessage bridge to the HA parent window.
 //

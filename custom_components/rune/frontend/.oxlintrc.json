@@ -17,6 +17,17 @@
         "allow": ["warn", "error"]
       }
     ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/../**", "../*", "../../*", "../../../*"],
+            "message": "Use the '@/...' import alias instead of parent-relative paths."
+          }
+        ]
+      }
+    ],
     "no-underscore-dangle": [
       "error",
       {
@@ -35,6 +46,7 @@
       }
     ],
     "import/no-duplicates": "error",
+    "import/no-relative-parent-imports": "error",
     "import/no-unassigned-import": "off",
     "unicorn/prefer-query-selector": "off",
     "unicorn/prefer-event-target": "off"

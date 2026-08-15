@@ -1,9 +1,9 @@
 import { css, html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 
-import { api } from "../api/bridge.js";
-import { store, subscribe } from "../state/store.js";
-import { sharedStyles } from "../styles/shared.js";
+import { api } from "@/api/bridge.js";
+import { store, subscribe } from "@/state/store.js";
+import { sharedStyles } from "@/styles/shared.js";
 
 @customElement("rune-learn-dialog")
 export class RuneLearnDialog extends LitElement {

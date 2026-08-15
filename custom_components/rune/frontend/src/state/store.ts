@@ -9,7 +9,7 @@ import type {
   Remote,
   RxEntity,
   TxEntity,
-} from "../types.js";
+} from "@/types.js";
 
 export type Section = "devices" | "sniffer" | "actions" | "settings";
 

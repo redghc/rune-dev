@@ -1,11 +1,11 @@
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { api } from "../api/bridge.js";
-import { store } from "../state/store.js";
-import { sharedStyles } from "../styles/shared.js";
+import { api } from "@/api/bridge.js";
+import { store } from "@/state/store.js";
+import { sharedStyles } from "@/styles/shared.js";
 
-import type { DeviceSummary, PulseCommand } from "../types.js";
+import type { DeviceSummary, PulseCommand } from "@/types.js";
 
 @customElement("rune-device-card")
 export class RuneDeviceCard extends LitElement {

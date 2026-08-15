@@ -26,6 +26,11 @@ const renameIndexToPanel = (): Plugin => ({
 
 export default defineConfig({
   root: srcDir,
+  resolve: {
+    alias: {
+      "@": srcDir,
+    },
+  },
   plugins: [viteSingleFile(), renameIndexToPanel()],
   build: {
     outDir: distDir,

@@ -1,8 +1,8 @@
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
-import { store, subscribe } from "../state/store.js";
-import { sharedStyles } from "../styles/shared.js";
+import { store, subscribe } from "@/state/store.js";
+import { sharedStyles } from "@/styles/shared.js";
 
 @customElement("rune-toast-stack")
 export class RuneToastStack extends LitElement {
