@@ -72,6 +72,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+__version__ = "0.2.7"
+
 
 # ---------------------------------------------------------------------------
 # Integration setup
@@ -168,52 +170,84 @@ async def _register_panel(hass: Any, entry: Any) -> None:
     setup — the integration remains usable via the options flow even
     if the panel can't be mounted.
     """
-    try:
-        from pathlib import Path
+    from pathlib import Path
 
-        from homeassistant.components import panel_custom
-        from homeassistant.components.http import StaticPathConfig
+    from homeassistant.components import panel_custom
+    from homeassistant.components.http import StaticPathConfig
 
-        from custom_components.rune.const import (
-            PANEL_HTML_FILENAME,
-            PANEL_ICON,
-            PANEL_JS_FILENAME,
-            PANEL_STATIC_PATH,
-            PANEL_TITLE,
-            PANEL_URL,
+    from custom_components.rune.const import (
+        PANEL_HTML_FILENAME,
+        PANEL_ICON,
+        PANEL_JS_FILENAME,
+        PANEL_STATIC_PATH,
+        PANEL_TITLE,
+        PANEL_URL,
+    )
+
+    # Resolve asset paths relative to THIS package. Using
+    # ``Path(__file__).parent`` is more reliable than
+    # ``async_get_integration(hass, DOMAIN).file_path`` because it
+    # doesn't depend on the integration loader having populated the
+    # registry yet when ``async_setup_entry`` runs.
+    package_root = Path(__file__).parent
+    js_path = package_root / "frontend" / "dist" / PANEL_JS_FILENAME
+    html_path = package_root / "frontend" / "dist" / PANEL_HTML_FILENAME
+
+    # Refuse to register if the asset files don't exist on disk —
+    # this prevents the "Unable to load custom panel" error that
+    # happens when HA caches a panel registration pointing at a
+    # missing file (e.g. during a partial deploy).
+    if not js_path.is_file():
+        _LOGGER.error(
+            "rune: cannot register sidebar panel — JS shim not found at %s",
+            js_path,
         )
+        return
+    if not html_path.is_file():
+        _LOGGER.error(
+            "rune: cannot register sidebar panel — HTML not found at %s",
+            html_path,
+        )
+        return
 
-        # Resolve asset paths relative to THIS package. Using
-        # ``Path(__file__).parent`` is more reliable than
-        # ``async_get_integration(hass, DOMAIN).file_path`` because it
-        # doesn't depend on the integration loader having populated
-        # the registry yet when ``async_setup_entry`` runs.
-        package_root = Path(__file__).parent
-        js_path = str(package_root / "frontend" / "dist" / PANEL_JS_FILENAME)
-        html_path = str(package_root / "frontend" / "dist" / PANEL_HTML_FILENAME)
+    # First, clean up any prior registration from a previous load.
+    # HA caches panel registrations across reloads; if we don't drop
+    # the old one we end up with a stale URL pointing at a moved or
+    # deleted file.
+    try:
+        await panel_custom.async_remove_panel(hass, PANEL_URL)
+    except Exception as err:
+        _LOGGER.debug("rune: prior panel removal skipped: %s", err)
 
-        # Two static assets:
-        # - The JS module that registers the ``<rune-panel>`` custom element
-        # - The HTML that the iframe inside that element loads
-        js_url = f"{PANEL_STATIC_PATH}/{PANEL_JS_FILENAME}"
-        html_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
+    js_url = f"{PANEL_STATIC_PATH}/{PANEL_JS_FILENAME}"
+    html_url = f"{PANEL_STATIC_PATH}/{PANEL_HTML_FILENAME}"
 
-        # Cache-bust the JS module so HA always loads the latest bundle
-        # after a restart. Use a stable string (the package version)
-        # rather than time.time() so HACS / browser caches behave.
-        module_url = f"{js_url}?v=0.2.6"
+    # Cache-bust the JS module so HA always loads the latest bundle
+    # after a restart. The version string MUST change every time the
+    # shim is updated or HA keeps loading the old cached file.
+    from custom_components.rune import __version__
 
+    module_url = f"{js_url}?v={__version__}"
+
+    try:
         await hass.http.async_register_static_paths(
             [
-                StaticPathConfig(js_url, js_path, cache_headers=False),
-                StaticPathConfig(html_url, html_path, cache_headers=False),
+                StaticPathConfig(js_url, str(js_path)),
+                StaticPathConfig(html_url, str(html_path)),
             ]
         )
+        _LOGGER.info(
+            "rune: registered static assets at %s and %s (paths %s, %s)",
+            js_url,
+            html_url,
+            js_path,
+            html_path,
+        )
+    except Exception as err:
+        _LOGGER.error("rune: failed to register static paths: %s", err)
+        return
 
-        # The panel framework requires a JS module that registers a
-        # custom element matching ``webcomponent_name``. The HTML
-        # itself is loaded as an iframe inside that element so the
-        # UI can be authored as plain HTML+JS with no build step.
+    try:
         await panel_custom.async_register_panel(
             hass,
             webcomponent_name="rune-panel",
@@ -226,21 +260,13 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             trust_external=False,
             module_url=module_url,
         )
-
         _LOGGER.info(
-            "rune: sidebar panel registered at %s (module %s -> %s, iframe %s -> %s)",
+            "rune: sidebar panel registered at %s (module_url=%s)",
             PANEL_URL,
             module_url,
-            js_path,
-            html_url,
-            html_path,
         )
     except Exception as err:
-        _LOGGER.warning(
-            "rune: failed to register sidebar panel (frontend still usable via "
-            "options flow): %s",
-            err,
-        )
+        _LOGGER.error("rune: failed to register sidebar panel: %s", err)
 
 
 async def async_unload_entry(hass: Any, entry: Any) -> bool:

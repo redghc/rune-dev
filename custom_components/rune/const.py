@@ -24,9 +24,13 @@ MANUFACTURER = "RUNE"
 PANEL_TITLE = "RUNE"
 PANEL_ICON = "mdi:remote"
 PANEL_URL = "rune-panel"
-PANEL_STATIC_PATH = "/rune_panel_static"
-PANEL_JS_FILENAME = "rune-panel.js"
-PANEL_HTML_FILENAME = "rune-panel.html"
+# Static assets are served under this URL prefix. Kept short so the
+# resulting module URL stays under typical length limits and easy to
+# reason about. Bump the ``?v=`` query string in ``__init__.py`` if
+# you change the JS shim and need to force-bust HA's cache.
+PANEL_STATIC_PATH = "/rune"
+PANEL_JS_FILENAME = "panel.js"
+PANEL_HTML_FILENAME = "panel.html"
 
 # Platform names forwarded to HA. Lowercase identifiers used as
 # documentation; the runtime lookup uses ``Platform.<NAME>``
