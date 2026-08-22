@@ -497,14 +497,14 @@ def _register_services(hass: Any, coordinator: DevicePlatformCoordinator) -> Non
         hass.services.async_register(
             DOMAIN,
             "send_command",
-            lambda call: _async_handle_send_command(coordinator, call),
+            lambda call: _async_handle_send_command(hass, coordinator, call),
         )
 
     if not hass.services.has_service(DOMAIN, "learn_command"):
         hass.services.async_register(
             DOMAIN,
             "learn_command",
-            lambda call: _async_handle_learn_command(coordinator, call),
+            lambda call: _async_handle_learn_command(hass, coordinator, call),
         )
 
 
@@ -515,45 +515,103 @@ def _unregister_services(hass: Any) -> None:
             hass.services.async_remove(DOMAIN, service_name)
 
 
+def _resolve_rune_device_id(hass: Any, ha_device_id: str) -> str | None:
+    """Translate an HA ``device_id`` (from ``selector: device``) into the
+    RUNE internal UUID stored in the device registry ``identifiers``
+    tuple ``("rune", <uuid>)``.
+
+    Returns ``None`` if the HA device is unknown or was not provisioned
+    by this integration.
+    """
+    from homeassistant.helpers import device_registry as dr
+
+    registry = dr.async_get(hass)
+    entry = registry.async_get(ha_device_id)
+    if entry is None:
+        return None
+    for domain, identifier in entry.identifiers:
+        if domain == DOMAIN:
+            return identifier
+    return None
+
+
 async def _async_handle_send_command(
-    coordinator: DevicePlatformCoordinator, call: Any
+    hass: Any, coordinator: DevicePlatformCoordinator, call: Any
 ) -> None:
     """Handle ``rune.send_command``.
 
     Required service data:
 
-    - ``device_id`` — id of the RuneDevice.
+    - ``device_id`` — HA ``device_id`` (resolved via the device
+      registry) of the RUNE device to control. The integration's
+      ``identifier`` tuple is used to recover the internal UUID.
     - ``command_key`` — key of the PulseCommand to send.
+
+    Raises ``ServiceValidationError`` with a user-visible message on
+    any missing / unknown input — HA surfaces this in the Developer
+    Tools → Actions panel instead of a silent warning.
     """
-    device_id = call.data.get("device_id")
+    from homeassistant.exceptions import ServiceValidationError
+
+    ha_device_id = call.data.get("device_id")
     command_key = call.data.get("command_key")
-    if not device_id or not command_key:
-        _LOGGER.warning("rune.send_command missing device_id or command_key")
-        return
-    device = await coordinator._devices.get(device_id)  # type: ignore[attr-defined]
+    if not ha_device_id:
+        raise ServiceValidationError("device_id is required")
+    if not command_key:
+        raise ServiceValidationError("command_key is required")
+
+    rune_device_id = _resolve_rune_device_id(hass, ha_device_id)
+    if rune_device_id is None:
+        raise ServiceValidationError(
+            f"unknown RUNE device: {ha_device_id!r}"
+        )
+
+    device = await coordinator._devices.get(rune_device_id)  # type: ignore[attr-defined]
     if device is None:
-        _LOGGER.warning("rune.send_command: unknown device %s", device_id)
-        return
+        raise ServiceValidationError(
+            f"RUNE device {rune_device_id!r} not found in store"
+        )
     command = device.commands.get(command_key)
     if command is None:
-        _LOGGER.warning(
-            "rune.send_command: device %s has no command %s", device_id, command_key
+        raise ServiceValidationError(
+            f"device {device.name!r} has no learned command {command_key!r}"
         )
-        return
     await coordinator.async_send_command(device=device, command=command)
 
 
 async def _async_handle_learn_command(
-    coordinator: DevicePlatformCoordinator, call: Any
+    hass: Any, coordinator: DevicePlatformCoordinator, call: Any
 ) -> None:
     """Handle ``rune.learn_command``.
 
-    Placeholder: real capture-orchestrator wiring lands in Phase 4's
-    integration into the sniffer. For now this just logs the request
-    so the service exists in the HA service panel without errors.
+    Resolves the HA device_id to a RUNE UUID and emits a structured
+    log line. The capture orchestrator owns the actual IR / RF
+    capture — wiring it to a service entry point is a Phase 4
+    deliverable. For now this validates inputs and logs the request
+    so the service shows up cleanly in the Developer Tools → Actions
+    panel.
     """
+    from homeassistant.exceptions import ServiceValidationError
+
+    ha_device_id = call.data.get("device_id")
+    command_key = call.data.get("command_key")
+    if not ha_device_id:
+        raise ServiceValidationError("device_id is required")
+    if not command_key:
+        raise ServiceValidationError("command_key is required")
+
+    rune_device_id = _resolve_rune_device_id(hass, ha_device_id)
+    if rune_device_id is None:
+        raise ServiceValidationError(
+            f"unknown RUNE device: {ha_device_id!r}"
+        )
+    timeout_s = int(call.data.get("timeout_s", 15))
     _LOGGER.info(
-        "rune.learn_command invoked (UI capture flow not yet wired in MVP)"
+        "rune.learn_command: device=%s command=%s timeout=%ss "
+        "(UI capture flow not yet wired in MVP)",
+        rune_device_id,
+        command_key,
+        timeout_s,
     )
 
 

@@ -36,25 +36,33 @@
     "services": {
         "send_command": {
             "name": "Enviar comando",
-            "description": "Dispara un pulso aprendido en un dispositivo RUNE.",
+            "description": "Dispara un pulso IR / RF aprendido en un dispositivo RUNE.",
             "fields": {
                 "device_id": {
                     "name": "Dispositivo",
-                    "description": "ID del dispositivo RUNE a controlar."
+                    "description": "Dispositivo RUNE a controlar."
                 },
                 "command_key": {
-                    "name": "Clave del comando",
-                    "description": "Clave del PulseCommand a enviar."
+                    "name": "Comando",
+                    "description": "Clave del PulseCommand a enviar (p. ej. power_on, speed_2, off)."
                 }
             }
         },
         "learn_command": {
             "name": "Aprender comando",
-            "description": "Inicia una sesión de aprendizaje en un dispositivo RUNE.",
+            "description": "Inicia una sesión de aprendizaje en un dispositivo RUNE \u2014 captura una señal IR / RF.",
             "fields": {
                 "device_id": {
                     "name": "Dispositivo",
-                    "description": "ID del dispositivo RUNE para capturar."
+                    "description": "Dispositivo RUNE para el que se captura."
+                },
+                "command_key": {
+                    "name": "Comando",
+                    "description": "Clave bajo la cual se almacena el pulso capturado."
+                },
+                "timeout_s": {
+                    "name": "Tiempo de espera (s)",
+                    "description": "Cuánto tiempo esperar la señal del mando antes de rendirse."
                 }
             }
         }

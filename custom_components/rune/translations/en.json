@@ -36,25 +36,33 @@
     "services": {
         "send_command": {
             "name": "Send command",
-            "description": "Fire a learned pulse on a RUNE device.",
+            "description": "Fire a learned IR / RF pulse on a RUNE device.",
             "fields": {
                 "device_id": {
                     "name": "Device",
-                    "description": "ID of the RUNE device to control."
+                    "description": "RUNE device to control."
                 },
                 "command_key": {
-                    "name": "Command key",
-                    "description": "Key of the PulseCommand to send."
+                    "name": "Command",
+                    "description": "Key of the PulseCommand to send (e.g. power_on, speed_2, off)."
                 }
             }
         },
         "learn_command": {
             "name": "Learn command",
-            "description": "Start a learn session on a RUNE device.",
+            "description": "Start a learn session on a RUNE device \u2014 capture an IR / RF signal.",
             "fields": {
                 "device_id": {
                     "name": "Device",
-                    "description": "ID of the RUNE device to capture for."
+                    "description": "RUNE device to capture for."
+                },
+                "command_key": {
+                    "name": "Command",
+                    "description": "Key under which to store the captured pulse."
+                },
+                "timeout_s": {
+                    "name": "Timeout (s)",
+                    "description": "How long to wait for the remote signal before giving up."
                 }
             }
         }
