@@ -157,7 +157,7 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
     # 5. WebSocket commands.
     from custom_components.rune.websocket_api import async_register_websocket_commands
 
-    async_register_websocket_commands(hass)
+    await async_register_websocket_commands(hass)
 
     # 6. Sidebar panel — the user-visible front-end. The HTML lives at
     #    ``frontend/dist/rune-panel.html``; HA serves it from the
@@ -403,7 +403,7 @@ async def async_unload_entry(hass: Any, entry: Any) -> bool:
         _unregister_services(hass)
         from custom_components.rune.websocket_api import async_unregister_websocket_commands
 
-        async_unregister_websocket_commands(hass)
+        await async_unregister_websocket_commands(hass)
 
     return True
 

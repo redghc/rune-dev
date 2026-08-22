@@ -517,14 +517,6 @@ async def _ws_transmitter_list(
     return {"transmitters": _list_transmitter_entities(ctx.hass)}
 
 
-@_register("transmitter/list")
-async def _ws_transmitter_list(
-    ctx: RuneWebSocketContext, _msg: dict[str, Any]
-) -> dict[str, Any]:
-    """List every HA entity that can act as a transmitter."""
-    return {"transmitters": _list_transmitter_entities(ctx.hass)}
-
-
 @_register("receiver/list")
 async def _ws_receiver_list(
     ctx: RuneWebSocketContext, _msg: dict[str, Any]
