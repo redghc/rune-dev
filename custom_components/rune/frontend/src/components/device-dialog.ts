@@ -1,99 +1,116 @@
-import { css, html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { css, html, LitElement, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+
+import type { TemplateResult } from "lit";
+
+import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
 import { store, subscribe } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
-import type { DeviceCategory, TxEntity } from "@/types.js";
+import { requiredFields, visibleFields } from "./devices/dialog-schema.js";
 
-const CATEGORIES: DeviceCategory[] = [
-  "fan",
-  "climate",
-  "light",
-  "cover",
-  "media_player",
-  "switch",
-  "remote",
-];
+import type { FieldDef, FormState } from "./devices/dialog-schema.js";
+import type { AsyncLoader } from "@/components/ui/select.js";
+import type { DeviceSummary, TxEntity } from "@/types.js";
 
 @customElement("rune-device-dialog")
 export class RuneDeviceDialog extends LitElement {
   static styles = [
     sharedStyles,
     css`
-      dialog {
-        background: var(--card);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 24px;
-        min-width: 420px;
-        max-width: 90vw;
+      :host {
+        display: contents;
       }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.6);
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 var(--rune-space-4);
       }
-      .form-row {
+      .grid > .full {
+        grid-column: 1 / -1;
+      }
+      .chips {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin-bottom: 12px;
-      }
-      .form-row label {
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .dialog-actions {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 16px;
-      }
-      .tx-row {
-        display: flex;
-        gap: 4px;
+        flex-wrap: wrap;
+        gap: var(--rune-space-1);
+        padding: var(--rune-space-1);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-surface);
+        min-height: 38px;
         align-items: center;
+        transition:
+          box-shadow var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease);
       }
-      .tx-row select {
+      .chips:focus-within {
+        border-color: var(--rune-primary);
+        box-shadow: var(--rune-focus-ring);
+      }
+      .chips sl-tag::part(base) {
+        cursor: default;
+      }
+      .chips sl-tag::part(remove-button) {
+        color: var(--rune-text-muted);
+      }
+      .chip-input {
         flex: 1;
+        min-width: 120px;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--rune-text);
+        font: inherit;
+        font-size: var(--rune-fs-sm);
+        padding: 2px 4px;
       }
-      h2 {
-        margin: 0 0 16px;
+      .section-head {
+        grid-column: 1 / -1;
+        margin: var(--rune-space-3) 0 var(--rune-space-1);
+        font-size: var(--rune-fs-xs);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .preview {
+        grid-column: 1 / -1;
+        margin-top: var(--rune-space-3);
+        padding: var(--rune-space-3);
+        background: var(--rune-primary-soft);
+        border-radius: var(--rune-radius-md);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
+      }
+      .preview strong {
+        color: var(--rune-primary-text);
+        font-weight: var(--rune-fw-semibold);
       }
       .err {
-        color: var(--danger);
-        font-size: 12px;
+        grid-column: 1 / -1;
+        color: var(--rune-danger-text);
+        background: var(--rune-danger-soft);
+        padding: var(--rune-space-2) var(--rune-space-3);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-xs);
+        margin-top: var(--rune-space-2);
       }
     `,
   ];
 
   @state() private _tick = 0;
-  @state() private _txLoading = false;
-  @state() private _transmitters: TxEntity[] = [];
-  @state() private _selectedTx = "";
-  @state() private _err = "";
   @state() private _busy = false;
+  @state() private _err = "";
+  @state() private _form: FormState = { category: "fan" };
+  @state() private _chips: Record<string, string[]> = {};
   private _unsub: (() => void) | null = null;
   private _lastEditingId: string | null = null;
-  @query("#dlg") private _dlg!: HTMLDialogElement;
-  @query("#name") private _nameEl!: HTMLInputElement;
-  @query("#category") private _categoryEl!: HTMLSelectElement;
-  @query("#manufacturer") private _manufacturerEl!: HTMLInputElement;
-  @query("#model") private _modelEl!: HTMLInputElement;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => {
-      const wasOpen = this._dlg?.open ?? false;
-      this._tick++;
-      queueMicrotask(() => {
-        const dlg = this._dlg;
-        if (!dlg) return;
-        if (store.deviceDialog.open && !wasOpen) dlg.showModal();
-        else if (!store.deviceDialog.open && wasOpen) dlg.close();
-      });
-    });
+    this._unsub = subscribe(() => this._tick++);
   }
 
   disconnectedCallback(): void {
@@ -101,78 +118,70 @@ export class RuneDeviceDialog extends LitElement {
     this._unsub?.();
   }
 
-  protected updated(_changed: Map<string, unknown>): void {
-    void _changed;
-    void this._tick;
+  protected willUpdate(): void {
     const editing = store.deviceDialog.editing;
     const editingId = editing?.id ?? null;
-    if (this._dlg?.open && editingId !== this._lastEditingId) {
+    if (editingId !== this._lastEditingId) {
       this._lastEditingId = editingId;
-      this._selectedTx = editing?.transmitter_entity_ids?.[0] ?? "";
-      if (editing) {
-        if (this._nameEl) this._nameEl.value = editing.name;
-        if (this._categoryEl) this._categoryEl.value = editing.category;
-        if (this._manufacturerEl) this._manufacturerEl.value = editing.manufacturer ?? "";
-        if (this._modelEl) this._modelEl.value = editing.model ?? "";
-      } else {
-        if (this._nameEl) this._nameEl.value = "";
-        if (this._categoryEl) this._categoryEl.value = "fan";
-        if (this._manufacturerEl) this._manufacturerEl.value = "";
-        if (this._modelEl) this._modelEl.value = "";
-      }
-      void this._loadTransmitters();
+      this._form = this._formFromEditing(editing);
+      this._chips = this._chipsFromEditing(editing);
     }
   }
 
-  private async _loadTransmitters(): Promise<void> {
-    this._txLoading = true;
-    try {
-      const { transmitters } = await api.transmitters();
-      this._transmitters = transmitters ?? [];
-      if (!this._selectedTx && this._transmitters.length > 0) {
-        this._selectedTx = this._transmitters[0]?.entity_id ?? "";
-      }
-    } catch (err) {
-      this._transmitters = [];
-      this._err = (err as Error).message;
-    } finally {
-      this._txLoading = false;
-    }
+  private _formFromEditing(editing: DeviceSummary | null): FormState {
+    if (!editing) return { category: "fan" };
+    const dev = editing as DeviceSummary & Record<string, unknown>;
+    return {
+      category: editing.category,
+      name: editing.name,
+      manufacturer: editing.manufacturer ?? "",
+      model: editing.model ?? "",
+      transmitter: editing.transmitter_entity_ids?.[0] ?? "",
+      discrete_speed_count: dev["discrete_speed_count"] ?? 3,
+    };
   }
 
-  private _onTxChange(ev: Event): void {
-    this._selectedTx = (ev.target as HTMLSelectElement).value;
+  private _chipsFromEditing(editing: DeviceSummary | null): Record<string, string[]> {
+    if (!editing) return {};
+    return {};
   }
 
-  private _cancel(): void {
+  private _setField(key: string, value: unknown): void {
+    this._form = { ...this._form, [key]: value };
+    void this._tick;
+  }
+
+  private _onClose = (): void => {
     this._lastEditingId = null;
+    this._err = "";
     store.closeDeviceDialog();
-  }
+  };
 
   private async _save(): Promise<void> {
     this._err = "";
+    const visible = visibleFields(this._form);
+    const required = requiredFields(this._form);
+    for (const f of required) {
+      const v = this._form[f.key];
+      if (v === undefined || v === null || v === "") {
+        this._err = `Field "${f.label}" is required`;
+        return;
+      }
+    }
     const editing = store.deviceDialog.editing;
-    const name = this._nameEl?.value.trim() ?? "";
-    const category = this._categoryEl?.value ?? "fan";
-    const tx = this._selectedTx;
-    const manufacturer = this._manufacturerEl?.value.trim() ?? "";
-    const model = this._modelEl?.value.trim() ?? "";
-    if (!name) {
-      this._err = "Name is required";
-      return;
+    const payload: Record<string, unknown> = {};
+    for (const f of visible) {
+      const v = this._form[f.key];
+      if (v === undefined || v === "" || v === null) continue;
+      payload[f.key] = v;
     }
-    if (!tx) {
-      this._err = "Pick a transmitter";
-      return;
+    // Append chip arrays.
+    for (const [k, arr] of Object.entries(this._chips)) {
+      if (arr.length > 0) payload[k] = arr;
     }
-    const payload = {
-      name,
-      category,
-      transmitter: tx,
-      manufacturer,
-      model,
-      discrete_speed_count: category === "fan" ? 3 : 0,
-    };
+    if (payload.category === "fan" && payload.discrete_speed_count === undefined) {
+      payload.discrete_speed_count = 3;
+    }
     this._busy = true;
     try {
       if (editing) {
@@ -193,70 +202,273 @@ export class RuneDeviceDialog extends LitElement {
     }
   }
 
-  private _renderTxOptions() {
-    if (this._txLoading) {
-      return html`<option value="" ?selected=${this._selectedTx === ""}>Loading…</option>`;
-    }
-    if (this._transmitters.length === 0) {
-      return html`<option value="" ?selected=${this._selectedTx === ""}>
-        (no IR/RF emitters in HA)
-      </option>`;
-    }
-    return this._transmitters.map(
-      (t) =>
-        html`<option value=${t.entity_id} ?selected=${this._selectedTx === t.entity_id}>
-          ${t.entity_id} (${t.state})
-        </option>`,
-    );
+  private _loadTransmitters(): AsyncLoader {
+    return async () => {
+      const r = await api.transmitters();
+      const txs = (r.transmitters ?? []) as TxEntity[];
+      return txs.map((t) => ({
+        value: t.entity_id,
+        label: t.entity_id,
+        description: t.state,
+      }));
+    };
   }
 
-  render() {
-    const editing = store.deviceDialog.editing;
+  private _loadReceivers(): AsyncLoader {
+    return async () => {
+      const r = await api.receivers();
+      const rxs = (r.receivers ?? []) as TxEntity[];
+      if (rxs.length === 0) {
+        return [{ value: "", label: "(no receivers)", description: "Add an RF receiver first" }];
+      }
+      return rxs.map((t) => ({
+        value: t.entity_id,
+        label: t.entity_id,
+        description: t.state,
+      }));
+    };
+  }
+
+  private _loadSensors(): AsyncLoader {
+    // The current WS API doesn't expose a sensor-list endpoint, so we
+    // return an empty list and rely on the user typing the entity_id
+    // via the searchable select. Future: add ``rune/entity/list``.
+    return async () => [];
+  }
+
+  private _resolveOptions(field: FieldDef): AsyncLoader | undefined {
+    if (field.kind !== "async-select") return undefined;
+    if (field.key === "transmitter") return this._loadTransmitters();
+    if (field.key === "receiver") return this._loadReceivers();
+    if (
+      field.key === "temperature_sensor" ||
+      field.key === "humidity_sensor" ||
+      field.key === "power_sensor"
+    ) {
+      return this._loadSensors();
+    }
+    return field.loadOptions;
+  }
+
+  private _renderField(f: FieldDef): TemplateResult | typeof nothing {
+    const value = this._form[f.key] ?? "";
+    const common = f.required ? " * " : " ";
+    switch (f.kind) {
+      case "text":
+        return html`
+          <rune-input
+            label=${f.label + common}
+            icon=${f.icon ?? ""}
+            placeholder=${f.placeholder ?? ""}
+            helper=${f.helper ?? ""}
+            .value=${String(value)}
+            maxlength=${f.maxLength ?? null}
+            ?required=${f.required ?? false}
+            @rune-input=${(ev: CustomEvent<{ value: string }>) =>
+              this._setField(f.key, ev.detail.value)}
+          ></rune-input>
+        `;
+      case "number":
+        return html`
+          <rune-input
+            label=${f.label + common}
+            icon=${f.icon ?? ""}
+            helper=${f.helper ?? ""}
+            type="number"
+            .value=${String(value)}
+            min=${f.min ?? null}
+            max=${f.max ?? null}
+            step=${f.step ?? null}
+            @rune-input=${(ev: CustomEvent<{ value: string }>) =>
+              this._setField(f.key, ev.detail.value === "" ? null : Number(ev.detail.value))}
+          ></rune-input>
+        `;
+      case "select":
+        return html`
+          <rune-select
+            label=${f.label + common}
+            icon=${f.icon ?? ""}
+            helper=${f.helper ?? ""}
+            .options=${f.options ?? []}
+            .value=${String(value)}
+            ?required=${f.required ?? false}
+            @rune-change=${(ev: CustomEvent<{ value: string }>) =>
+              this._setField(f.key, ev.detail.value)}
+          ></rune-select>
+        `;
+      case "async-select":
+        return html`
+          <rune-select
+            label=${f.label + common}
+            icon=${f.icon ?? ""}
+            helper=${f.helper ?? ""}
+            placeholder=${f.placeholder ?? ""}
+            ?searchable=${f.searchable ?? false}
+            ?clearable=${f.clearable ?? false}
+            .loadOptions=${this._resolveOptions(f)}
+            .value=${String(value)}
+            @rune-change=${(ev: CustomEvent<{ value: string }>) =>
+              this._setField(f.key, ev.detail.value)}
+          ></rune-select>
+        `;
+      case "chips":
+        return this._renderChips(f);
+      case "switch":
+        return html`
+          <rune-input
+            label=${f.label + common}
+            icon=${f.icon ?? ""}
+            helper=${f.helper ?? ""}
+            type="text"
+            .value=${String(value ?? "")}
+            @rune-input=${(ev: CustomEvent<{ value: string }>) =>
+              this._setField(f.key, ev.detail.value)}
+          ></rune-input>
+        `;
+      default:
+        return nothing;
+    }
+  }
+
+  private _renderChips(f: FieldDef): TemplateResult {
+    const values = this._chips[f.key] ?? [];
+    const onKey = (ev: KeyboardEvent): void => {
+      if (ev.key === "Enter" || ev.key === ",") {
+        ev.preventDefault();
+        const target = ev.target as HTMLInputElement;
+        const v = target.value.trim().replace(/,$/, "");
+        if (!v) return;
+        this._chips = {
+          ...this._chips,
+          [f.key]: [...values, v],
+        };
+        target.value = "";
+      } else if (ev.key === "Backspace" && !values.length) {
+        ev.preventDefault();
+        const arr = [...values];
+        arr.pop();
+        this._chips = { ...this._chips, [f.key]: arr };
+      }
+    };
     return html`
-      <dialog id="dlg" @close=${() => store.closeDeviceDialog()}>
-        <h2>${editing ? "Edit device" : "Add device"}</h2>
-        <div class="form-row">
-          <label for="name">Name</label>
-          <input id="name" placeholder="Bedroom fan" />
+      <div class="full">
+        <label
+          style="font-size:var(--rune-fs-xs);font-weight:var(--rune-fw-medium);color:var(--rune-text-muted);text-transform:uppercase;letter-spacing:0.04em"
+        >
+          ${f.label}${f.required ? " *" : ""}
+        </label>
+        <div class="chips" style="margin-top:var(--rune-space-1)">
+          ${values.map(
+            (v, i) => html`
+              <rune-chip
+                variant="primary"
+                closable
+                @rune-chip-remove=${() => {
+                  const arr = [...values];
+                  arr.splice(i, 1);
+                  this._chips = { ...this._chips, [f.key]: arr };
+                }}
+              >
+                ${v}
+              </rune-chip>
+            `,
+          )}
+          <input
+            class="chip-input"
+            placeholder=${values.length === 0 ? (f.chipPlaceholder ?? "") : ""}
+            @keydown=${onKey}
+          />
         </div>
-        <div class="form-row">
-          <label for="category">Category</label>
-          <select id="category">
-            ${CATEGORIES.map((c) => html`<option value=${c}>${c}</option>`)}
-          </select>
+        ${
+          f.helper
+            ? html`<div
+                style="font-size:var(--rune-fs-xs);color:var(--rune-text-muted);margin-top:var(--rune-space-1)"
+              >
+                ${f.helper}
+              </div>`
+            : nothing
+        }
+      </div>
+    `;
+  }
+
+  private _renderPreview(): TemplateResult {
+    const cat = this._form.category || "fan";
+    const label =
+      cat === "fan"
+        ? "Fan"
+        : cat === "climate"
+          ? "Climate"
+          : cat === "light"
+            ? "Light"
+            : cat === "cover"
+              ? "Cover"
+              : cat === "media_player"
+                ? "Media player"
+                : cat === "switch"
+                  ? "Switch"
+                  : "Remote";
+    return html`
+      <div class="preview">
+        HA will expose a <strong>${label}</strong> entity${
+          this._form.name ? html` named <strong>${this._form.name}</strong>` : ""
+        }
+        ${
+          cat === "fan" && this._form.discrete_speed_count
+            ? html` with
+                <strong>${this._form.discrete_speed_count}</strong>
+                speed step(s)`
+            : nothing
+        }
+        ${
+          cat === "media_player" && (this._chips.source_list ?? []).length > 0
+            ? html` and
+                <strong>${this._chips.source_list.length}</strong>
+                source(s)`
+            : nothing
+        }
+        ${
+          cat === "remote" && this._form.power_sensor
+            ? html` driven by
+                <strong>${this._form.power_sensor}</strong>`
+            : nothing
+        }
+        .
+      </div>
+    `;
+  }
+
+  protected render() {
+    const editing = store.deviceDialog.editing;
+    const open = store.deviceDialog.open;
+    const visible = visibleFields(this._form);
+
+    return html`
+      <rune-dialog
+        ?open=${open}
+        size="large"
+        label=${editing ? "Edit device" : "Add device"}
+        @sl-after-hide=${this._onClose}
+      >
+        <div class="grid">
+          ${visible.map((f) => this._renderField(f))}
+          ${this._err ? html`<div class="err">${this._err}</div>` : nothing}
+          ${this._renderPreview()}
         </div>
-        <div class="form-row">
-          <label for="manufacturer">Manufacturer (optional)</label>
-          <input id="manufacturer" placeholder="Broadlink, ESPHome, ..." />
+        <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
+          <rune-button variant="secondary" icon="x" ?disabled=${this._busy} @click=${this._onClose}>
+            Cancel
+          </rune-button>
+          <rune-button
+            variant="primary"
+            icon=${editing ? "device-floppy" : "plus"}
+            ?loading=${this._busy}
+            @click=${this._save}
+          >
+            ${editing ? "Save" : "Create"}
+          </rune-button>
         </div>
-        <div class="form-row">
-          <label for="model">Model (optional)</label>
-          <input id="model" placeholder="RM4 Pro, FRM97, ..." />
-        </div>
-        <div class="form-row">
-          <label for="tx">Transmitter</label>
-          <div class="tx-row">
-            <select id="tx" @change=${this._onTxChange}>
-              ${this._renderTxOptions()}
-            </select>
-            <button
-              class="secondary"
-              type="button"
-              @click=${this._loadTransmitters}
-              ?disabled=${this._txLoading}
-            >
-              ↻
-            </button>
-          </div>
-        </div>
-        ${this._err ? html`<div class="err">${this._err}</div>` : ""}
-        <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
-          <button type="button" @click=${this._save} ?disabled=${this._busy}>
-            ${this._busy ? "Saving…" : "Save"}
-          </button>
-        </div>
-      </dialog>
+      </rune-dialog>
     `;
   }
 }

@@ -36,14 +36,27 @@ export class RuneChip extends LitElement {
   @property({ type: String }) icon = "";
   @property({ type: Boolean }) outlined = false;
   @property({ type: Boolean }) pulse = false;
+  @property({ type: Boolean }) closable = false;
 
   private _slVariant(): "neutral" | "primary" | "success" | "warning" | "danger" {
     return this.variant === "neutral" ? "neutral" : this.variant;
   }
 
+  private _onRemove = (ev: Event): void => {
+    ev.stopPropagation();
+    this.dispatchEvent(new CustomEvent("rune-chip-remove", { bubbles: true, composed: true }));
+  };
+
   protected render() {
     return html`
-      <sl-tag variant=${this._slVariant()} size="small" ?pill=${true} ?outlined=${this.outlined}>
+      <sl-tag
+        variant=${this._slVariant()}
+        size="small"
+        ?pill=${true}
+        ?outlined=${this.outlined}
+        ?closable=${this.closable}
+        @sl-remove=${this._onRemove}
+      >
         ${
           this.icon
             ? html`<i
