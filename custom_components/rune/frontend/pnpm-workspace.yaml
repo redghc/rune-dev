@@ -1,3 +1,6 @@
+allowBuilds:
+  ttf2woff2: false
+
 onlyBuiltDependencies:
   - esbuild
 

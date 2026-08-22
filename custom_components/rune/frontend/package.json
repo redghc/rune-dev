@@ -19,6 +19,9 @@
     "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
+    "@shoelace-style/shoelace": "^2.20.1",
+    "@tabler/icons-webfont": "^3.46.0",
     "lit": "^3.3.3"
   },
   "devDependencies": {

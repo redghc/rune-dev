@@ -15,5 +15,12 @@
     "nsTypes": "warn",
     "enumMembers": "warn",
     "types": "warn"
+  },
+  "ignoreIssues": {
+    "src/components/ui/index.ts": ["exports", "nsExports", "nsTypes", "types"],
+    "src/components/ui/floating.ts": ["exports"],
+    "src/components/ui/icon.ts": ["exports"],
+    "src/styles/shared.ts": ["exports"],
+    "src/styles/tokens.ts": ["exports"]
   }
 }
