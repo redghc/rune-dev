@@ -1,11 +1,13 @@
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
+import "@/components/ui/index.js";
+
 import { api } from "@/api/bridge.js";
 import { store, subscribe } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
-import type { Remote } from "@/types.js";
+import type { Remote, RemoteSignal } from "@/types.js";
 
 @customElement("rune-sniffer-view")
 export class RuneSnifferView extends LitElement {
@@ -14,61 +16,127 @@ export class RuneSnifferView extends LitElement {
     css`
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: var(--rune-space-3);
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: var(--rune-space-5);
       }
       .toolbar h2 {
         margin: 0;
-        font-weight: 400;
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
       .grow {
         flex: 1;
       }
+      .help {
+        margin-bottom: var(--rune-space-4);
+      }
+      .remotes {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-4);
+      }
       .remote-card {
-        background: var(--card);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
-        border: 1px solid var(--border);
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        padding: var(--rune-space-5);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
       }
       .remote-card.dismissed {
-        opacity: 0.5;
+        opacity: 0.55;
       }
-      .remote-card h4 {
-        margin: 0 0 8px;
-        font-size: 14px;
+      .remote-head {
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-3);
+        margin-bottom: var(--rune-space-3);
       }
-      .signal-card {
-        background: var(--card);
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 6px;
-        border: 1px solid var(--border);
+      .remote-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .remote-title {
+        flex: 1;
+        min-width: 0;
+      }
+      .remote-title h4 {
+        margin: 0;
+        font-size: var(--rune-fs-lg);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
+      }
+      .remote-meta {
+        display: flex;
+        gap: var(--rune-space-2);
+        align-items: center;
+        margin-top: 4px;
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+      }
+      .signals {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-2);
+      }
+      .signal {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        border: 1px solid var(--rune-border);
+        gap: var(--rune-space-3);
       }
-      .signal-card .info {
-        font-size: 13px;
+      .signal-info {
+        flex: 1;
+        min-width: 0;
       }
-      .signal-card .meta {
-        color: var(--muted);
+      .signal-info .name {
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text-strong);
+        font-weight: var(--rune-fw-medium);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .signal-info .meta {
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+        margin-top: 2px;
+        display: flex;
+        gap: var(--rune-space-2);
+        flex-wrap: wrap;
+      }
+      .signal-info .meta i {
         font-size: 11px;
+        line-height: 1;
       }
-      .badge {
-        display: inline-block;
-        padding: 1px 8px;
-        border-radius: 10px;
-        background: var(--bg-2);
-        color: var(--muted);
-        font-size: 11px;
-        border: 1px solid var(--border);
-        margin-left: 6px;
+      .signal-info .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
-      .badge.protocol {
-        color: var(--primary);
-        border-color: var(--primary);
+      .hit-count {
+        font-family: var(--rune-font-mono);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-primary);
+        padding: var(--rune-space-1) var(--rune-space-2);
+        background: var(--rune-primary-soft);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-xs);
       }
     `,
   ];
@@ -109,51 +177,113 @@ export class RuneSnifferView extends LitElement {
     }
   }
 
+  private _renderSignal(s: RemoteSignal) {
+    return html`
+      <div class="signal">
+        <div class="signal-info">
+          <div class="name">${s.alias ?? s.fingerprint ?? s.id}</div>
+          <div class="meta">
+            <span class="meta-item"> <i class="ti ti-clock"></i>${s.last_seen} </span>
+            ${
+              s.decoded_fingerprint
+                ? html`<span class="meta-item">
+                    <i class="ti ti-fingerprint"></i>${s.decoded_fingerprint}
+                  </span>`
+                : null
+            }
+          </div>
+        </div>
+        <rune-chip variant="primary" icon="bolt">${s.hit_count} hits</rune-chip>
+      </div>
+    `;
+  }
+
   render() {
     void this._tick;
     const visible = store.remotes.filter((r) => !r.dismissed);
+    const totalSignals = visible.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <div class="toolbar">
         <h2>Sniffer</h2>
+        <rune-chip variant="neutral" icon="antenna"
+          >${visible.length} remote${visible.length === 1 ? "" : "s"} · ${totalSignals}
+          signal${totalSignals === 1 ? "" : "s"}</rune-chip
+        >
         <span class="grow"></span>
-        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
-          ${this._loading ? "Loading…" : "Refresh"}
-        </button>
+        <rune-tooltip content="Reload from backend">
+          <rune-button
+            variant="secondary"
+            icon="refresh"
+            ?loading=${this._loading}
+            @click=${this.refresh}
+          >
+            Refresh
+          </rune-button>
+        </rune-tooltip>
       </div>
       <div class="help">
-        Live signals captured from every receiver you've configured. The sniffer listens on each
-        receiver entity automatically once you add a device. Assign a signal to a device command via
-        the
-        <code>Actions</code> tab, or dismiss the whole remote here.
+        <i class="ti ti-info-circle"></i> Live signals captured from every receiver you've
+        configured. The sniffer listens on each receiver entity automatically once you add a device.
+        Assign a signal to a device command via the <strong>Actions</strong> tab, or dismiss the
+        whole remote here.
       </div>
       ${
         visible.length === 0
-          ? html`<div class="empty">No captured signals yet.</div>`
-          : visible.map(
-              (r) => html`
-                <div class="remote-card ${r.dismissed ? "dismissed" : ""}">
-                  <h4>
-                    ${r.label ?? r.protocol_label ?? r.id}
-                    <span class="badge protocol">${r.protocol_label ?? "unknown"}</span>
-                    <span class="badge">${r.signal_count} signal(s)</span>
-                  </h4>
-                  ${r.signals.map(
-                    (s) => html`
-                      <div class="signal-card">
-                        <div class="info">${s.alias ?? s.fingerprint ?? s.id}</div>
-                        <div class="meta">
-                          hits: ${s.hit_count} · last: ${s.last_seen} ·
-                          ${s.decoded_fingerprint ?? "—"}
+          ? html`
+              <rune-empty-state
+                icon="antenna"
+                heading="No captured signals yet"
+                message="Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time."
+              ></rune-empty-state>
+            `
+          : html`
+              <div class="remotes">
+                ${visible.map(
+                  (r) => html`
+                    <div class="remote-card ${r.dismissed ? "dismissed" : ""}">
+                      <div class="remote-head">
+                        <div class="remote-icon"><i class="ti ti-antenna"></i></div>
+                        <div class="remote-title">
+                          <h4>${r.label ?? r.protocol_label ?? r.id}</h4>
+                          <div class="remote-meta">
+                            ${
+                              r.protocol_label
+                                ? html`<rune-chip variant="primary">${r.protocol_label}</rune-chip>`
+                                : html`<rune-chip variant="neutral">unknown</rune-chip>`
+                            }
+                            <span>${r.signal_count} signal${r.signal_count === 1 ? "" : "s"}</span>
+                          </div>
                         </div>
+                        <rune-tooltip
+                          content=${
+                            r.dismissed
+                              ? "Re-activate this remote"
+                              : "Hide this remote from the sniffer list"
+                          }
+                        >
+                          <rune-button
+                            variant=${r.dismissed ? "ghost" : "secondary"}
+                            icon=${r.dismissed ? "rotate" : "x"}
+                            @click=${() => this._dismiss(r)}
+                          >
+                            ${r.dismissed ? "Re-activate" : "Dismiss"}
+                          </rune-button>
+                        </rune-tooltip>
                       </div>
-                    `,
-                  )}
-                  <button class="secondary" @click=${() => this._dismiss(r)}>
-                    ${r.dismissed ? "Re-activate" : "Dismiss remote"}
-                  </button>
-                </div>
-              `,
-            )
+                      ${
+                        r.signals.length > 0
+                          ? html`
+                              <div class="signals">
+                                ${r.signals.map((s) => this._renderSignal(s))}
+                              </div>
+                            `
+                          : null
+                      }
+                    </div>
+                  `,
+                )}
+              </div>
+            `
       }
     `;
   }

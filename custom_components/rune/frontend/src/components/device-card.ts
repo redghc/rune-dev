@@ -1,80 +1,166 @@
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
+import "@/components/ui/index.js";
+
 import { api } from "@/api/bridge.js";
 import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
-import type { DeviceSummary, PulseCommand } from "@/types.js";
+import type { DeviceCategory, DeviceSummary, PulseCommand } from "@/types.js";
+
+const CATEGORY_ICON: Record<DeviceCategory, string> = {
+  fan: "fan",
+  climate: "temperature",
+  light: "bulb",
+  cover: "blinds",
+  media_player: "device-tv",
+  switch: "plug",
+  remote: "remote",
+};
 
 @customElement("rune-device-card")
 export class RuneDeviceCard extends LitElement {
   static styles = [
     sharedStyles,
     css`
-      .device {
-        background: var(--card);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid var(--border);
+      .card {
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        padding: var(--rune-space-5);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
+        transition:
+          box-shadow var(--rune-dur) var(--rune-ease),
+          transform var(--rune-dur) var(--rune-ease);
       }
-      .device-head {
+      .card:hover {
+        box-shadow: var(--rune-shadow-2);
+      }
+      .head {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
-        gap: 8px;
+        margin-bottom: var(--rune-space-4);
+        gap: var(--rune-space-3);
       }
-      .device h3 {
+      .head-left {
+        display: flex;
+        gap: var(--rune-space-3);
+        align-items: flex-start;
+        flex: 1;
+        min-width: 0;
+      }
+      .icon-circle {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--rune-radius-md);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .title-block {
+        flex: 1;
+        min-width: 0;
+      }
+      .title-block h3 {
         margin: 0 0 4px;
-        font-size: 16px;
-        font-weight: 500;
+        font-size: var(--rune-fs-lg);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
       }
       .meta {
-        color: var(--muted);
-        font-size: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--rune-space-2);
+        align-items: center;
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+      }
+      .meta i {
+        font-size: 13px;
+        line-height: 1;
+      }
+      .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
       .actions {
         display: flex;
-        gap: 4px;
-      }
-      .actions button {
-        padding: 4px 10px;
-        font-size: 12px;
+        gap: var(--rune-space-1);
+        flex-shrink: 0;
       }
       .commands {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 6px;
+        gap: var(--rune-space-2);
       }
       .cmd {
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 8px;
+        position: relative;
+        background: var(--rune-surface-alt);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        padding: var(--rune-space-3) var(--rune-space-2);
         cursor: pointer;
         font: inherit;
-        color: var(--text);
-        font-size: 12px;
+        color: var(--rune-text);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
         text-align: center;
-        transition: all 0.1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        transition:
+          background-color var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          transform var(--rune-dur-fast) var(--rune-ease);
+      }
+      .cmd i {
+        font-size: 16px;
+        color: var(--rune-text-subtle);
+        transition: color var(--rune-dur-fast) var(--rune-ease);
       }
       .cmd:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
+        background: var(--rune-primary);
+        border-color: var(--rune-primary);
+        color: var(--rune-on-primary);
+        transform: translateY(-1px);
+      }
+      .cmd:hover i {
+        color: var(--rune-on-primary);
       }
       .cmd:active {
-        transform: scale(0.97);
+        transform: translateY(0);
       }
       .cmd.flash {
-        background: var(--ok) !important;
+        background: var(--rune-success) !important;
+        border-color: var(--rune-success) !important;
+        color: white !important;
+      }
+      .cmd.flash i {
         color: white !important;
       }
       .cmd.placeholder {
         border-style: dashed;
-        color: var(--muted);
+        color: var(--rune-text-muted);
+        background: transparent;
+      }
+      .cmd.placeholder:hover {
+        background: var(--rune-primary-soft);
+        border-style: solid;
+        border-color: var(--rune-primary);
+        color: var(--rune-primary-text);
+      }
+      .cmd.placeholder:hover i {
+        color: var(--rune-primary);
       }
     `,
   ];
@@ -103,7 +189,7 @@ export class RuneDeviceCard extends LitElement {
     try {
       await api.sendCommand(this.device.id, cmd.key);
       btn.classList.add("flash");
-      setTimeout(() => btn.classList.remove("flash"), 280);
+      setTimeout(() => btn.classList.remove("flash"), 380);
       store.pushToast(`Sent ${cmd.label ?? cmd.key}`, "ok");
     } catch (err) {
       store.pushToast((err as Error).message, "err");
@@ -123,18 +209,49 @@ export class RuneDeviceCard extends LitElement {
   render() {
     const d = this.device;
     const tx = (d.transmitter_entity_ids ?? []).join(", ") || "—";
-    const meta = `${d.category} • ${d.command_count} command(s) • tx: ${tx}`;
+    const icon = CATEGORY_ICON[d.category] ?? "remote";
     void this._flash;
     return html`
-      <div class="device">
-        <div class="device-head">
-          <div>
-            <h3>${d.name}</h3>
-            <div class="meta">${meta}</div>
+      <div class="card">
+        <div class="head">
+          <div class="head-left">
+            <div class="icon-circle"><i class="ti ti-${icon}"></i></div>
+            <div class="title-block">
+              <h3>${d.name}</h3>
+              <div class="meta">
+                <rune-chip variant="primary" icon=${icon}>${d.category}</rune-chip>
+                <span class="meta-item">
+                  <i class="ti ti-bolt"></i>${d.command_count}
+                  command${d.command_count === 1 ? "" : "s"}
+                </span>
+                <span class="meta-item"> <i class="ti ti-antenna-bars-5"></i>${tx} </span>
+                ${
+                  d.manufacturer
+                    ? html`<span class="meta-item">
+                        <i class="ti ti-building"></i>${d.manufacturer}
+                      </span>`
+                    : null
+                }
+              </div>
+            </div>
           </div>
           <div class="actions">
-            <button class="secondary" @click=${this._onEdit}>Edit</button>
-            <button class="danger" @click=${this._onDelete}>Delete</button>
+            <rune-tooltip content="Edit device">
+              <rune-button
+                variant="ghost"
+                icon="edit"
+                @click=${this._onEdit}
+                aria-label="Edit device"
+              ></rune-button>
+            </rune-tooltip>
+            <rune-tooltip content="Delete device">
+              <rune-button
+                variant="ghost"
+                icon="trash"
+                @click=${this._onDelete}
+                aria-label="Delete device"
+              ></rune-button>
+            </rune-tooltip>
           </div>
         </div>
         <div class="commands">
@@ -145,11 +262,15 @@ export class RuneDeviceCard extends LitElement {
                 title=${`Send "${c.label ?? c.key}" to ${d.name}`}
                 @click=${(e: Event) => this._send(c, e.currentTarget as HTMLButtonElement)}
               >
-                ${c.label ?? c.key}
+                <i class="ti ti-bolt"></i>
+                <span>${c.label ?? c.key}</span>
               </button>
             `,
           )}
-          <button class="cmd placeholder" @click=${this._learn}>+ Learn command</button>
+          <button class="cmd placeholder" @click=${this._learn}>
+            <i class="ti ti-plus"></i>
+            <span>Learn command</span>
+          </button>
         </div>
       </div>
     `;

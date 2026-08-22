@@ -23890,120 +23890,263 @@ ${Sn.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
     ></i>`}};B([O({type:String})],ya.prototype,`name`,void 0),B([O({type:String})],ya.prototype,`size`,void 0),B([O({type:String})],ya.prototype,`color`,void 0),ya=B([D(`rune-icon`)],ya);var X={version:`0.3.2`,section:`devices`,devices:[],remotes:[],actions:[],transmitters:[],receivers:[],toasts:[],deviceDialog:{open:!1,editing:null},learnDialog:{open:!1,deviceId:null,commandKey:``,status:`Idle — click Start learn`,captured:null,rawTimings:null,carrierHz:null},setSection(e){this.section=e,Z()},pushToast(e,t){let n=Date.now()+Math.floor(Math.random()*1e3);this.toasts=[...this.toasts,{id:n,text:e,kind:t}],Z(),setTimeout(()=>{this.toasts=this.toasts.filter(e=>e.id!==n),Z()},2400)},openDeviceDialog(e=null){this.deviceDialog={open:!0,editing:e},Z()},closeDeviceDialog(){this.deviceDialog={open:!1,editing:null},Z()},openLearnDialog(e,t){this.learnDialog={open:!0,deviceId:e,commandKey:t,status:`Idle — click Start learn`,captured:null,rawTimings:null,carrierHz:null},Z()},closeLearnDialog(){this.learnDialog={open:!1,deviceId:null,commandKey:``,status:`Idle — click Start learn`,captured:null,rawTimings:null,carrierHz:null},Z()},updateLearn(e){this.learnDialog={...this.learnDialog,...e},Z()},setDevices(e){this.devices=e,Z()},setRemotes(e){this.remotes=e,Z()},setActions(e){this.actions=e,Z()},setTransmitters(e){this.transmitters=e,Z()},setReceivers(e){this.receivers=e,Z()}},ba=new Set;function xa(e){return ba.add(e),()=>ba.delete(e)}function Z(){for(let e of ba)e()}var Sa=class extends E{constructor(...e){super(...e),this._tick=0,this._unsub=null}static{this.styles=[z,y`
       .stack {
         position: fixed;
-        bottom: 24px;
+        bottom: var(--rune-space-6);
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        flex-direction: column;
-        gap: 8px;
-        z-index: 1000;
+        flex-direction: column-reverse;
+        gap: var(--rune-space-2);
+        z-index: var(--rune-z-toast, 1200);
         pointer-events: none;
       }
       .toast {
-        background: var(--card);
-        border: 1px solid var(--border);
-        padding: 12px 20px;
-        border-radius: 8px;
-        max-width: 80%;
-        animation: rune-fade-in 0.15s ease-out;
-      }
-      .toast.err {
-        border-color: var(--danger);
-        color: #ff8a80;
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+        padding: var(--rune-space-3) var(--rune-space-4);
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-md);
+        box-shadow: var(--rune-shadow-3);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
+        color: var(--rune-text);
+        min-width: 240px;
+        max-width: 480px;
+        pointer-events: auto;
+        animation: rune-toast-in 0.18s var(--rune-ease);
       }
       .toast.ok {
-        border-color: var(--ok);
-        color: #b9f6ca;
+        border-color: var(--rune-success);
+        background: var(--rune-surface);
+        color: var(--rune-text-strong);
       }
-      @keyframes rune-fade-in {
+      .toast.err {
+        border-color: var(--rune-danger);
+        background: var(--rune-surface);
+        color: var(--rune-text-strong);
+      }
+      .toast .badge {
+        width: 22px;
+        height: 22px;
+        border-radius: var(--rune-radius-full);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 13px;
+      }
+      .toast.ok .badge {
+        background: var(--rune-success-soft);
+        color: var(--rune-success);
+      }
+      .toast.err .badge {
+        background: var(--rune-danger-soft);
+        color: var(--rune-danger);
+      }
+      .toast .badge i {
+        line-height: 1;
+      }
+      @keyframes rune-toast-in {
         from {
           opacity: 0;
-          transform: translateY(8px);
+          transform: translateY(12px) scale(0.96);
         }
         to {
           opacity: 1;
-          transform: translateY(0);
+          transform: translateY(0) scale(1);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .toast {
+          animation: none;
         }
       }
     `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}render(){return this._tick,C`
-      <div class="stack">
-        ${X.toasts.map(e=>C` <div class="toast ${e.kind??``}">${e.text}</div> `)}
+      <div class="stack" aria-live="polite" aria-atomic="true">
+        ${X.toasts.map(e=>{let t=e.kind===`err`?`alert-circle`:`check`;return C`
+            <div class="toast ${e.kind??``}" role="status">
+              <span class="badge"><i class="ti ti-${t}"></i></span>
+              <span>${e.text}</span>
+            </div>
+          `})}
       </div>
-    `}};B([k()],Sa.prototype,`_tick`,void 0),Sa=B([D(`rune-toast-stack`)],Sa);var Ca=8e3,wa=new Map,Ta=1;window.addEventListener(`message`,e=>{let t=e.data??{};if(!t||t.type!==`rune-bridge-result`||typeof t.id!=`number`)return;let n=wa.get(t.id);n&&(wa.delete(t.id),typeof t.error==`string`?n.reject(Error(t.error)):n.resolve(t.result))});function Q(e){let t=Ta++;return new Promise((n,r)=>{let i=setTimeout(()=>{wa.has(t)&&(wa.delete(t),console.warn(`[rune-bridge] timeout id=${t} payload=${JSON.stringify(e)}`),r(Error(`bridge timeout (no response from HA)`)))},Ca),a={timer:i,resolve:e=>{clearTimeout(i),console.debug(`[rune-bridge] ok id=${t} result=${JSON.stringify(e)}`),n(e)},reject:e=>{clearTimeout(i),console.warn(`[rune-bridge] err id=${t} msg=${e.message}`),r(e)}};wa.set(t,a),console.debug(`[rune-bridge] -> id=${t} payload=${JSON.stringify(e)}`),window.parent.postMessage({type:`rune-bridge`,id:t,...e},`*`)})}var $={list:()=>Q({kind:`ws`,message:{type:`rune/list`}}),getDevice:e=>Q({kind:`ws`,message:{type:`rune/device/get`,device_id:e}}),createDevice:e=>Q({kind:`ws`,message:{type:`rune/device/create`,...e}}),updateDevice:e=>Q({kind:`ws`,message:{type:`rune/device/update`,...e}}),deleteDevice:e=>Q({kind:`ws`,message:{type:`rune/device/delete`,device_id:e}}),learnCommand:e=>Q({kind:`ws`,message:{type:`rune/command/learn`,...e}}),listSniffer:()=>Q({kind:`ws`,message:{type:`rune/sniffer/list`}}),dismissRemote:e=>Q({kind:`ws`,message:{type:`rune/sniffer/dismiss`,remote_id:e}}),listActions:()=>Q({kind:`ws`,message:{type:`rune/action/list`}}),transmitters:()=>Q({kind:`ws`,message:{type:`rune/transmitter/list`}}),receivers:()=>Q({kind:`ws`,message:{type:`rune/receiver/list`}}),sendCommand:(e,t)=>Q({kind:`service`,domain:`rune`,service:`send_command`,service_data:{device_id:e,command_key:t}})},Ea=class extends E{constructor(...e){super(...e),this._flash=null}static{this.styles=[z,y`
-      .device {
-        background: var(--card);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid var(--border);
+    `}};B([k()],Sa.prototype,`_tick`,void 0),Sa=B([D(`rune-toast-stack`)],Sa);var Ca=8e3,wa=new Map,Ta=1;window.addEventListener(`message`,e=>{let t=e.data??{};if(!t||t.type!==`rune-bridge-result`||typeof t.id!=`number`)return;let n=wa.get(t.id);n&&(wa.delete(t.id),typeof t.error==`string`?n.reject(Error(t.error)):n.resolve(t.result))});function Q(e){let t=Ta++;return new Promise((n,r)=>{let i=setTimeout(()=>{wa.has(t)&&(wa.delete(t),console.warn(`[rune-bridge] timeout id=${t} payload=${JSON.stringify(e)}`),r(Error(`bridge timeout (no response from HA)`)))},Ca),a={timer:i,resolve:e=>{clearTimeout(i),console.debug(`[rune-bridge] ok id=${t} result=${JSON.stringify(e)}`),n(e)},reject:e=>{clearTimeout(i),console.warn(`[rune-bridge] err id=${t} msg=${e.message}`),r(e)}};wa.set(t,a),console.debug(`[rune-bridge] -> id=${t} payload=${JSON.stringify(e)}`),window.parent.postMessage({type:`rune-bridge`,id:t,...e},`*`)})}var $={list:()=>Q({kind:`ws`,message:{type:`rune/list`}}),getDevice:e=>Q({kind:`ws`,message:{type:`rune/device/get`,device_id:e}}),createDevice:e=>Q({kind:`ws`,message:{type:`rune/device/create`,...e}}),updateDevice:e=>Q({kind:`ws`,message:{type:`rune/device/update`,...e}}),deleteDevice:e=>Q({kind:`ws`,message:{type:`rune/device/delete`,device_id:e}}),learnCommand:e=>Q({kind:`ws`,message:{type:`rune/command/learn`,...e}}),listSniffer:()=>Q({kind:`ws`,message:{type:`rune/sniffer/list`}}),dismissRemote:e=>Q({kind:`ws`,message:{type:`rune/sniffer/dismiss`,remote_id:e}}),listActions:()=>Q({kind:`ws`,message:{type:`rune/action/list`}}),transmitters:()=>Q({kind:`ws`,message:{type:`rune/transmitter/list`}}),receivers:()=>Q({kind:`ws`,message:{type:`rune/receiver/list`}}),sendCommand:(e,t)=>Q({kind:`service`,domain:`rune`,service:`send_command`,service_data:{device_id:e,command_key:t}})},Ea={fan:`fan`,climate:`temperature`,light:`bulb`,cover:`blinds`,media_player:`device-tv`,switch:`plug`,remote:`remote`},Da=class extends E{constructor(...e){super(...e),this._flash=null}static{this.styles=[z,y`
+      .card {
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        padding: var(--rune-space-5);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
+        transition:
+          box-shadow var(--rune-dur) var(--rune-ease),
+          transform var(--rune-dur) var(--rune-ease);
       }
-      .device-head {
+      .card:hover {
+        box-shadow: var(--rune-shadow-2);
+      }
+      .head {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
-        gap: 8px;
+        margin-bottom: var(--rune-space-4);
+        gap: var(--rune-space-3);
       }
-      .device h3 {
+      .head-left {
+        display: flex;
+        gap: var(--rune-space-3);
+        align-items: flex-start;
+        flex: 1;
+        min-width: 0;
+      }
+      .icon-circle {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--rune-radius-md);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .title-block {
+        flex: 1;
+        min-width: 0;
+      }
+      .title-block h3 {
         margin: 0 0 4px;
-        font-size: 16px;
-        font-weight: 500;
+        font-size: var(--rune-fs-lg);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
       }
       .meta {
-        color: var(--muted);
-        font-size: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--rune-space-2);
+        align-items: center;
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+      }
+      .meta i {
+        font-size: 13px;
+        line-height: 1;
+      }
+      .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
       .actions {
         display: flex;
-        gap: 4px;
-      }
-      .actions button {
-        padding: 4px 10px;
-        font-size: 12px;
+        gap: var(--rune-space-1);
+        flex-shrink: 0;
       }
       .commands {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 6px;
+        gap: var(--rune-space-2);
       }
       .cmd {
-        background: var(--bg-2);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 8px;
+        position: relative;
+        background: var(--rune-surface-alt);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        padding: var(--rune-space-3) var(--rune-space-2);
         cursor: pointer;
         font: inherit;
-        color: var(--text);
-        font-size: 12px;
+        color: var(--rune-text);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
         text-align: center;
-        transition: all 0.1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        transition:
+          background-color var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          transform var(--rune-dur-fast) var(--rune-ease);
+      }
+      .cmd i {
+        font-size: 16px;
+        color: var(--rune-text-subtle);
+        transition: color var(--rune-dur-fast) var(--rune-ease);
       }
       .cmd:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
+        background: var(--rune-primary);
+        border-color: var(--rune-primary);
+        color: var(--rune-on-primary);
+        transform: translateY(-1px);
+      }
+      .cmd:hover i {
+        color: var(--rune-on-primary);
       }
       .cmd:active {
-        transform: scale(0.97);
+        transform: translateY(0);
       }
       .cmd.flash {
-        background: var(--ok) !important;
+        background: var(--rune-success) !important;
+        border-color: var(--rune-success) !important;
+        color: white !important;
+      }
+      .cmd.flash i {
         color: white !important;
       }
       .cmd.placeholder {
         border-style: dashed;
-        color: var(--muted);
+        color: var(--rune-text-muted);
+        background: transparent;
       }
-    `]}_onEdit(){X.openDeviceDialog(this.device)}async _onDelete(){if(confirm(`Delete device "${this.device.name}"?`))try{await $.deleteDevice(this.device.id),X.pushToast(`Deleted`,`ok`);let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){X.pushToast(e.message,`err`)}}async _send(e,t){try{await $.sendCommand(this.device.id,e.key),t.classList.add(`flash`),setTimeout(()=>t.classList.remove(`flash`),280),X.pushToast(`Sent ${e.label??e.key}`,`ok`)}catch(e){X.pushToast(e.message,`err`)}}_learn(){let e=prompt(`Learn which command on "${this.device.name}"?\n\nEnter a command key (e.g. "off", "speed_2", "power_on"):`,`off`);e&&X.openLearnDialog(this.device.id,e.trim())}render(){let e=this.device,t=(e.transmitter_entity_ids??[]).join(`, `)||`—`,n=`${e.category} • ${e.command_count} command(s) • tx: ${t}`;return this._flash,C`
-      <div class="device">
-        <div class="device-head">
-          <div>
-            <h3>${e.name}</h3>
-            <div class="meta">${n}</div>
+      .cmd.placeholder:hover {
+        background: var(--rune-primary-soft);
+        border-style: solid;
+        border-color: var(--rune-primary);
+        color: var(--rune-primary-text);
+      }
+      .cmd.placeholder:hover i {
+        color: var(--rune-primary);
+      }
+    `]}_onEdit(){X.openDeviceDialog(this.device)}async _onDelete(){if(confirm(`Delete device "${this.device.name}"?`))try{await $.deleteDevice(this.device.id),X.pushToast(`Deleted`,`ok`);let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){X.pushToast(e.message,`err`)}}async _send(e,t){try{await $.sendCommand(this.device.id,e.key),t.classList.add(`flash`),setTimeout(()=>t.classList.remove(`flash`),380),X.pushToast(`Sent ${e.label??e.key}`,`ok`)}catch(e){X.pushToast(e.message,`err`)}}_learn(){let e=prompt(`Learn which command on "${this.device.name}"?\n\nEnter a command key (e.g. "off", "speed_2", "power_on"):`,`off`);e&&X.openLearnDialog(this.device.id,e.trim())}render(){let e=this.device,t=(e.transmitter_entity_ids??[]).join(`, `)||`—`,n=Ea[e.category]??`remote`;return this._flash,C`
+      <div class="card">
+        <div class="head">
+          <div class="head-left">
+            <div class="icon-circle"><i class="ti ti-${n}"></i></div>
+            <div class="title-block">
+              <h3>${e.name}</h3>
+              <div class="meta">
+                <rune-chip variant="primary" icon=${n}>${e.category}</rune-chip>
+                <span class="meta-item">
+                  <i class="ti ti-bolt"></i>${e.command_count}
+                  command${e.command_count===1?``:`s`}
+                </span>
+                <span class="meta-item"> <i class="ti ti-antenna-bars-5"></i>${t} </span>
+                ${e.manufacturer?C`<span class="meta-item">
+                        <i class="ti ti-building"></i>${e.manufacturer}
+                      </span>`:null}
+              </div>
+            </div>
           </div>
           <div class="actions">
-            <button class="secondary" @click=${this._onEdit}>Edit</button>
-            <button class="danger" @click=${this._onDelete}>Delete</button>
+            <rune-tooltip content="Edit device">
+              <rune-button
+                variant="ghost"
+                icon="edit"
+                @click=${this._onEdit}
+                aria-label="Edit device"
+              ></rune-button>
+            </rune-tooltip>
+            <rune-tooltip content="Delete device">
+              <rune-button
+                variant="ghost"
+                icon="trash"
+                @click=${this._onDelete}
+                aria-label="Delete device"
+              ></rune-button>
+            </rune-tooltip>
           </div>
         </div>
         <div class="commands">
@@ -24013,278 +24156,637 @@ ${Sn.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
                 title=${`Send "${t.label??t.key}" to ${e.name}`}
                 @click=${e=>this._send(t,e.currentTarget)}
               >
-                ${t.label??t.key}
+                <i class="ti ti-bolt"></i>
+                <span>${t.label??t.key}</span>
               </button>
             `)}
-          <button class="cmd placeholder" @click=${this._learn}>+ Learn command</button>
+          <button class="cmd placeholder" @click=${this._learn}>
+            <i class="ti ti-plus"></i>
+            <span>Learn command</span>
+          </button>
         </div>
       </div>
-    `}};B([O({attribute:!1})],Ea.prototype,`device`,void 0),B([k()],Ea.prototype,`_flash`,void 0),Ea=B([D(`rune-device-card`)],Ea);var Da=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
+    `}};B([O({attribute:!1})],Da.prototype,`device`,void 0),B([k()],Da.prototype,`_flash`,void 0),Da=B([D(`rune-device-card`)],Da);var Oa=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: var(--rune-space-3);
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: var(--rune-space-5);
       }
       .toolbar h2 {
         margin: 0;
-        font-weight: 400;
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
-      .grow {
+      .toolbar .grow {
         flex: 1;
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){console.error(`[rune] Load devices failed`,e),X.pushToast(`Load devices: ${e.message}`,`err`)}finally{this._loading=!1}}_add(){X.openDeviceDialog(null)}render(){this._tick;let e=X.devices;return C`
+      .subtitle {
+        margin: -12px 0 var(--rune-space-4);
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-sm);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-3);
+      }
+      .loading-bar {
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--rune-primary) 50%,
+          transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: rune-shimmer 1.4s infinite linear;
+        border-radius: var(--rune-radius-full);
+        margin-bottom: var(--rune-space-4);
+      }
+      @keyframes rune-shimmer {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
+      }
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){X.pushToast(`Load devices: ${e.message}`,`err`)}finally{this._loading=!1}}_add(){X.openDeviceDialog(null)}render(){this._tick;let e=X.devices;return C`
       <div class="toolbar">
         <h2>Devices</h2>
         <span class="grow"></span>
-        <button @click=${this._add}>+ Add device</button>
-        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
-          ${this._loading?`Loading…`:`Refresh`}
-        </button>
+        <rune-tooltip content="Reload from backend">
+          <rune-button
+            variant="secondary"
+            icon="refresh"
+            ?loading=${this._loading}
+            @click=${this.refresh}
+          >
+            Refresh
+          </rune-button>
+        </rune-tooltip>
+        <rune-button variant="primary" icon="plus" @click=${this._add}> Add device </rune-button>
       </div>
-      ${e.length===0?C`<div class="empty">
-              <div>No devices yet.</div>
-              <div style="margin-top:8px;font-size:12px;">
-                Click + Add device to create one, or use the config flow.
+      <div class="subtitle">
+        IR / RF devices RUNE controls in Home Assistant. Click
+        <strong>+ Add device</strong> to create one, or use the config flow.
+      </div>
+      ${this._loading&&e.length===0?C`<div class="loading-bar"></div>`:null}
+      ${e.length===0?C`
+              <rune-empty-state
+                icon="devices"
+                heading="No devices yet"
+                message="Create your first IR / RF device — pick a category, name it, and choose the emitter entity."
+              >
+                <rune-button slot="action" variant="primary" icon="plus" @click=${this._add}>
+                  Add device
+                </rune-button>
+              </rune-empty-state>
+            `:C`
+              <div class="stack">
+                ${e.map(e=>C`<rune-device-card .device=${e}></rune-device-card>`)}
               </div>
-            </div>`:C`${e.map(e=>C`<rune-device-card .device=${e}></rune-device-card>`)}`}
-    `}};B([k()],Da.prototype,`_tick`,void 0),B([k()],Da.prototype,`_loading`,void 0),Da=B([D(`rune-devices-view`)],Da);var Oa=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
+            `}
+    `}};B([k()],Oa.prototype,`_tick`,void 0),B([k()],Oa.prototype,`_loading`,void 0),Oa=B([D(`rune-devices-view`)],Oa);var ka=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: var(--rune-space-3);
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: var(--rune-space-5);
       }
       .toolbar h2 {
         margin: 0;
-        font-weight: 400;
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
       .grow {
         flex: 1;
+      }
+      .help {
+        margin-bottom: var(--rune-space-4);
+      }
+      .remotes {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-4);
       }
       .remote-card {
-        background: var(--card);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
-        border: 1px solid var(--border);
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        padding: var(--rune-space-5);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
       }
       .remote-card.dismissed {
-        opacity: 0.5;
+        opacity: 0.55;
       }
-      .remote-card h4 {
-        margin: 0 0 8px;
-        font-size: 14px;
+      .remote-head {
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-3);
+        margin-bottom: var(--rune-space-3);
       }
-      .signal-card {
-        background: var(--card);
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 6px;
-        border: 1px solid var(--border);
+      .remote-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .remote-title {
+        flex: 1;
+        min-width: 0;
+      }
+      .remote-title h4 {
+        margin: 0;
+        font-size: var(--rune-fs-lg);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
+      }
+      .remote-meta {
+        display: flex;
+        gap: var(--rune-space-2);
+        align-items: center;
+        margin-top: 4px;
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+      }
+      .signals {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-2);
+      }
+      .signal {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        border: 1px solid var(--rune-border);
+        gap: var(--rune-space-3);
       }
-      .signal-card .info {
-        font-size: 13px;
+      .signal-info {
+        flex: 1;
+        min-width: 0;
       }
-      .signal-card .meta {
-        color: var(--muted);
+      .signal-info .name {
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text-strong);
+        font-weight: var(--rune-fw-medium);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .signal-info .meta {
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+        margin-top: 2px;
+        display: flex;
+        gap: var(--rune-space-2);
+        flex-wrap: wrap;
+      }
+      .signal-info .meta i {
         font-size: 11px;
+        line-height: 1;
       }
-      .badge {
-        display: inline-block;
-        padding: 1px 8px;
-        border-radius: 10px;
-        background: var(--bg-2);
-        color: var(--muted);
-        font-size: 11px;
-        border: 1px solid var(--border);
-        margin-left: 6px;
+      .signal-info .meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
       }
-      .badge.protocol {
-        color: var(--primary);
-        border-color: var(--primary);
+      .hit-count {
+        font-family: var(--rune-font-mono);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-primary);
+        padding: var(--rune-space-1) var(--rune-space-2);
+        background: var(--rune-primary-soft);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-xs);
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{remotes:e}=await $.listSniffer();X.setRemotes(e??[])}catch(e){X.pushToast(`Load sniffer: ${e.message}`,`err`)}finally{this._loading=!1}}async _dismiss(e){try{await $.dismissRemote(e.id),await this.refresh()}catch(e){X.pushToast(e.message,`err`)}}render(){this._tick;let e=X.remotes.filter(e=>!e.dismissed);return C`
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{remotes:e}=await $.listSniffer();X.setRemotes(e??[])}catch(e){X.pushToast(`Load sniffer: ${e.message}`,`err`)}finally{this._loading=!1}}async _dismiss(e){try{await $.dismissRemote(e.id),await this.refresh()}catch(e){X.pushToast(e.message,`err`)}}_renderSignal(e){return C`
+      <div class="signal">
+        <div class="signal-info">
+          <div class="name">${e.alias??e.fingerprint??e.id}</div>
+          <div class="meta">
+            <span class="meta-item"> <i class="ti ti-clock"></i>${e.last_seen} </span>
+            ${e.decoded_fingerprint?C`<span class="meta-item">
+                    <i class="ti ti-fingerprint"></i>${e.decoded_fingerprint}
+                  </span>`:null}
+          </div>
+        </div>
+        <rune-chip variant="primary" icon="bolt">${e.hit_count} hits</rune-chip>
+      </div>
+    `}render(){this._tick;let e=X.remotes.filter(e=>!e.dismissed),t=e.reduce((e,t)=>e+t.signals.length,0);return C`
       <div class="toolbar">
         <h2>Sniffer</h2>
+        <rune-chip variant="neutral" icon="antenna"
+          >${e.length} remote${e.length===1?``:`s`} · ${t}
+          signal${t===1?``:`s`}</rune-chip
+        >
         <span class="grow"></span>
-        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
-          ${this._loading?`Loading…`:`Refresh`}
-        </button>
+        <rune-tooltip content="Reload from backend">
+          <rune-button
+            variant="secondary"
+            icon="refresh"
+            ?loading=${this._loading}
+            @click=${this.refresh}
+          >
+            Refresh
+          </rune-button>
+        </rune-tooltip>
       </div>
       <div class="help">
-        Live signals captured from every receiver you've configured. The sniffer listens on each
-        receiver entity automatically once you add a device. Assign a signal to a device command via
-        the
-        <code>Actions</code> tab, or dismiss the whole remote here.
+        <i class="ti ti-info-circle"></i> Live signals captured from every receiver you've
+        configured. The sniffer listens on each receiver entity automatically once you add a device.
+        Assign a signal to a device command via the <strong>Actions</strong> tab, or dismiss the
+        whole remote here.
       </div>
-      ${e.length===0?C`<div class="empty">No captured signals yet.</div>`:e.map(e=>C`
-                <div class="remote-card ${e.dismissed?`dismissed`:``}">
-                  <h4>
-                    ${e.label??e.protocol_label??e.id}
-                    <span class="badge protocol">${e.protocol_label??`unknown`}</span>
-                    <span class="badge">${e.signal_count} signal(s)</span>
-                  </h4>
-                  ${e.signals.map(e=>C`
-                      <div class="signal-card">
-                        <div class="info">${e.alias??e.fingerprint??e.id}</div>
-                        <div class="meta">
-                          hits: ${e.hit_count} · last: ${e.last_seen} ·
-                          ${e.decoded_fingerprint??`—`}
+      ${e.length===0?C`
+              <rune-empty-state
+                icon="antenna"
+                heading="No captured signals yet"
+                message="Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time."
+              ></rune-empty-state>
+            `:C`
+              <div class="remotes">
+                ${e.map(e=>C`
+                    <div class="remote-card ${e.dismissed?`dismissed`:``}">
+                      <div class="remote-head">
+                        <div class="remote-icon"><i class="ti ti-antenna"></i></div>
+                        <div class="remote-title">
+                          <h4>${e.label??e.protocol_label??e.id}</h4>
+                          <div class="remote-meta">
+                            ${e.protocol_label?C`<rune-chip variant="primary">${e.protocol_label}</rune-chip>`:C`<rune-chip variant="neutral">unknown</rune-chip>`}
+                            <span>${e.signal_count} signal${e.signal_count===1?``:`s`}</span>
+                          </div>
                         </div>
+                        <rune-tooltip
+                          content=${e.dismissed?`Re-activate this remote`:`Hide this remote from the sniffer list`}
+                        >
+                          <rune-button
+                            variant=${e.dismissed?`ghost`:`secondary`}
+                            icon=${e.dismissed?`rotate`:`x`}
+                            @click=${()=>this._dismiss(e)}
+                          >
+                            ${e.dismissed?`Re-activate`:`Dismiss`}
+                          </rune-button>
+                        </rune-tooltip>
                       </div>
-                    `)}
-                  <button class="secondary" @click=${()=>this._dismiss(e)}>
-                    ${e.dismissed?`Re-activate`:`Dismiss remote`}
-                  </button>
-                </div>
-              `)}
-    `}};B([k()],Oa.prototype,`_tick`,void 0),B([k()],Oa.prototype,`_loading`,void 0),Oa=B([D(`rune-sniffer-view`)],Oa);var ka=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
+                      ${e.signals.length>0?C`
+                              <div class="signals">
+                                ${e.signals.map(e=>this._renderSignal(e))}
+                              </div>
+                            `:null}
+                    </div>
+                  `)}
+              </div>
+            `}
+    `}};B([k()],ka.prototype,`_tick`,void 0),B([k()],ka.prototype,`_loading`,void 0),ka=B([D(`rune-sniffer-view`)],ka);var Aa=class extends E{constructor(...e){super(...e),this._tick=0,this._loading=!1,this._unsub=null}static{this.styles=[z,y`
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: var(--rune-space-3);
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: var(--rune-space-5);
       }
       .toolbar h2 {
         margin: 0;
-        font-weight: 400;
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
       .grow {
         flex: 1;
       }
-      .action-card {
-        background: var(--card);
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 6px;
-        border: 1px solid var(--border);
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-2);
+      }
+      .action {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: var(--rune-space-4);
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
+        gap: var(--rune-space-3);
       }
-      .action-card .info strong {
-        font-weight: 500;
+      .action-info {
+        flex: 1;
+        min-width: 0;
       }
-      .action-card .meta {
-        color: var(--muted);
+      .action-info .name {
+        font-size: var(--rune-fs-md);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        margin-bottom: 4px;
+      }
+      .action-info .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--rune-space-2);
+        align-items: center;
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+        font-family: var(--rune-font-mono);
+      }
+      .action-info .meta i {
         font-size: 11px;
+        line-height: 1;
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{actions:e}=await $.listActions();X.setActions(e??[])}catch(e){X.pushToast(`Load actions: ${e.message}`,`err`)}finally{this._loading=!1}}render(){this._tick;let e=X.actions;return C`
+      .action-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){this._loading=!0;try{let{actions:e}=await $.listActions();X.setActions(e??[])}catch(e){X.pushToast(`Load actions: ${e.message}`,`err`)}finally{this._loading=!1}}_renderAction(e){return C`
+      <div class="action">
+        <div class="action-icon"><i class="ti ti-wand"></i></div>
+        <div class="action-info">
+          <div class="name">${e.name??e.id}</div>
+          <div class="meta">
+            <rune-chip variant="primary" icon="target">${e.target.kind}</rune-chip>
+            <span>
+              <i class="ti ti-fingerprint"></i>
+              signal ${e.signal_id.slice(0,8)}…
+            </span>
+            <span> <i class="ti ti-bolt"></i> min_hits: ${e.min_hits} </span>
+          </div>
+        </div>
+      </div>
+    `}render(){this._tick;let e=X.actions;return C`
       <div class="toolbar">
         <h2>Actions</h2>
+        <rune-chip variant="neutral" icon="wand"
+          >${e.length} binding${e.length===1?``:`s`}</rune-chip
+        >
         <span class="grow"></span>
-        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
-          ${this._loading?`Loading…`:`Refresh`}
-        </button>
+        <rune-tooltip content="Reload from backend">
+          <rune-button
+            variant="secondary"
+            icon="refresh"
+            ?loading=${this._loading}
+            @click=${this.refresh}
+          >
+            Refresh
+          </rune-button>
+        </rune-tooltip>
       </div>
       <div class="help">
-        Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a
-        service, activate a scene, run a script, or fire an event. Bindings are managed
-        programmatically (the API is stable; a UI editor lands in v0.4).
+        <i class="ti ti-info-circle"></i> Action bindings connect a captured signal to a
+        side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or
+        fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands
+        in v0.4).
       </div>
-      ${e.length===0?C`<div class="empty">No action bindings yet.</div>`:e.map(e=>C`
-                <div class="action-card">
-                  <div class="info">
-                    <strong>${e.name??e.id}</strong>
-                    <div class="meta">
-                      ${e.target.kind} · signal ${e.signal_id.slice(0,8)}… · min_hits:
-                      ${e.min_hits}
-                    </div>
-                  </div>
-                </div>
-              `)}
-    `}};B([k()],ka.prototype,`_tick`,void 0),B([k()],ka.prototype,`_loading`,void 0),ka=B([D(`rune-actions-view`)],ka);var Aa=class extends E{constructor(...e){super(...e),this._tick=0,this._unsub=null}static{this.styles=[z,y`
-      h2 {
-        margin: 0 0 16px;
-        font-weight: 400;
+      ${e.length===0?C`
+              <rune-empty-state
+                icon="wand"
+                heading="No action bindings yet"
+                message="Create bindings from the API or wait for the v0.4 editor."
+              ></rune-empty-state>
+            `:C` <div class="actions">${e.map(e=>this._renderAction(e))}</div> `}
+    `}};B([k()],Aa.prototype,`_tick`,void 0),B([k()],Aa.prototype,`_loading`,void 0),Aa=B([D(`rune-actions-view`)],Aa);var ja=class extends E{constructor(...e){super(...e),this._tick=0,this._unsub=null}static{this.styles=[z,y`
+      .head {
+        margin-bottom: var(--rune-space-5);
       }
-      h3 {
-        margin-top: 24px;
+      .head h2 {
+        margin: 0 0 var(--rune-space-1);
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
-      .status-grid {
+      .head .sub {
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-sm);
+      }
+      .section-title {
+        margin: var(--rune-space-6) 0 var(--rune-space-3);
+        font-size: var(--rune-fs-md);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+      }
+      .section-title i {
+        color: var(--rune-primary);
+        font-size: 18px;
+      }
+      .stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
+        gap: var(--rune-space-3);
       }
-      .stat-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 16px;
+      .stat {
+        background: var(--rune-surface);
+        border-radius: var(--rune-radius-md);
+        padding: var(--rune-space-4);
+        border: 1px solid var(--rune-border);
+        box-shadow: var(--rune-shadow-1);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--rune-space-3);
       }
-      .stat-card .label {
-        font-size: 12px;
-        color: var(--muted);
-        margin-bottom: 6px;
+      .stat-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
       }
-      .stat-card .value {
-        font-size: 24px;
-        font-weight: 500;
+      .stat-icon.success {
+        background: var(--rune-success-soft);
+        color: var(--rune-success);
       }
-      .status-dot {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 6px;
-        background: var(--muted);
+      .stat-icon.warning {
+        background: var(--rune-warning-soft);
+        color: var(--rune-warning);
       }
-      .status-dot.ok {
-        background: var(--ok);
+      .stat-icon.neutral {
+        background: var(--rune-surface-alt);
+        color: var(--rune-text-muted);
       }
-      .meta {
-        color: var(--muted);
-        font-size: 12px;
-        margin-top: 6px;
+      .stat-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .stat-label {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: var(--rune-fw-medium);
+        margin-bottom: 2px;
+      }
+      .stat-value {
+        font-size: var(--rune-fs-xl);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+        letter-spacing: -0.01em;
+      }
+      .stat-value.small {
+        font-size: var(--rune-fs-md);
+        font-family: var(--rune-font-mono);
+      }
+      .stat-meta {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        margin-top: 2px;
+      }
+      .entities {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: var(--rune-space-2);
+      }
+      .entity {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--rune-space-3) var(--rune-space-4);
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-xs);
+      }
+      .entity-id {
+        color: var(--rune-text-strong);
+        font-weight: var(--rune-fw-medium);
+      }
+      .entity-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--rune-text-muted);
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--rune-radius-full);
+        background: var(--rune-success);
+        box-shadow: 0 0 0 3px var(--rune-success-soft);
+      }
+      .dot.off {
+        background: var(--rune-text-subtle);
+        box-shadow: 0 0 0 3px var(--rune-surface-alt);
       }
     `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++),this.refresh()}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async refresh(){try{let[{transmitters:e},{receivers:t},{devices:n}]=await Promise.all([$.transmitters(),$.receivers(),$.list()]);X.setTransmitters(e??[]),X.setReceivers(t??[]),X.setDevices(n??[])}catch(e){X.pushToast(`Load settings: ${e.message}`,`err`)}}render(){this._tick;let e=X.remotes.reduce((e,t)=>e+t.signals.length,0);return C`
-      <h2>Settings</h2>
-      <div class="status-grid">
-        <div class="stat-card">
-          <div class="label">Integration</div>
-          <div class="value" style="font-size:18px;">RUNE</div>
-          <div class="meta">v${X.version}</div>
+      <div class="head">
+        <h2>Settings</h2>
+        <div class="sub">Integration health and discovered entities.</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-icon"><i class="ti ti-remote"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Integration</div>
+            <div class="stat-value">RUNE</div>
+            <div class="stat-meta">v${X.version}</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="label">Devices</div>
-          <div class="value">${X.devices.length}</div>
+        <div class="stat">
+          <div class="stat-icon neutral"><i class="ti ti-devices"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Devices</div>
+            <div class="stat-value">${X.devices.length}</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="label">Sniffer signals</div>
-          <div class="value">${e}</div>
+        <div class="stat">
+          <div class="stat-icon warning"><i class="ti ti-antenna"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Sniffer signals</div>
+            <div class="stat-value">${e}</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="label">Action bindings</div>
-          <div class="value">${X.actions.length}</div>
+        <div class="stat">
+          <div class="stat-icon success"><i class="ti ti-wand"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Action bindings</div>
+            <div class="stat-value">${X.actions.length}</div>
+          </div>
         </div>
       </div>
-      <h3>Available transmitters</h3>
-      <div class="status-grid">
-        ${X.transmitters.length===0?C`<div class="empty">No IR/RF emitters found.</div>`:X.transmitters.map(e=>C`
-                  <div class="stat-card">
-                    <div class="label">${e.entity_id}</div>
-                    <div class="value" style="font-size:14px;">
-                      <span class="status-dot ok"></span>${e.state}
+
+      <div class="section-title">
+        <i class="ti ti-antenna-bars-5"></i>
+        Available transmitters
+        <rune-chip variant="neutral">${X.transmitters.length}</rune-chip>
+      </div>
+      ${X.transmitters.length===0?C`<rune-empty-state
+              icon="antenna-bars-5"
+              heading="No IR/RF emitters found"
+              message="Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first."
+            ></rune-empty-state>`:C`
+              <div class="entities">
+                ${X.transmitters.map(e=>C`
+                    <div class="entity">
+                      <span class="entity-id">${e.entity_id}</span>
+                      <span class="entity-state">
+                        <span
+                          class="dot ${e.state===`off`||e.state===`unavailable`?`off`:``}"
+                        ></span>
+                        ${e.state}
+                      </span>
                     </div>
-                  </div>
-                `)}
+                  `)}
+              </div>
+            `}
+
+      <div class="section-title">
+        <i class="ti ti-antenna"></i>
+        Available receivers
+        <rune-chip variant="neutral">${X.receivers.length}</rune-chip>
       </div>
-      <h3>Available receivers</h3>
-      <div class="status-grid">
-        ${X.receivers.length===0?C`<div class="empty">No IR/RF receivers found.</div>`:X.receivers.map(e=>C`
-                  <div class="stat-card">
-                    <div class="label">${e.entity_id}</div>
-                    <div class="value" style="font-size:14px;">
-                      <span class="status-dot ok"></span>${e.state}
+      ${X.receivers.length===0?C`<rune-empty-state
+              icon="antenna"
+              heading="No IR/RF receivers found"
+              message="Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows."
+            ></rune-empty-state>`:C`
+              <div class="entities">
+                ${X.receivers.map(e=>C`
+                    <div class="entity">
+                      <span class="entity-id">${e.entity_id}</span>
+                      <span class="entity-state">
+                        <span
+                          class="dot ${e.state===`off`||e.state===`unavailable`?`off`:``}"
+                        ></span>
+                        ${e.state}
+                      </span>
                     </div>
-                  </div>
-                `)}
-      </div>
-    `}};B([k()],Aa.prototype,`_tick`,void 0),Aa=B([D(`rune-settings-view`)],Aa);var ja=[{key:`name`,label:`Name`,helper:`How the device appears in Home Assistant`,icon:`device-gamepad`,kind:`text`,placeholder:`Bedroom fan`,required:!0,maxLength:64},{key:`category`,label:`Category`,helper:`Determines which entities HA exposes`,icon:`category`,kind:`select`,required:!0,options:[{value:`fan`,label:`Fan`,icon:`fan`},{value:`climate`,label:`Climate`,icon:`temperature`},{value:`light`,label:`Light`,icon:`bulb`},{value:`cover`,label:`Cover / Blinds`,icon:`blinds`},{value:`media_player`,label:`Media player`,icon:`device-tv`},{value:`switch`,label:`Switch / Outlet`,icon:`plug`},{value:`remote`,label:`Generic remote`,icon:`remote`}]},{key:`transmitter`,label:`Transmitter`,helper:`IR / RF emitter entity that sends commands`,icon:`antenna-bars-5`,kind:`async-select`,required:!0,searchable:!0,clearable:!1,placeholder:`Pick an emitter…`},{key:`receiver`,label:`Receiver`,helper:`Optional — needed for cover / learn workflows`,icon:`antenna`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`},{key:`manufacturer`,label:`Manufacturer`,icon:`building`,kind:`text`,placeholder:`Broadlink, ESPHome, …`,maxLength:64},{key:`model`,label:`Model`,icon:`barcode`,kind:`text`,placeholder:`RM4 Pro, FRM97, …`,maxLength:64}],Ma=[{key:`discrete_speed_count`,label:`Speed steps`,helper:`How many discrete speed levels this fan exposes`,icon:`gauge`,kind:`number`,min:1,max:7,step:1,visibleWhen:e=>e.category===`fan`},{key:`speed_mode`,label:`Speed mode`,helper:`Hybrid sends both step + percent commands`,icon:`adjustments`,kind:`select`,visibleWhen:e=>e.category===`fan`,options:[{value:`hybrid`,label:`Hybrid (recommended)`,description:`Steps + percent`},{value:`discrete`,label:`Discrete only`,description:`Just the steps`},{value:`percent`,label:`Percent only`,description:`Smooth percentage`}]},{key:`climate_matrix`,label:`Full HVAC matrix`,helper:`Generate every (mode × fan) × (on/off) combo`,icon:`matrix`,kind:`switch`,visibleWhen:e=>e.category===`climate`},{key:`temperature_sensor`,label:`Temperature sensor`,helper:`Optional — drives current temp on the climate entity`,icon:`temperature`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`climate`},{key:`humidity_sensor`,label:`Humidity sensor`,icon:`droplet`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`climate`},{key:`source_list`,label:`Sources`,helper:`Press Enter to add each source name`,icon:`list`,kind:`chips`,chipPlaceholder:`HDMI1, Bluetooth, …`,visibleWhen:e=>e.category===`media_player`},{key:`power_sensor`,label:`Power sensor`,helper:`W sensor — used to detect real on/off state`,icon:`bolt`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`remote`},{key:`power_off_below_w`,label:`Off threshold (W)`,helper:`Device is off when reading drops below this`,icon:`battery-3`,kind:`number`,min:0,max:5e3,step:1,visibleWhen:e=>e.category===`remote`},{key:`power_on_above_w`,label:`On threshold (W)`,helper:`Device is on when reading rises above this`,icon:`battery-4`,kind:`number`,min:0,max:5e3,step:1,visibleWhen:e=>e.category===`remote`}];function Na(){return[...ja,...Ma]}function Pa(e){return Na().filter(t=>!t.visibleWhen||t.visibleWhen(e))}function Fa(e){return Pa(e).filter(e=>e.required)}var Ia=class extends E{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._err=``,this._form={category:`fan`},this._chips={},this._unsub=null,this._lastEditingId=null,this._onClose=()=>{this._lastEditingId=null,this._err=``,X.closeDeviceDialog()}}static{this.styles=[z,y`
+                  `)}
+              </div>
+            `}
+    `}};B([k()],ja.prototype,`_tick`,void 0),ja=B([D(`rune-settings-view`)],ja);var Ma=[{key:`name`,label:`Name`,helper:`How the device appears in Home Assistant`,icon:`device-gamepad`,kind:`text`,placeholder:`Bedroom fan`,required:!0,maxLength:64},{key:`category`,label:`Category`,helper:`Determines which entities HA exposes`,icon:`category`,kind:`select`,required:!0,options:[{value:`fan`,label:`Fan`,icon:`fan`},{value:`climate`,label:`Climate`,icon:`temperature`},{value:`light`,label:`Light`,icon:`bulb`},{value:`cover`,label:`Cover / Blinds`,icon:`blinds`},{value:`media_player`,label:`Media player`,icon:`device-tv`},{value:`switch`,label:`Switch / Outlet`,icon:`plug`},{value:`remote`,label:`Generic remote`,icon:`remote`}]},{key:`transmitter`,label:`Transmitter`,helper:`IR / RF emitter entity that sends commands`,icon:`antenna-bars-5`,kind:`async-select`,required:!0,searchable:!0,clearable:!1,placeholder:`Pick an emitter…`},{key:`receiver`,label:`Receiver`,helper:`Optional — needed for cover / learn workflows`,icon:`antenna`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`},{key:`manufacturer`,label:`Manufacturer`,icon:`building`,kind:`text`,placeholder:`Broadlink, ESPHome, …`,maxLength:64},{key:`model`,label:`Model`,icon:`barcode`,kind:`text`,placeholder:`RM4 Pro, FRM97, …`,maxLength:64}],Na=[{key:`discrete_speed_count`,label:`Speed steps`,helper:`How many discrete speed levels this fan exposes`,icon:`gauge`,kind:`number`,min:1,max:7,step:1,visibleWhen:e=>e.category===`fan`},{key:`speed_mode`,label:`Speed mode`,helper:`Hybrid sends both step + percent commands`,icon:`adjustments`,kind:`select`,visibleWhen:e=>e.category===`fan`,options:[{value:`hybrid`,label:`Hybrid (recommended)`,description:`Steps + percent`},{value:`discrete`,label:`Discrete only`,description:`Just the steps`},{value:`percent`,label:`Percent only`,description:`Smooth percentage`}]},{key:`climate_matrix`,label:`Full HVAC matrix`,helper:`Generate every (mode × fan) × (on/off) combo`,icon:`matrix`,kind:`switch`,visibleWhen:e=>e.category===`climate`},{key:`temperature_sensor`,label:`Temperature sensor`,helper:`Optional — drives current temp on the climate entity`,icon:`temperature`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`climate`},{key:`humidity_sensor`,label:`Humidity sensor`,icon:`droplet`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`climate`},{key:`source_list`,label:`Sources`,helper:`Press Enter to add each source name`,icon:`list`,kind:`chips`,chipPlaceholder:`HDMI1, Bluetooth, …`,visibleWhen:e=>e.category===`media_player`},{key:`power_sensor`,label:`Power sensor`,helper:`W sensor — used to detect real on/off state`,icon:`bolt`,kind:`async-select`,searchable:!0,clearable:!0,placeholder:`(none)`,visibleWhen:e=>e.category===`remote`},{key:`power_off_below_w`,label:`Off threshold (W)`,helper:`Device is off when reading drops below this`,icon:`battery-3`,kind:`number`,min:0,max:5e3,step:1,visibleWhen:e=>e.category===`remote`},{key:`power_on_above_w`,label:`On threshold (W)`,helper:`Device is on when reading rises above this`,icon:`battery-4`,kind:`number`,min:0,max:5e3,step:1,visibleWhen:e=>e.category===`remote`}];function Pa(){return[...Ma,...Na]}function Fa(e){return Pa().filter(t=>!t.visibleWhen||t.visibleWhen(e))}function Ia(e){return Fa(e).filter(e=>e.required)}var La=class extends E{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._err=``,this._form={category:`fan`},this._chips={},this._unsub=null,this._lastEditingId=null,this._onClose=()=>{this._lastEditingId=null,this._err=``,X.closeDeviceDialog()}}static{this.styles=[z,y`
       :host {
         display: contents;
       }
@@ -24362,7 +24864,7 @@ ${Sn.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         font-size: var(--rune-fs-xs);
         margin-top: var(--rune-space-2);
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++)}disconnectedCallback(){super.connectedCallback(),this._unsub?.()}willUpdate(){let e=X.deviceDialog.editing,t=e?.id??null;t!==this._lastEditingId&&(this._lastEditingId=t,this._form=this._formFromEditing(e),this._chips=this._chipsFromEditing(e))}_formFromEditing(e){if(!e)return{category:`fan`};let t=e;return{category:e.category,name:e.name,manufacturer:e.manufacturer??``,model:e.model??``,transmitter:e.transmitter_entity_ids?.[0]??``,discrete_speed_count:t.discrete_speed_count??3}}_chipsFromEditing(e){return{}}_setField(e,t){this._form={...this._form,[e]:t},this._tick}async _save(){this._err=``;let e=Pa(this._form),t=Fa(this._form);for(let e of t){let t=this._form[e.key];if(t==null||t===``){this._err=`Field "${e.label}" is required`;return}}let n=X.deviceDialog.editing,r={};for(let t of e){let e=this._form[t.key];e!==void 0&&e!==``&&e!==null&&(r[t.key]=e)}for(let[e,t]of Object.entries(this._chips))t.length>0&&(r[e]=t);r.category===`fan`&&r.discrete_speed_count===void 0&&(r.discrete_speed_count=3),this._busy=!0;try{n?(await $.updateDevice({device_id:n.id,...r}),X.pushToast(`Updated`,`ok`)):(await $.createDevice(r),X.pushToast(`Created`,`ok`)),this._lastEditingId=null,X.closeDeviceDialog();let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){this._err=e.message}finally{this._busy=!1}}_loadTransmitters(){return async()=>((await $.transmitters()).transmitters??[]).map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}_loadReceivers(){return async()=>{let e=(await $.receivers()).receivers??[];return e.length===0?[{value:``,label:`(no receivers)`,description:`Add an RF receiver first`}]:e.map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}}_loadSensors(){return async()=>[]}_resolveOptions(e){if(e.kind===`async-select`)return e.key===`transmitter`?this._loadTransmitters():e.key===`receiver`?this._loadReceivers():e.key===`temperature_sensor`||e.key===`humidity_sensor`||e.key===`power_sensor`?this._loadSensors():e.loadOptions}_renderField(e){let t=this._form[e.key]??``,n=e.required?` * `:` `;switch(e.kind){case`text`:return C`
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}willUpdate(){let e=X.deviceDialog.editing,t=e?.id??null;t!==this._lastEditingId&&(this._lastEditingId=t,this._form=this._formFromEditing(e),this._chips=this._chipsFromEditing(e))}_formFromEditing(e){if(!e)return{category:`fan`};let t=e;return{category:e.category,name:e.name,manufacturer:e.manufacturer??``,model:e.model??``,transmitter:e.transmitter_entity_ids?.[0]??``,discrete_speed_count:t.discrete_speed_count??3}}_chipsFromEditing(e){return{}}_setField(e,t){this._form={...this._form,[e]:t},this._tick}async _save(){this._err=``;let e=Fa(this._form),t=Ia(this._form);for(let e of t){let t=this._form[e.key];if(t==null||t===``){this._err=`Field "${e.label}" is required`;return}}let n=X.deviceDialog.editing,r={};for(let t of e){let e=this._form[t.key];e!==void 0&&e!==``&&e!==null&&(r[t.key]=e)}for(let[e,t]of Object.entries(this._chips))t.length>0&&(r[e]=t);r.category===`fan`&&r.discrete_speed_count===void 0&&(r.discrete_speed_count=3),this._busy=!0;try{n?(await $.updateDevice({device_id:n.id,...r}),X.pushToast(`Updated`,`ok`)):(await $.createDevice(r),X.pushToast(`Created`,`ok`)),this._lastEditingId=null,X.closeDeviceDialog();let{devices:e}=await $.list();X.setDevices(e??[])}catch(e){this._err=e.message}finally{this._busy=!1}}_loadTransmitters(){return async()=>((await $.transmitters()).transmitters??[]).map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}_loadReceivers(){return async()=>{let e=(await $.receivers()).receivers??[];return e.length===0?[{value:``,label:`(no receivers)`,description:`Add an RF receiver first`}]:e.map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}}_loadSensors(){return async()=>[]}_resolveOptions(e){if(e.kind===`async-select`)return e.key===`transmitter`?this._loadTransmitters():e.key===`receiver`?this._loadReceivers():e.key===`temperature_sensor`||e.key===`humidity_sensor`||e.key===`power_sensor`?this._loadSensors():e.loadOptions}_renderField(e){let t=this._form[e.key]??``,n=e.required?` * `:` `;switch(e.kind){case`text`:return C`
           <rune-input
             label=${e.label+n}
             icon=${e.icon??``}
@@ -24458,7 +24960,7 @@ ${Sn.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
                 <strong>${this._form.power_sensor}</strong>`:T}
         .
       </div>
-    `}render(){let e=X.deviceDialog.editing,t=X.deviceDialog.open,n=Pa(this._form);return C`
+    `}render(){let e=X.deviceDialog.editing,t=X.deviceDialog.open,n=Fa(this._form);return C`
       <rune-dialog
         ?open=${t}
         size="large"
@@ -24484,161 +24986,311 @@ ${Sn.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
           </rune-button>
         </div>
       </rune-dialog>
-    `}};B([k()],Ia.prototype,`_tick`,void 0),B([k()],Ia.prototype,`_busy`,void 0),B([k()],Ia.prototype,`_err`,void 0),B([k()],Ia.prototype,`_form`,void 0),B([k()],Ia.prototype,`_chips`,void 0),Ia=B([D(`rune-device-dialog`)],Ia);var La=class extends E{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null}static{this.styles=[z,y`
-      dialog {
-        background: var(--card);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 24px;
-        min-width: 420px;
-        max-width: 90vw;
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.6);
-      }
-      h2 {
-        margin: 0 0 16px;
-      }
-      .form-row {
+    `}};B([k()],La.prototype,`_tick`,void 0),B([k()],La.prototype,`_busy`,void 0),B([k()],La.prototype,`_err`,void 0),B([k()],La.prototype,`_form`,void 0),B([k()],La.prototype,`_chips`,void 0),La=B([D(`rune-device-dialog`)],La);var Ra=class extends E{constructor(...e){super(...e),this._tick=0,this._busy=!1,this._saving=!1,this._unsub=null,this._cancel=()=>{X.closeLearnDialog()}}static{this.styles=[z,y`
+      .body {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        margin-bottom: 12px;
+        gap: var(--rune-space-3);
+        min-width: 480px;
       }
-      .form-row label {
-        font-size: 12px;
-        color: var(--muted);
+      .help {
+        background: var(--rune-primary-soft);
+        border-left: 3px solid var(--rune-primary);
+        padding: var(--rune-space-3) var(--rune-space-4);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
+        line-height: var(--rune-lh-relaxed);
       }
-      .dialog-actions {
+      .help i {
+        color: var(--rune-primary);
+        margin-right: var(--rune-space-1);
+        vertical-align: -2px;
+      }
+      .target {
         display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 16px;
+        align-items: center;
+        gap: var(--rune-space-2);
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        border: 1px solid var(--rune-border);
       }
-      pre {
-        background: var(--bg-2);
-        padding: 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        overflow-x: auto;
+      .target-label {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: var(--rune-fw-medium);
+      }
+      .target-value {
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text-strong);
+        font-weight: var(--rune-fw-medium);
+      }
+      .arrow {
+        color: var(--rune-text-subtle);
+        font-size: 14px;
       }
       .status {
-        font-family: monospace;
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>{let e=this._dlg?.open??!1;this._tick++,queueMicrotask(()=>{let t=this._dlg;t&&(X.learnDialog.open&&!e?t.showModal():!X.learnDialog.open&&e&&t.close())})})}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}_cancel(){X.closeLearnDialog()}async _start(){let{deviceId:e,commandKey:t}=X.learnDialog;if(!(!e||!t)){X.updateLearn({status:`Capturing… press the button on your remote NOW`}),this._busy=!0;try{let n=await $.learnCommand({device_id:e,command_key:t,timeout_s:15});n?.captured?X.updateLearn({status:`Captured: ${n.captured.protocol_label??`raw`} @ ${n.carrier_frequency_hz} Hz`,captured:n.captured,rawTimings:n.raw_timings,carrierHz:n.carrier_frequency_hz}):X.updateLearn({status:`No signal captured`})}catch(e){X.updateLearn({status:`Failed: ${e.message}`})}finally{this._busy=!1}}}async _save(){let{deviceId:e,commandKey:t,captured:n,rawTimings:r}=X.learnDialog;if(!(!e||!n||!r)){this._saving=!0;try{let{device:i}=await $.getDevice(e),a={...i.commands};a[t]={key:t,label:t.replace(/_/g,` `).replace(/^./,e=>e.toUpperCase()),category:`custom`,signal_category:{...n.signal_category},payload:{...n.payload,raw_timings:r}},await $.updateDevice({device_id:e,commands:a}),X.pushToast(`Learned "${t}"`,`ok`),X.closeLearnDialog();let{devices:o}=await $.list();X.setDevices(o??[])}catch(e){X.pushToast(e.message,`err`)}finally{this._saving=!1}}}render(){this._tick;let e=X.learnDialog,t=e.rawTimings,n=t?JSON.stringify(t.slice(0,30))+(t.length>30?`…`:``):`—`,r=`${X.devices.find(t=>t.id===e.deviceId)?.name??`—`} → ${e.commandKey}`,i=e.captured!==null&&!this._saving;return C`
-      <dialog id="dlg" @close=${()=>X.closeLearnDialog()}>
-        <h2>Learn command</h2>
-        <div class="help">
-          Point your remote at the receiver and press the button you want to capture. RUNE records
-          the raw timings and writes them into the command slot.
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--rune-radius-full);
+        background: var(--rune-text-subtle);
+        flex-shrink: 0;
+      }
+      .status-dot.live {
+        background: var(--rune-warning);
+        animation: rune-pulse 1.2s infinite;
+      }
+      .status-dot.ok {
+        background: var(--rune-success);
+      }
+      .status-dot.err {
+        background: var(--rune-danger);
+      }
+      @keyframes rune-pulse {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 var(--rune-warning);
+        }
+        50% {
+          opacity: 0.5;
+          box-shadow: 0 0 0 6px transparent;
+        }
+      }
+      .timings {
+        background: var(--rune-bg-elevated);
+        padding: var(--rune-space-3);
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text);
+        overflow-x: auto;
+        max-height: 120px;
+        border: 1px solid var(--rune-border);
+        margin: 0;
+      }
+      .section-label {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: var(--rune-fw-medium);
+        margin-bottom: var(--rune-space-1);
+      }
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}async _start(){let{deviceId:e,commandKey:t}=X.learnDialog;if(!(!e||!t)){X.updateLearn({status:`Capturing… press the button on your remote NOW`}),this._busy=!0;try{let n=await $.learnCommand({device_id:e,command_key:t,timeout_s:15});n?.captured?X.updateLearn({status:`Captured: ${n.captured.protocol_label??`raw`} @ ${n.carrier_frequency_hz} Hz`,captured:n.captured,rawTimings:n.raw_timings,carrierHz:n.carrier_frequency_hz}):X.updateLearn({status:`No signal captured`})}catch(e){X.updateLearn({status:`Failed: ${e.message}`})}finally{this._busy=!1}}}async _save(){let{deviceId:e,commandKey:t,captured:n,rawTimings:r}=X.learnDialog;if(!(!e||!n||!r)){this._saving=!0;try{let{device:i}=await $.getDevice(e),a={...i.commands};a[t]={key:t,label:t.replace(/_/g,` `).replace(/^./,e=>e.toUpperCase()),category:`custom`,signal_category:{...n.signal_category},payload:{...n.payload,raw_timings:r}},await $.updateDevice({device_id:e,commands:a}),X.pushToast(`Learned "${t}"`,`ok`),X.closeLearnDialog();let{devices:o}=await $.list();X.setDevices(o??[])}catch(e){X.pushToast(e.message,`err`)}finally{this._saving=!1}}}render(){this._tick;let e=X.learnDialog,t=e.rawTimings,n=t?JSON.stringify(t.slice(0,30))+(t.length>30?`…`:``):`—`,r=X.devices.find(t=>t.id===e.deviceId)?.name??`—`,i=e.captured!==null&&!this._saving,a=``;return this._busy?a=`live`:e.captured?a=`ok`:e.status.startsWith(`Failed`)&&(a=`err`),C`
+      <rune-dialog
+        ?open=${e.open}
+        size="medium"
+        label="Learn command"
+        @sl-after-hide=${this._cancel}
+      >
+        <div class="body">
+          <div class="help">
+            <i class="ti ti-info-circle"></i>
+            Point your remote at the receiver and press the button you want to capture. RUNE records
+            the raw timings and writes them into the command slot.
+          </div>
+
+          <div class="section-label">Command</div>
+          <div class="target">
+            <span class="target-value">${r}</span>
+            <i class="ti ti-arrow-right arrow"></i>
+            <rune-chip variant="primary">${e.commandKey}</rune-chip>
+          </div>
+
+          <div class="section-label">Status</div>
+          <div class="status">
+            <span class="status-dot ${a}"></span>
+            <span>${e.status}</span>
+          </div>
+
+          <div class="section-label">Captured timings</div>
+          <pre class="timings">${n}</pre>
         </div>
-        <div class="form-row">
-          <label>Command</label>
-          <div><strong>${r}</strong></div>
+        <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
+          <rune-button variant="secondary" icon="x" @click=${this._cancel}> Cancel </rune-button>
+          <rune-button
+            variant="ghost"
+            icon="antenna"
+            ?loading=${this._busy}
+            ?disabled=${e.captured!==null&&!this._busy}
+            @click=${this._start}
+          >
+            ${e.captured?`Re-learn`:`Start learn`}
+          </rune-button>
+          <rune-button
+            variant="primary"
+            icon="device-floppy"
+            ?loading=${this._saving}
+            ?disabled=${!i}
+            @click=${this._save}
+          >
+            Save &amp; close
+          </rune-button>
         </div>
-        <div class="form-row">
-          <label>Status</label>
-          <div class="status">${e.status}</div>
-        </div>
-        <div class="form-row">
-          <label>Captured timings</label>
-          <pre>${n}</pre>
-        </div>
-        <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
-          <button type="button" @click=${this._start} ?disabled=${this._busy}>
-            ${this._busy?`Capturing…`:`Start learn`}
-          </button>
-          <button type="button" @click=${this._save} ?disabled=${!i}>
-            ${this._saving?`Saving…`:`Save & close`}
-          </button>
-        </div>
-      </dialog>
-    `}};B([k()],La.prototype,`_tick`,void 0),B([k()],La.prototype,`_busy`,void 0),B([k()],La.prototype,`_saving`,void 0),B([A(`#dlg`)],La.prototype,`_dlg`,void 0),La=B([D(`rune-learn-dialog`)],La);var Ra=class extends E{constructor(...e){super(...e),this._tick=0,this._unsub=null}static{this.styles=[z,y`
+      </rune-dialog>
+    `}};B([k()],Ra.prototype,`_tick`,void 0),B([k()],Ra.prototype,`_busy`,void 0),B([k()],Ra.prototype,`_saving`,void 0),Ra=B([D(`rune-learn-dialog`)],Ra);var za=[{id:`devices`,label:`Devices`,icon:`devices`},{id:`sniffer`,label:`Sniffer`,icon:`antenna`},{id:`actions`,label:`Actions`,icon:`wand`},{id:`settings`,label:`Settings`,icon:`settings`}],Ba=class extends E{constructor(...e){super(...e),this._tick=0,this._unsub=null}static{this.styles=[z,y`
       :host {
         display: grid;
-        grid-template-columns: 220px 1fr;
+        grid-template-columns: 240px 1fr;
         grid-template-rows: 100vh;
         height: 100%;
         min-height: 100vh;
-        background: var(--bg);
+        background: var(--rune-bg);
+        color: var(--rune-text);
       }
       nav {
-        background: var(--bg-2);
-        border-right: 1px solid var(--border);
-        padding: 16px 0;
+        background: var(--rune-bg-elevated);
+        border-right: 1px solid var(--rune-border);
+        padding: var(--rune-space-5) var(--rune-space-2);
         height: 100%;
         overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-1);
       }
       .brand {
-        padding: 0 20px 16px;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 12px;
+        padding: 0 var(--rune-space-3) var(--rune-space-4);
+        border-bottom: 1px solid var(--rune-border);
+        margin-bottom: var(--rune-space-3);
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+      }
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--rune-radius-sm);
+        background: linear-gradient(
+          135deg,
+          var(--rune-primary) 0%,
+          var(--rune-primary-active) 100%
+        );
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--rune-on-primary);
+        font-size: 18px;
+        box-shadow: var(--rune-shadow-1);
       }
       .brand h1 {
         margin: 0;
-        font-size: 18px;
-        font-weight: 500;
+        font-size: var(--rune-fs-lg);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
       .pill {
         display: inline-block;
-        padding: 1px 6px;
-        border-radius: 8px;
-        background: var(--bg);
-        color: var(--muted);
-        font-size: 10px;
-        border: 1px solid var(--border);
-        margin-left: 4px;
+        padding: 2px 8px;
+        border-radius: var(--rune-radius-full);
+        background: var(--rune-surface-alt);
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-xs);
+        font-weight: var(--rune-fw-medium);
+        margin-left: auto;
       }
       .nav-item {
-        display: block;
-        padding: 10px 20px;
-        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-3);
+        padding: var(--rune-space-3);
+        color: var(--rune-text-muted);
         text-decoration: none;
         cursor: pointer;
         border: 0;
         background: transparent;
+        border-radius: var(--rune-radius-sm);
         width: 100%;
         text-align: left;
         font: inherit;
-        font-size: 13px;
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
+        transition:
+          background-color var(--rune-dur-fast) var(--rune-ease),
+          color var(--rune-dur-fast) var(--rune-ease);
       }
       .nav-item:hover {
-        background: var(--bg);
-        color: var(--text);
+        background: var(--rune-surface-alt);
+        color: var(--rune-text);
       }
       .nav-item.active {
-        background: var(--bg);
-        color: var(--primary);
-        border-left: 3px solid var(--primary);
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary-text);
+        font-weight: var(--rune-fw-semibold);
+      }
+      .nav-item i {
+        font-size: 18px;
+        line-height: 1;
+        width: 18px;
+        flex-shrink: 0;
+      }
+      .footer {
+        margin-top: auto;
+        padding: var(--rune-space-3);
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-subtle);
+        border-top: 1px solid var(--rune-border);
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+      }
+      .footer .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--rune-radius-full);
+        background: var(--rune-success);
+        box-shadow: 0 0 0 3px var(--rune-success-soft);
       }
       main {
-        padding: 24px;
+        padding: var(--rune-space-6);
         overflow-y: auto;
         height: 100%;
         max-height: 100vh;
+        background: var(--rune-bg);
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>{this._tick++})}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}_select(e){X.setSection(e)}_renderSection(){switch(X.section){case`sniffer`:return C`<rune-sniffer-view></rune-sniffer-view>`;case`actions`:return C`<rune-actions-view></rune-actions-view>`;case`settings`:return C`<rune-settings-view></rune-settings-view>`;default:return C`<rune-devices-view></rune-devices-view>`}}render(){return this._tick,C`
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xa(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}_select(e){X.setSection(e)}_renderSection(){switch(X.section){case`sniffer`:return C`<rune-sniffer-view></rune-sniffer-view>`;case`actions`:return C`<rune-actions-view></rune-actions-view>`;case`settings`:return C`<rune-settings-view></rune-settings-view>`;default:return C`<rune-devices-view></rune-devices-view>`}}render(){return this._tick,C`
       <nav>
         <div class="brand">
-          <h1>RUNE <span class="pill">v${X.version}</span></h1>
+          <span class="brand-mark"><i class="ti ti-remote"></i></span>
+          <h1>RUNE<span class="pill">v${X.version}</span></h1>
         </div>
-        ${[`devices`,`sniffer`,`actions`,`settings`].map(e=>C`
+        ${za.map(e=>C`
             <button
-              class="nav-item ${X.section===e?`active`:``}"
-              data-section=${e}
-              @click=${()=>this._select(e)}
+              class="nav-item ${X.section===e.id?`active`:``}"
+              data-section=${e.id}
+              aria-current=${X.section===e.id?`page`:`false`}
+              @click=${()=>this._select(e.id)}
             >
-              ${e[0].toUpperCase()}${e.slice(1)}
+              <i class="ti ti-${e.icon}"></i>
+              <span>${e.label}</span>
             </button>
           `)}
+        <div class="footer">
+          <span class="dot"></span>
+          <span>Connected</span>
+        </div>
       </nav>
       <main>${this._renderSection()}</main>
       <rune-toast-stack></rune-toast-stack>
       <rune-device-dialog></rune-device-dialog>
       <rune-learn-dialog></rune-learn-dialog>
-    `}};B([k()],Ra.prototype,`_tick`,void 0),Ra=B([D(`rune-app`)],Ra);</script>
+    `}};B([k()],Ba.prototype,`_tick`,void 0),Ba=B([D(`rune-app`)],Ba);</script>
     <style rel="stylesheet" crossorigin>:root,:host,.sl-theme-light{--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light;--sl-color-gray-50:#f9f9f9;--sl-color-gray-100:#f4f4f5;--sl-color-gray-200:#e4e4e7;--sl-color-gray-300:#d4d4d8;--sl-color-gray-400:#a1a1aa;--sl-color-gray-500:#71717a;--sl-color-gray-600:#52525b;--sl-color-gray-700:#3f3f46;--sl-color-gray-800:#27272a;--sl-color-gray-900:#18181b;--sl-color-gray-950:#131316;--sl-color-red-50:#fef2f2;--sl-color-red-100:#fee2e2;--sl-color-red-200:#fecaca;--sl-color-red-300:#fca5a5;--sl-color-red-400:#f87171;--sl-color-red-500:#ef4444;--sl-color-red-600:#dc2626;--sl-color-red-700:#b91c1c;--sl-color-red-800:#991b1b;--sl-color-red-900:#7f1d1d;--sl-color-red-950:#501414;--sl-color-orange-50:#fff7ed;--sl-color-orange-100:#ffedd5;--sl-color-orange-200:#fed7aa;--sl-color-orange-300:#fdba74;--sl-color-orange-400:#fb923c;--sl-color-orange-500:#f97316;--sl-color-orange-600:#ea580c;--sl-color-orange-700:#c2410c;--sl-color-orange-800:#9a3412;--sl-color-orange-900:#7c2d12;--sl-color-orange-950:#52200f;--sl-color-amber-50:#fffbeb;--sl-color-amber-100:#fef3c7;--sl-color-amber-200:#fde68a;--sl-color-amber-300:#fcd34d;--sl-color-amber-400:#fbbf24;--sl-color-amber-500:#f59e0b;--sl-color-amber-600:#d97706;--sl-color-amber-700:#b45309;--sl-color-amber-800:#92400e;--sl-color-amber-900:#78350f;--sl-color-amber-950:#4a230b;--sl-color-yellow-50:#fefce8;--sl-color-yellow-100:#fef9c3;--sl-color-yellow-200:#fef08a;--sl-color-yellow-300:#fde047;--sl-color-yellow-400:#facc15;--sl-color-yellow-500:#eab308;--sl-color-yellow-600:#ca8a04;--sl-color-yellow-700:#a16207;--sl-color-yellow-800:#854d0e;--sl-color-yellow-900:#713f12;--sl-color-yellow-950:#3c260b;--sl-color-lime-50:#f7fee7;--sl-color-lime-100:#ecfccb;--sl-color-lime-200:#d9f99d;--sl-color-lime-300:#bef264;--sl-color-lime-400:#a3e635;--sl-color-lime-500:#84cc16;--sl-color-lime-600:#65a30d;--sl-color-lime-700:#4d7c0f;--sl-color-lime-800:#3f6212;--sl-color-lime-900:#365314;--sl-color-lime-950:#26390e;--sl-color-green-50:#f0fdf4;--sl-color-green-100:#dcfce7;--sl-color-green-200:#bbf7d0;--sl-color-green-300:#86efac;--sl-color-green-400:#4ade80;--sl-color-green-500:#22c55e;--sl-color-green-600:#16a34a;--sl-color-green-700:#15803d;--sl-color-green-800:#166534;--sl-color-green-900:#14532d;--sl-color-green-950:#0c311b;--sl-color-emerald-50:#ecfdf5;--sl-color-emerald-100:#d1fae5;--sl-color-emerald-200:#a7f3d0;--sl-color-emerald-300:#6ee7b7;--sl-color-emerald-400:#34d399;--sl-color-emerald-500:#10b981;--sl-color-emerald-600:#059669;--sl-color-emerald-700:#047857;--sl-color-emerald-800:#065f46;--sl-color-emerald-900:#064e3b;--sl-color-emerald-950:#032d22;--sl-color-teal-50:#f0fdfa;--sl-color-teal-100:#ccfbf1;--sl-color-teal-200:#99f6e4;--sl-color-teal-300:#5eead4;--sl-color-teal-400:#2dd4bf;--sl-color-teal-500:#14b8a6;--sl-color-teal-600:#0d9488;--sl-color-teal-700:#0f766e;--sl-color-teal-800:#115e59;--sl-color-teal-900:#134e4a;--sl-color-teal-950:#0c2e2c;--sl-color-cyan-50:#ecfeff;--sl-color-cyan-100:#cffafe;--sl-color-cyan-200:#a5f3fc;--sl-color-cyan-300:#67e8f9;--sl-color-cyan-400:#22d3ee;--sl-color-cyan-500:#06b6d4;--sl-color-cyan-600:#0891b2;--sl-color-cyan-700:#0e7490;--sl-color-cyan-800:#155e75;--sl-color-cyan-900:#164e63;--sl-color-cyan-950:#103442;--sl-color-sky-50:#f0f9ff;--sl-color-sky-100:#e0f2fe;--sl-color-sky-200:#bae6fd;--sl-color-sky-300:#7dd3fc;--sl-color-sky-400:#38bdf8;--sl-color-sky-500:#0ea5e9;--sl-color-sky-600:#0284c7;--sl-color-sky-700:#0369a1;--sl-color-sky-800:#075985;--sl-color-sky-900:#0c4a6e;--sl-color-sky-950:#0b3249;--sl-color-blue-50:#eff6ff;--sl-color-blue-100:#dbeafe;--sl-color-blue-200:#bfdbfe;--sl-color-blue-300:#93c5fd;--sl-color-blue-400:#60a5fa;--sl-color-blue-500:#3b82f6;--sl-color-blue-600:#2563eb;--sl-color-blue-700:#1d4ed8;--sl-color-blue-800:#1e40af;--sl-color-blue-900:#1e3a8a;--sl-color-blue-950:#152149;--sl-color-indigo-50:#eef2ff;--sl-color-indigo-100:#e0e7ff;--sl-color-indigo-200:#c7d2fe;--sl-color-indigo-300:#a5b4fc;--sl-color-indigo-400:#818cf8;--sl-color-indigo-500:#6366f1;--sl-color-indigo-600:#4f46e5;--sl-color-indigo-700:#4338ca;--sl-color-indigo-800:#3730a3;--sl-color-indigo-900:#312e81;--sl-color-indigo-950:#242154;--sl-color-violet-50:#f5f3ff;--sl-color-violet-100:#ede9fe;--sl-color-violet-200:#ddd6fe;--sl-color-violet-300:#c4b5fd;--sl-color-violet-400:#a78bfa;--sl-color-violet-500:#8b5cf6;--sl-color-violet-600:#7c3aed;--sl-color-violet-700:#6d28d9;--sl-color-violet-800:#5b21b6;--sl-color-violet-900:#4c1d95;--sl-color-violet-950:#311558;--sl-color-purple-50:#faf5ff;--sl-color-purple-100:#f3e8ff;--sl-color-purple-200:#e9d5ff;--sl-color-purple-300:#d8b4fe;--sl-color-purple-400:#c084fc;--sl-color-purple-500:#a855f7;--sl-color-purple-600:#9333ea;--sl-color-purple-700:#7e22ce;--sl-color-purple-800:#6b21a8;--sl-color-purple-900:#581c87;--sl-color-purple-950:#2f1143;--sl-color-fuchsia-50:#fdf4ff;--sl-color-fuchsia-100:#fae8ff;--sl-color-fuchsia-200:#f5d0fe;--sl-color-fuchsia-300:#f0abfc;--sl-color-fuchsia-400:#e879f9;--sl-color-fuchsia-500:#d946ef;--sl-color-fuchsia-600:#c026d3;--sl-color-fuchsia-700:#a21caf;--sl-color-fuchsia-800:#86198f;--sl-color-fuchsia-900:#701a75;--sl-color-fuchsia-950:#38103a;--sl-color-pink-50:#fdf2f8;--sl-color-pink-100:#fce7f3;--sl-color-pink-200:#fbcfe8;--sl-color-pink-300:#f9a8d4;--sl-color-pink-400:#f472b6;--sl-color-pink-500:#ec4899;--sl-color-pink-600:#db2777;--sl-color-pink-700:#be185d;--sl-color-pink-800:#9d174d;--sl-color-pink-900:#831843;--sl-color-pink-950:#430e23;--sl-color-rose-50:#fff1f2;--sl-color-rose-100:#ffe4e6;--sl-color-rose-200:#fecdd3;--sl-color-rose-300:#fda4af;--sl-color-rose-400:#fb7185;--sl-color-rose-500:#f43f5e;--sl-color-rose-600:#e11d48;--sl-color-rose-700:#be123c;--sl-color-rose-800:#9f1239;--sl-color-rose-900:#881337;--sl-color-rose-950:#4a0d20;--sl-color-primary-50:var(--sl-color-sky-50);--sl-color-primary-100:var(--sl-color-sky-100);--sl-color-primary-200:var(--sl-color-sky-200);--sl-color-primary-300:var(--sl-color-sky-300);--sl-color-primary-400:var(--sl-color-sky-400);--sl-color-primary-500:var(--sl-color-sky-500);--sl-color-primary-600:var(--sl-color-sky-600);--sl-color-primary-700:var(--sl-color-sky-700);--sl-color-primary-800:var(--sl-color-sky-800);--sl-color-primary-900:var(--sl-color-sky-900);--sl-color-primary-950:var(--sl-color-sky-950);--sl-color-success-50:var(--sl-color-green-50);--sl-color-success-100:var(--sl-color-green-100);--sl-color-success-200:var(--sl-color-green-200);--sl-color-success-300:var(--sl-color-green-300);--sl-color-success-400:var(--sl-color-green-400);--sl-color-success-500:var(--sl-color-green-500);--sl-color-success-600:var(--sl-color-green-600);--sl-color-success-700:var(--sl-color-green-700);--sl-color-success-800:var(--sl-color-green-800);--sl-color-success-900:var(--sl-color-green-900);--sl-color-success-950:var(--sl-color-green-950);--sl-color-warning-50:var(--sl-color-amber-50);--sl-color-warning-100:var(--sl-color-amber-100);--sl-color-warning-200:var(--sl-color-amber-200);--sl-color-warning-300:var(--sl-color-amber-300);--sl-color-warning-400:var(--sl-color-amber-400);--sl-color-warning-500:var(--sl-color-amber-500);--sl-color-warning-600:var(--sl-color-amber-600);--sl-color-warning-700:var(--sl-color-amber-700);--sl-color-warning-800:var(--sl-color-amber-800);--sl-color-warning-900:var(--sl-color-amber-900);--sl-color-warning-950:var(--sl-color-amber-950);--sl-color-danger-50:var(--sl-color-red-50);--sl-color-danger-100:var(--sl-color-red-100);--sl-color-danger-200:var(--sl-color-red-200);--sl-color-danger-300:var(--sl-color-red-300);--sl-color-danger-400:var(--sl-color-red-400);--sl-color-danger-500:var(--sl-color-red-500);--sl-color-danger-600:var(--sl-color-red-600);--sl-color-danger-700:var(--sl-color-red-700);--sl-color-danger-800:var(--sl-color-red-800);--sl-color-danger-900:var(--sl-color-red-900);--sl-color-danger-950:var(--sl-color-red-950);--sl-color-neutral-50:var(--sl-color-gray-50);--sl-color-neutral-100:var(--sl-color-gray-100);--sl-color-neutral-200:var(--sl-color-gray-200);--sl-color-neutral-300:var(--sl-color-gray-300);--sl-color-neutral-400:var(--sl-color-gray-400);--sl-color-neutral-500:var(--sl-color-gray-500);--sl-color-neutral-600:var(--sl-color-gray-600);--sl-color-neutral-700:var(--sl-color-gray-700);--sl-color-neutral-800:var(--sl-color-gray-800);--sl-color-neutral-900:var(--sl-color-gray-900);--sl-color-neutral-950:var(--sl-color-gray-950);--sl-color-neutral-0:#fff;--sl-color-neutral-1000:#000;--sl-border-radius-small:.1875rem;--sl-border-radius-medium:.25rem;--sl-border-radius-large:.5rem;--sl-border-radius-x-large:1rem;--sl-border-radius-circle:50%;--sl-border-radius-pill:9999px;--sl-shadow-x-small:0 1px 2px #71717a0f;--sl-shadow-small:0 1px 2px #71717a1f;--sl-shadow-medium:0 2px 4px #71717a1f;--sl-shadow-large:0 2px 8px #71717a1f;--sl-shadow-x-large:0 4px 16px #71717a1f;--sl-spacing-3x-small:.125rem;--sl-spacing-2x-small:.25rem;--sl-spacing-x-small:.5rem;--sl-spacing-small:.75rem;--sl-spacing-medium:1rem;--sl-spacing-large:1.25rem;--sl-spacing-x-large:1.75rem;--sl-spacing-2x-large:2.25rem;--sl-spacing-3x-large:3rem;--sl-spacing-4x-large:4.5rem;--sl-transition-x-slow:1s;--sl-transition-slow:.5s;--sl-transition-medium:.25s;--sl-transition-fast:.15s;--sl-transition-x-fast:50ms;--sl-font-mono:SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;--sl-font-sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";--sl-font-serif:Georgia, "Times New Roman", serif;--sl-font-size-2x-small:.625rem;--sl-font-size-x-small:.75rem;--sl-font-size-small:.875rem;--sl-font-size-medium:1rem;--sl-font-size-large:1.25rem;--sl-font-size-x-large:1.5rem;--sl-font-size-2x-large:2.25rem;--sl-font-size-3x-large:3rem;--sl-font-size-4x-large:4.5rem;--sl-font-weight-light:300;--sl-font-weight-normal:400;--sl-font-weight-semibold:500;--sl-font-weight-bold:700;--sl-letter-spacing-denser:-.03em;--sl-letter-spacing-dense:-.015em;--sl-letter-spacing-normal:normal;--sl-letter-spacing-loose:.075em;--sl-letter-spacing-looser:.15em;--sl-line-height-denser:1;--sl-line-height-dense:1.4;--sl-line-height-normal:1.8;--sl-line-height-loose:2.2;--sl-line-height-looser:2.6;--sl-focus-ring-color:var(--sl-color-primary-600);--sl-focus-ring-style:solid;--sl-focus-ring-width:3px;--sl-focus-ring:var(--sl-focus-ring-style) var(--sl-focus-ring-width) var(--sl-focus-ring-color);--sl-focus-ring-offset:1px;--sl-button-font-size-small:var(--sl-font-size-x-small);--sl-button-font-size-medium:var(--sl-font-size-small);--sl-button-font-size-large:var(--sl-font-size-medium);--sl-input-height-small:1.875rem;--sl-input-height-medium:2.5rem;--sl-input-height-large:3.125rem;--sl-input-background-color:var(--sl-color-neutral-0);--sl-input-background-color-hover:var(--sl-input-background-color);--sl-input-background-color-focus:var(--sl-input-background-color);--sl-input-background-color-disabled:var(--sl-color-neutral-100);--sl-input-border-color:var(--sl-color-neutral-300);--sl-input-border-color-hover:var(--sl-color-neutral-400);--sl-input-border-color-focus:var(--sl-color-primary-500);--sl-input-border-color-disabled:var(--sl-color-neutral-300);--sl-input-border-width:1px;--sl-input-required-content:"*";--sl-input-required-content-offset:-2px;--sl-input-required-content-color:var(--sl-input-label-color);--sl-input-border-radius-small:var(--sl-border-radius-medium);--sl-input-border-radius-medium:var(--sl-border-radius-medium);--sl-input-border-radius-large:var(--sl-border-radius-medium);--sl-input-font-family:var(--sl-font-sans);--sl-input-font-weight:var(--sl-font-weight-normal);--sl-input-font-size-small:var(--sl-font-size-small);--sl-input-font-size-medium:var(--sl-font-size-medium);--sl-input-font-size-large:var(--sl-font-size-large);--sl-input-letter-spacing:var(--sl-letter-spacing-normal);--sl-input-color:var(--sl-color-neutral-700);--sl-input-color-hover:var(--sl-color-neutral-700);--sl-input-color-focus:var(--sl-color-neutral-700);--sl-input-color-disabled:var(--sl-color-neutral-900);--sl-input-icon-color:var(--sl-color-neutral-500);--sl-input-icon-color-hover:var(--sl-color-neutral-600);--sl-input-icon-color-focus:var(--sl-color-neutral-600);--sl-input-placeholder-color:var(--sl-color-neutral-500);--sl-input-placeholder-color-disabled:var(--sl-color-neutral-600);--sl-input-spacing-small:var(--sl-spacing-small);--sl-input-spacing-medium:var(--sl-spacing-medium);--sl-input-spacing-large:var(--sl-spacing-large);--sl-input-focus-ring-color:#0ea5e966;--sl-input-focus-ring-offset:0;--sl-input-filled-background-color:var(--sl-color-neutral-100);--sl-input-filled-background-color-hover:var(--sl-color-neutral-100);--sl-input-filled-background-color-focus:var(--sl-color-neutral-100);--sl-input-filled-background-color-disabled:var(--sl-color-neutral-100);--sl-input-filled-color:var(--sl-color-neutral-800);--sl-input-filled-color-hover:var(--sl-color-neutral-800);--sl-input-filled-color-focus:var(--sl-color-neutral-700);--sl-input-filled-color-disabled:var(--sl-color-neutral-800);--sl-input-label-font-size-small:var(--sl-font-size-small);--sl-input-label-font-size-medium:var(--sl-font-size-medium);--sl-input-label-font-size-large:var(--sl-font-size-large);--sl-input-label-color:inherit;--sl-input-help-text-font-size-small:var(--sl-font-size-x-small);--sl-input-help-text-font-size-medium:var(--sl-font-size-small);--sl-input-help-text-font-size-large:var(--sl-font-size-medium);--sl-input-help-text-color:var(--sl-color-neutral-500);--sl-toggle-size-small:.875rem;--sl-toggle-size-medium:1.125rem;--sl-toggle-size-large:1.375rem;--sl-overlay-background-color:#71717a54;--sl-panel-background-color:var(--sl-color-neutral-0);--sl-panel-border-color:var(--sl-color-neutral-200);--sl-panel-border-width:1px;--sl-tooltip-border-radius:var(--sl-border-radius-medium);--sl-tooltip-background-color:var(--sl-color-neutral-800);--sl-tooltip-color:var(--sl-color-neutral-0);--sl-tooltip-font-family:var(--sl-font-sans);--sl-tooltip-font-weight:var(--sl-font-weight-normal);--sl-tooltip-font-size:var(--sl-font-size-small);--sl-tooltip-line-height:var(--sl-line-height-dense);--sl-tooltip-padding:var(--sl-spacing-2x-small) var(--sl-spacing-x-small);--sl-tooltip-arrow-size:6px;--sl-z-index-drawer:700;--sl-z-index-dialog:800;--sl-z-index-dropdown:900;--sl-z-index-toast:950;--sl-z-index-tooltip:1000}@supports (scrollbar-gutter:stable){.sl-scroll-lock{scrollbar-gutter:var(--sl-scroll-lock-gutter)!important}.sl-scroll-lock body{overflow:hidden!important}}@supports not (scrollbar-gutter:stable){.sl-scroll-lock body{padding-right:var(--sl-scroll-lock-size)!important;overflow:hidden!important}}.sl-toast-stack{top:0;z-index:var(--sl-z-index-toast);width:28rem;max-width:100%;max-height:100%;position:fixed;inset-inline-end:0;overflow:auto}.sl-toast-stack sl-alert{margin:var(--sl-spacing-medium)}.sl-toast-stack sl-alert::part(base){box-shadow:var(--sl-shadow-large)}
 /*$vite$:1*/</style>
   </head>

@@ -1,6 +1,8 @@
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
+import "@/components/ui/index.js";
+
 import { api } from "@/api/bridge.js";
 import { store, subscribe } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
@@ -14,16 +16,50 @@ export class RuneDevicesView extends LitElement {
     css`
       .toolbar {
         display: flex;
-        gap: 8px;
+        gap: var(--rune-space-3);
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: var(--rune-space-5);
       }
       .toolbar h2 {
         margin: 0;
-        font-weight: 400;
+        font-size: var(--rune-fs-2xl);
+        font-weight: var(--rune-fw-semibold);
+        letter-spacing: -0.02em;
+        color: var(--rune-text-strong);
       }
-      .grow {
+      .toolbar .grow {
         flex: 1;
+      }
+      .subtitle {
+        margin: -12px 0 var(--rune-space-4);
+        color: var(--rune-text-muted);
+        font-size: var(--rune-fs-sm);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-3);
+      }
+      .loading-bar {
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--rune-primary) 50%,
+          transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: rune-shimmer 1.4s infinite linear;
+        border-radius: var(--rune-radius-full);
+        margin-bottom: var(--rune-space-4);
+      }
+      @keyframes rune-shimmer {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
       }
     `,
   ];
@@ -49,7 +85,6 @@ export class RuneDevicesView extends LitElement {
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
     } catch (err) {
-      console.error("[rune] Load devices failed", err);
       store.pushToast(`Load devices: ${(err as Error).message}`, "err");
     } finally {
       this._loading = false;
@@ -67,20 +102,41 @@ export class RuneDevicesView extends LitElement {
       <div class="toolbar">
         <h2>Devices</h2>
         <span class="grow"></span>
-        <button @click=${this._add}>+ Add device</button>
-        <button class="secondary" @click=${this.refresh} ?disabled=${this._loading}>
-          ${this._loading ? "Loading…" : "Refresh"}
-        </button>
+        <rune-tooltip content="Reload from backend">
+          <rune-button
+            variant="secondary"
+            icon="refresh"
+            ?loading=${this._loading}
+            @click=${this.refresh}
+          >
+            Refresh
+          </rune-button>
+        </rune-tooltip>
+        <rune-button variant="primary" icon="plus" @click=${this._add}> Add device </rune-button>
       </div>
+      <div class="subtitle">
+        IR / RF devices RUNE controls in Home Assistant. Click
+        <strong>+ Add device</strong> to create one, or use the config flow.
+      </div>
+      ${this._loading && devices.length === 0 ? html`<div class="loading-bar"></div>` : null}
       ${
         devices.length === 0
-          ? html`<div class="empty">
-              <div>No devices yet.</div>
-              <div style="margin-top:8px;font-size:12px;">
-                Click + Add device to create one, or use the config flow.
+          ? html`
+              <rune-empty-state
+                icon="devices"
+                heading="No devices yet"
+                message="Create your first IR / RF device — pick a category, name it, and choose the emitter entity."
+              >
+                <rune-button slot="action" variant="primary" icon="plus" @click=${this._add}>
+                  Add device
+                </rune-button>
+              </rune-empty-state>
+            `
+          : html`
+              <div class="stack">
+                ${devices.map((d) => html`<rune-device-card .device=${d}></rune-device-card>`)}
               </div>
-            </div>`
-          : html`${devices.map((d) => html`<rune-device-card .device=${d}></rune-device-card>`)}`
+            `
       }
     `;
   }

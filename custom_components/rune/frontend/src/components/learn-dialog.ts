@@ -1,5 +1,7 @@
 import { css, html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+
+import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
 import { store, subscribe } from "@/state/store.js";
@@ -10,46 +12,110 @@ export class RuneLearnDialog extends LitElement {
   static styles = [
     sharedStyles,
     css`
-      dialog {
-        background: var(--card);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 24px;
-        min-width: 420px;
-        max-width: 90vw;
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.6);
-      }
-      h2 {
-        margin: 0 0 16px;
-      }
-      .form-row {
+      .body {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        margin-bottom: 12px;
+        gap: var(--rune-space-3);
+        min-width: 480px;
       }
-      .form-row label {
-        font-size: 12px;
-        color: var(--muted);
+      .help {
+        background: var(--rune-primary-soft);
+        border-left: 3px solid var(--rune-primary);
+        padding: var(--rune-space-3) var(--rune-space-4);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
+        line-height: var(--rune-lh-relaxed);
       }
-      .dialog-actions {
+      .help i {
+        color: var(--rune-primary);
+        margin-right: var(--rune-space-1);
+        vertical-align: -2px;
+      }
+      .target {
         display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 16px;
+        align-items: center;
+        gap: var(--rune-space-2);
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        border: 1px solid var(--rune-border);
       }
-      pre {
-        background: var(--bg-2);
-        padding: 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        overflow-x: auto;
+      .target-label {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: var(--rune-fw-medium);
+      }
+      .target-value {
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text-strong);
+        font-weight: var(--rune-fw-medium);
+      }
+      .arrow {
+        color: var(--rune-text-subtle);
+        font-size: 14px;
       }
       .status {
-        font-family: monospace;
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+        padding: var(--rune-space-3);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: var(--rune-radius-full);
+        background: var(--rune-text-subtle);
+        flex-shrink: 0;
+      }
+      .status-dot.live {
+        background: var(--rune-warning);
+        animation: rune-pulse 1.2s infinite;
+      }
+      .status-dot.ok {
+        background: var(--rune-success);
+      }
+      .status-dot.err {
+        background: var(--rune-danger);
+      }
+      @keyframes rune-pulse {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 var(--rune-warning);
+        }
+        50% {
+          opacity: 0.5;
+          box-shadow: 0 0 0 6px transparent;
+        }
+      }
+      .timings {
+        background: var(--rune-bg-elevated);
+        padding: var(--rune-space-3);
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font-mono);
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text);
+        overflow-x: auto;
+        max-height: 120px;
+        border: 1px solid var(--rune-border);
+        margin: 0;
+      }
+      .section-label {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: var(--rune-fw-medium);
+        margin-bottom: var(--rune-space-1);
       }
     `,
   ];
@@ -58,20 +124,10 @@ export class RuneLearnDialog extends LitElement {
   @state() private _busy = false;
   @state() private _saving = false;
   private _unsub: (() => void) | null = null;
-  @query("#dlg") private _dlg!: HTMLDialogElement;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => {
-      const wasOpen = this._dlg?.open ?? false;
-      this._tick++;
-      queueMicrotask(() => {
-        const dlg = this._dlg;
-        if (!dlg) return;
-        if (store.learnDialog.open && !wasOpen) dlg.showModal();
-        else if (!store.learnDialog.open && wasOpen) dlg.close();
-      });
-    });
+    this._unsub = subscribe(() => this._tick++);
   }
 
   disconnectedCallback(): void {
@@ -79,9 +135,9 @@ export class RuneLearnDialog extends LitElement {
     this._unsub?.();
   }
 
-  private _cancel(): void {
+  private _cancel = (): void => {
     store.closeLearnDialog();
-  }
+  };
 
   private async _start(): Promise<void> {
     const { deviceId, commandKey } = store.learnDialog;
@@ -117,7 +173,9 @@ export class RuneLearnDialog extends LitElement {
     this._saving = true;
     try {
       const { device } = await api.getDevice(deviceId);
-      const commands = { ...device.commands } as unknown as Record<string, Record<string, unknown>>;
+      const commands = {
+        ...device.commands,
+      } as unknown as Record<string, Record<string, unknown>>;
       commands[commandKey] = {
         key: commandKey,
         label: commandKey.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
@@ -145,37 +203,65 @@ export class RuneLearnDialog extends LitElement {
       ? JSON.stringify(timings.slice(0, 30)) + (timings.length > 30 ? "…" : "")
       : "—";
     const deviceName = store.devices.find((d) => d.id === ld.deviceId)?.name ?? "—";
-    const target = `${deviceName} → ${ld.commandKey}`;
     const canSave = ld.captured !== null && !this._saving;
+
+    let dotClass = "";
+    if (this._busy) dotClass = "live";
+    else if (ld.captured) dotClass = "ok";
+    else if (ld.status.startsWith("Failed")) dotClass = "err";
+
     return html`
-      <dialog id="dlg" @close=${() => store.closeLearnDialog()}>
-        <h2>Learn command</h2>
-        <div class="help">
-          Point your remote at the receiver and press the button you want to capture. RUNE records
-          the raw timings and writes them into the command slot.
+      <rune-dialog
+        ?open=${ld.open}
+        size="medium"
+        label="Learn command"
+        @sl-after-hide=${this._cancel}
+      >
+        <div class="body">
+          <div class="help">
+            <i class="ti ti-info-circle"></i>
+            Point your remote at the receiver and press the button you want to capture. RUNE records
+            the raw timings and writes them into the command slot.
+          </div>
+
+          <div class="section-label">Command</div>
+          <div class="target">
+            <span class="target-value">${deviceName}</span>
+            <i class="ti ti-arrow-right arrow"></i>
+            <rune-chip variant="primary">${ld.commandKey}</rune-chip>
+          </div>
+
+          <div class="section-label">Status</div>
+          <div class="status">
+            <span class="status-dot ${dotClass}"></span>
+            <span>${ld.status}</span>
+          </div>
+
+          <div class="section-label">Captured timings</div>
+          <pre class="timings">${timingsText}</pre>
         </div>
-        <div class="form-row">
-          <label>Command</label>
-          <div><strong>${target}</strong></div>
+        <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
+          <rune-button variant="secondary" icon="x" @click=${this._cancel}> Cancel </rune-button>
+          <rune-button
+            variant="ghost"
+            icon="antenna"
+            ?loading=${this._busy}
+            ?disabled=${ld.captured !== null && !this._busy}
+            @click=${this._start}
+          >
+            ${ld.captured ? "Re-learn" : "Start learn"}
+          </rune-button>
+          <rune-button
+            variant="primary"
+            icon="device-floppy"
+            ?loading=${this._saving}
+            ?disabled=${!canSave}
+            @click=${this._save}
+          >
+            Save &amp; close
+          </rune-button>
         </div>
-        <div class="form-row">
-          <label>Status</label>
-          <div class="status">${ld.status}</div>
-        </div>
-        <div class="form-row">
-          <label>Captured timings</label>
-          <pre>${timingsText}</pre>
-        </div>
-        <div class="dialog-actions">
-          <button class="secondary" type="button" @click=${this._cancel}>Cancel</button>
-          <button type="button" @click=${this._start} ?disabled=${this._busy}>
-            ${this._busy ? "Capturing…" : "Start learn"}
-          </button>
-          <button type="button" @click=${this._save} ?disabled=${!canSave}>
-            ${this._saving ? "Saving…" : "Save & close"}
-          </button>
-        </div>
-      </dialog>
+      </rune-dialog>
     `;
   }
 }
