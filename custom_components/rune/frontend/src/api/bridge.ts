@@ -52,6 +52,7 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
     const timer = setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
+        console.warn(`[rune-bridge] timeout id=${id} payload=${JSON.stringify(payload)}`);
         reject(new Error("bridge timeout (no response from HA)"));
       }
     }, BRIDGE_TIMEOUT_MS);
@@ -59,14 +60,17 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
       timer,
       resolve: (v) => {
         clearTimeout(timer);
+        console.debug(`[rune-bridge] ok id=${id} result=${JSON.stringify(v)}`);
         resolve(v);
       },
       reject: (e) => {
         clearTimeout(timer);
+        console.warn(`[rune-bridge] err id=${id} msg=${e.message}`);
         reject(e);
       },
     };
     pending.set(id, resolver);
+    console.debug(`[rune-bridge] -> id=${id} payload=${JSON.stringify(payload)}`);
     window.parent.postMessage({ type: "rune-bridge", id, ...payload }, "*");
   });
 }

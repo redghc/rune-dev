@@ -109,11 +109,18 @@ class RunePanel extends HTMLElement {
       }
 
       if (data.kind === "ws" && data.message) {
+        console.debug(`[rune-shim] ws -> ${JSON.stringify(data.message)}`);
         this._hass
           .callWS(data.message)
-          .then((result) => reply({ result: result === undefined ? null : result }))
+          .then((result) => {
+            console.debug(`[rune-shim] ws <- ok ${JSON.stringify(data.message)}`);
+            reply({ result: result === undefined ? null : result });
+          })
           .catch((err) => {
             const raw = String((err as Error)?.message ?? err);
+            console.warn(
+              `[rune-shim] ws <- err ${JSON.stringify(data.message)} code=${(err as { code?: string })?.code ?? "?"} msg=${raw}`,
+            );
             // HA returns ``"Unknown command"`` (or
             // ``"Unknown command: rune/..."`` on newer builds) when the
             // ``rune/*`` WebSocket handlers aren't registered yet —

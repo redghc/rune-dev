@@ -49,6 +49,7 @@ export class RuneDevicesView extends LitElement {
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
     } catch (err) {
+      console.error("[rune] Load devices failed", err);
       store.pushToast(`Load devices: ${(err as Error).message}`, "err");
     } finally {
       this._loading = false;

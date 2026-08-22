@@ -121,7 +121,16 @@ async def async_register_websocket_commands(hass: Any) -> None:
                 websocket_api.result_message(msg_id, payload)
             )
 
-        websocket_api.async_register_command(hass, full, _callback)
+        # HA's WS dispatcher calls ``handler(hass, connection, schema(msg))``.
+        # The 3-arg form of ``async_register_command`` ignores any schema we
+        # pass and stores ``None``; the dispatcher then evaluates ``None(msg)``
+        # -> TypeError, which its top-level catch flattens to the generic
+        # "Unknown error" response -- masking the real exception. Mark the
+        # callback as schema-less so the dispatcher passes ``msg`` through
+        # untouched (the bridge always sends exactly ``{id, type}``).
+        _callback._ws_command = full  # type: ignore[attr-defined]
+        _callback._ws_schema = False  # type: ignore[attr-defined]
+        websocket_api.async_register_command(hass, _callback)
 
 
 async def async_unregister_websocket_commands(hass: Any) -> None:
