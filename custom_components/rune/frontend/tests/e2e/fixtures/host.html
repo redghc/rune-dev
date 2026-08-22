@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RUNE — Mock HA host</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #f0f0f0;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100vh;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe id="panel" src="/panel.html"></iframe>
+    <script>
+      // Mock the HA ``postMessage`` bridge. The RUNE shim posts
+      // ``{ type: "rune-bridge", id, kind, message | service }`` from
+      // the iframe and listens for ``{ type: "rune-bridge-result", id,
+      // result | error }`` back. We respond with a canned payload so
+      // the panel can render its empty / populated states.
+      const MOCK_DEVICES = [
+        {
+          id: "dev-1",
+          name: "Bedroom fan",
+          category: "fan",
+          manufacturer: "Broadlink",
+          model: "RM4 Pro",
+          command_count: 4,
+          transmitter_entity_ids: ["remote.broadlink_rm4_pro"],
+          commands: [
+            { key: "power_on", label: "Power on" },
+            { key: "power_off", label: "Power off" },
+            { key: "speed_1", label: "Speed 1" },
+            { key: "speed_2", label: "Speed 2" },
+          ],
+        },
+        {
+          id: "dev-2",
+          name: "Living room light",
+          category: "light",
+          command_count: 2,
+          transmitter_entity_ids: ["remote.broadlink_rm4_pro"],
+          commands: [
+            { key: "on", label: "On" },
+            { key: "off", label: "Off" },
+          ],
+        },
+      ];
+      const MOCK_TRANSMITTERS = [
+        { entity_id: "remote.broadlink_rm4_pro", state: "idle" },
+        { entity_id: "remote.rm_mini_3", state: "idle" },
+      ];
+      const MOCK_RECEIVERS = [
+        { entity_id: "remote.rf_receiver_1", state: "idle" },
+      ];
+      const MOCK_REMOTES = [
+        {
+          id: "remote-1",
+          label: "AC remote",
+          protocol_label: "NEC",
+          signal_count: 3,
+          signals: [
+            { id: "sig-1", alias: "power", hit_count: 12, last_seen: "2026-08-22T10:30:00Z" },
+            { id: "sig-2", alias: "temp_up", hit_count: 7, last_seen: "2026-08-22T10:32:00Z" },
+            { id: "sig-3", alias: "temp_down", hit_count: 4, last_seen: "2026-08-22T10:35:00Z" },
+          ],
+        },
+      ];
+      const MOCK_ACTIONS = [
+        {
+          id: "act-1",
+          name: "Power on AC when warm",
+          signal_id: "sig-1",
+          min_hits: 2,
+          target: { kind: "service" },
+        },
+      ];
+      window.addEventListener("message", (event) => {
+        const d = event.data;
+        if (!d || d.type !== "rune-bridge") return;
+        const id = d.id;
+        const reply = (payload) => {
+          event.source.postMessage(
+            { type: "rune-bridge-result", id, ...payload },
+            "*",
+          );
+        };
+        if (d.kind === "ws" && d.message) {
+          const t = d.message.type;
+          if (t === "rune/list") reply({ result: { devices: MOCK_DEVICES } });
+          else if (t === "rune/transmitter/list") reply({ result: { transmitters: MOCK_TRANSMITTERS } });
+          else if (t === "rune/receiver/list") reply({ result: { receivers: MOCK_RECEIVERS } });
+          else if (t === "rune/sniffer/list") reply({ result: { remotes: MOCK_REMOTES } });
+          else if (t === "rune/action/list") reply({ result: { actions: MOCK_ACTIONS } });
+          else reply({ result: null });
+          return;
+        }
+        if (d.kind === "service") reply({ result: true });
+      });
+    </script>
+  </body>
+</html>

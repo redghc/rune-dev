@@ -10,13 +10,15 @@
     "build:spa": "vite build --config vite.spa.config.ts",
     "build:shim": "vite build --config vite.shim.config.ts",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint src",
     "lint:fix": "oxlint --fix src",
     "knip": "knip",
-    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build"
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium --with-deps",
+    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build && pnpm test:e2e"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
@@ -26,6 +28,8 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.0.0",
     "knip": "^6.32.0",
     "oxlint": "^1.78.0",
     "prettier": "^3.9.0",

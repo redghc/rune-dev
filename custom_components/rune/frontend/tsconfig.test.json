@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "playwright.config.ts",
+    "vite.spa.config.ts",
+    "vite.shim.config.ts"
+  ]
+}

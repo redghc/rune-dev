@@ -15,6 +15,9 @@ dist/
 !custom_components/rune/frontend/dist/
 !custom_components/rune/frontend/dist/panel.html
 !custom_components/rune/frontend/dist/panel.js
+# ``dist/host.html`` is a Playwright fixture copied next to ``panel.html``
+# at e2e test runtime. It is not part of the shipped package.
+custom_components/rune/frontend/dist/host.html
 *.egg-info/
 *.egg
 .eggs/
@@ -65,6 +68,9 @@ htmlcov/
 .tox/
 .cache/
 .noseids
+# Playwright e2e artefacts
+playwright-report/
+test-results/
 
 # ---------------------------------------------------------------------------
 # mypy / ruff / linters
