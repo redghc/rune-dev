@@ -96,6 +96,7 @@ async def async_register_websocket_commands(hass: Any) -> None:
     for command, handler in _HANDLERS.items():
         full = f"{WS_PREFIX}/{command}"
 
+        @websocket_api.async_response
         async def _callback(
             hass: Any,
             connection: Any,
