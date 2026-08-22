@@ -124,6 +124,7 @@ export class RuneLearnDialog extends LitElement {
   @state() private _busy = false;
   @state() private _saving = false;
   private _unsub: (() => void) | null = null;
+  private _returnFocusTo: HTMLElement | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -137,6 +138,18 @@ export class RuneLearnDialog extends LitElement {
 
   private _cancel = (): void => {
     store.closeLearnDialog();
+  };
+
+  private _onShow = (): void => {
+    this._returnFocusTo =
+      (this.getRootNode() as Document | ShadowRoot).activeElement as HTMLElement | null;
+  };
+
+  private _onAfterHide = (): void => {
+    this._returnFocusTo?.focus();
+    this._returnFocusTo = null;
+    // Sync the store if the user closed the dialog via the X button.
+    if (store.learnDialog.open) store.closeLearnDialog();
   };
 
   private async _start(): Promise<void> {
@@ -215,7 +228,8 @@ export class RuneLearnDialog extends LitElement {
         ?open=${ld.open}
         size="medium"
         label="Learn command"
-        @sl-after-hide=${this._cancel}
+        @sl-show=${this._onShow}
+        @sl-after-hide=${this._onAfterHide}
       >
         <div class="body">
           <div class="help">

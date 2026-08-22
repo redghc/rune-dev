@@ -107,6 +107,7 @@ export class RuneDeviceDialog extends LitElement {
   @state() private _chips: Record<string, string[]> = {};
   private _unsub: (() => void) | null = null;
   private _lastEditingId: string | null = null;
+  private _returnFocusTo: HTMLElement | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -155,6 +156,29 @@ export class RuneDeviceDialog extends LitElement {
     this._lastEditingId = null;
     this._err = "";
     store.closeDeviceDialog();
+  };
+
+  private _onShow = (): void => {
+    // When sl-dialog opens, capture the currently focused element so
+    // we can restore focus when it closes.
+    this._returnFocusTo =
+      (this.getRootNode() as Document | ShadowRoot).activeElement as HTMLElement | null;
+    queueMicrotask(() => {
+      const dlg = this.renderRoot.querySelector("rune-dialog");
+      const target = dlg?.querySelector<HTMLElement>(
+        "input, select, sl-input, sl-select, textarea, button",
+      );
+      target?.focus();
+    });
+  };
+
+  private _onAfterHide = (): void => {
+    // After the close animation finishes, restore focus to the element
+    // that triggered the dialog (or null if there was none).
+    this._returnFocusTo?.focus();
+    this._returnFocusTo = null;
+    // Sync the store if the user closed the dialog via the X button.
+    if (store.deviceDialog.open) store.closeDeviceDialog();
   };
 
   private async _save(): Promise<void> {
@@ -448,7 +472,8 @@ export class RuneDeviceDialog extends LitElement {
         ?open=${open}
         size="large"
         label=${editing ? "Edit device" : "Add device"}
-        @sl-after-hide=${this._onClose}
+        @sl-show=${this._onShow}
+        @sl-after-hide=${this._onAfterHide}
       >
         <div class="grid">
           ${visible.map((f) => this._renderField(f))}

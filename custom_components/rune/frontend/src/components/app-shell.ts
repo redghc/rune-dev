@@ -20,14 +20,22 @@ interface NavItem {
   id: Section;
   label: string;
   icon: string;
+  shortcut: string;
 }
 
 const NAV: NavItem[] = [
-  { id: "devices", label: "Devices", icon: "devices" },
-  { id: "sniffer", label: "Sniffer", icon: "antenna" },
-  { id: "actions", label: "Actions", icon: "wand" },
-  { id: "settings", label: "Settings", icon: "settings" },
+  { id: "devices", label: "Devices", icon: "devices", shortcut: "g d" },
+  { id: "sniffer", label: "Sniffer", icon: "antenna", shortcut: "g s" },
+  { id: "actions", label: "Actions", icon: "wand", shortcut: "g a" },
+  { id: "settings", label: "Settings", icon: "settings", shortcut: "g x" },
 ];
+
+const SHORTCUT_MAP: Record<string, Section> = {
+  d: "devices",
+  s: "sniffer",
+  a: "actions",
+  x: "settings",
+};
 
 @customElement("rune-app")
 export class RuneApp extends LitElement {
@@ -42,6 +50,25 @@ export class RuneApp extends LitElement {
         min-height: 100vh;
         background: var(--rune-bg);
         color: var(--rune-text);
+      }
+      .skip-link {
+        position: fixed;
+        top: var(--rune-space-2);
+        left: var(--rune-space-2);
+        padding: var(--rune-space-2) var(--rune-space-3);
+        background: var(--rune-primary);
+        color: var(--rune-on-primary);
+        border-radius: var(--rune-radius-sm);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-semibold);
+        text-decoration: none;
+        z-index: 9999;
+        transform: translateY(-200%);
+        transition: transform var(--rune-dur-fast) var(--rune-ease);
+        box-shadow: var(--rune-shadow-3);
+      }
+      .skip-link:focus {
+        transform: translateY(0);
       }
       nav {
         background: var(--rune-bg-elevated);
@@ -129,6 +156,21 @@ export class RuneApp extends LitElement {
         width: 18px;
         flex-shrink: 0;
       }
+      .nav-item .kbd {
+        margin-left: auto;
+        font-family: var(--rune-font-mono);
+        font-size: 10px;
+        color: var(--rune-text-subtle);
+        padding: 1px 5px;
+        border-radius: var(--rune-radius-xs);
+        background: var(--rune-surface-alt);
+        border: 1px solid var(--rune-border);
+      }
+      .nav-item.active .kbd {
+        background: var(--rune-surface);
+        border-color: var(--rune-primary);
+        color: var(--rune-primary);
+      }
       .footer {
         margin-top: auto;
         padding: var(--rune-space-3);
@@ -152,22 +194,71 @@ export class RuneApp extends LitElement {
         height: 100%;
         max-height: 100vh;
         background: var(--rune-bg);
+        animation: rune-section-in 0.18s var(--rune-ease);
+      }
+      @keyframes rune-section-in {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        main {
+          animation: none;
+        }
       }
     `,
   ];
 
   @state() private _tick = 0;
   private _unsub: (() => void) | null = null;
+  private _shortcutPrefix: string | null = null;
+  private _shortcutTimer: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
     this._unsub = subscribe(() => this._tick++);
+    document.addEventListener("keydown", this._onKeydown);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this._unsub?.();
+    document.removeEventListener("keydown", this._onKeydown);
+    if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
   }
+
+  private _onKeydown = (ev: KeyboardEvent): void => {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const target = ev.target as HTMLElement | null;
+    const inField =
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      target?.tagName === "SELECT" ||
+      target?.isContentEditable;
+    if (inField) return;
+    if (ev.key === "g") {
+      this._shortcutPrefix = "g";
+      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+      this._shortcutTimer = setTimeout(() => {
+        this._shortcutPrefix = null;
+      }, 1200);
+      return;
+    }
+    if (this._shortcutPrefix === "g") {
+      const section = SHORTCUT_MAP[ev.key.toLowerCase()];
+      if (section) {
+        ev.preventDefault();
+        store.setSection(section);
+      }
+      this._shortcutPrefix = null;
+      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+    }
+  };
 
   private _select(s: Section): void {
     store.setSection(s);
@@ -190,9 +281,12 @@ export class RuneApp extends LitElement {
   render() {
     void this._tick;
     return html`
-      <nav>
+      <a class="skip-link" href="#main-content">Skip to content</a>
+      <nav aria-label="Primary">
         <div class="brand">
-          <span class="brand-mark"><i class="ti ti-remote"></i></span>
+          <span class="brand-mark" aria-hidden="true">
+            <i class="ti ti-remote"></i>
+          </span>
           <h1>RUNE<span class="pill">v${store.version}</span></h1>
         </div>
         ${NAV.map(
@@ -203,17 +297,18 @@ export class RuneApp extends LitElement {
               aria-current=${store.section === n.id ? "page" : "false"}
               @click=${() => this._select(n.id)}
             >
-              <i class="ti ti-${n.icon}"></i>
+              <i class="ti ti-${n.icon}" aria-hidden="true"></i>
               <span>${n.label}</span>
+              <span class="kbd" aria-hidden="true">${n.shortcut}</span>
             </button>
           `,
         )}
-        <div class="footer">
+        <div class="footer" role="status" aria-live="polite">
           <span class="dot"></span>
           <span>Connected</span>
         </div>
       </nav>
-      <main>${this._renderSection()}</main>
+      <main id="main-content" tabindex="-1">${this._renderSection()}</main>
       <rune-toast-stack></rune-toast-stack>
       <rune-device-dialog></rune-device-dialog>
       <rune-learn-dialog></rune-learn-dialog>

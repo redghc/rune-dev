@@ -40,27 +40,6 @@ export class RuneDevicesView extends LitElement {
         flex-direction: column;
         gap: var(--rune-space-3);
       }
-      .loading-bar {
-        height: 3px;
-        background: linear-gradient(
-          90deg,
-          transparent 0%,
-          var(--rune-primary) 50%,
-          transparent 100%
-        );
-        background-size: 200% 100%;
-        animation: rune-shimmer 1.4s infinite linear;
-        border-radius: var(--rune-radius-full);
-        margin-bottom: var(--rune-space-4);
-      }
-      @keyframes rune-shimmer {
-        from {
-          background-position: 200% 0;
-        }
-        to {
-          background-position: -200% 0;
-        }
-      }
     `,
   ];
 
@@ -98,8 +77,8 @@ export class RuneDevicesView extends LitElement {
   render() {
     void this._tick;
     const devices = store.devices;
-    return html`
-      <div class="toolbar">
+return html`
+      <div class="toolbar" role="toolbar" aria-label="Devices toolbar">
         <h2>Devices</h2>
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -112,13 +91,27 @@ export class RuneDevicesView extends LitElement {
             Refresh
           </rune-button>
         </rune-tooltip>
-        <rune-button variant="primary" icon="plus" @click=${this._add}> Add device </rune-button>
+        <rune-button variant="primary" icon="plus" @click=${this._add}>
+          Add device
+        </rune-button>
       </div>
       <div class="subtitle">
         IR / RF devices RUNE controls in Home Assistant. Click
         <strong>+ Add device</strong> to create one, or use the config flow.
       </div>
-      ${this._loading && devices.length === 0 ? html`<div class="loading-bar"></div>` : null}
+${this._loading && devices.length === 0
+        ? html`
+            <div
+              style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--rune-space-3)"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <rune-skeleton variant="rect" height="120px"></rune-skeleton>
+              <rune-skeleton variant="rect" height="120px"></rune-skeleton>
+              <rune-skeleton variant="rect" height="120px"></rune-skeleton>
+            </div>
+          `
+        : null}
       ${
         devices.length === 0
           ? html`
