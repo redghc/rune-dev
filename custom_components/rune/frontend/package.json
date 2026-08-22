@@ -1,7 +1,7 @@
 {
   "name": "rune-frontend",
   "private": true,
-  "version": "0.3.5",
+  "version": "0.4.0",
   "type": "module",
   "description": "RUNE Home Assistant panel — Lit SPA bundled for the iframe target.",
   "scripts": {
