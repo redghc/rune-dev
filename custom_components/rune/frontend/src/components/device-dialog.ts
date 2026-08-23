@@ -34,41 +34,6 @@ export class RuneDeviceDialog extends LitElement {
       .grid > .full {
         grid-column: 1 / -1;
       }
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--rune-space-1);
-        padding: var(--rune-space-1);
-        border: 1px solid var(--rune-border);
-        border-radius: var(--rune-radius-sm);
-        background: var(--rune-surface);
-        min-height: 34px;
-        align-items: center;
-        transition:
-          box-shadow var(--rune-dur-fast) var(--rune-ease),
-          border-color var(--rune-dur-fast) var(--rune-ease);
-      }
-      .chips:focus-within {
-        border-color: var(--rune-primary);
-        box-shadow: var(--rune-focus-ring);
-      }
-      .chips sl-tag::part(base) {
-        cursor: default;
-      }
-      .chips sl-tag::part(remove-button) {
-        color: var(--rune-text-muted);
-      }
-      .chip-input {
-        flex: 1;
-        min-width: 120px;
-        border: 0;
-        outline: none;
-        background: transparent;
-        color: var(--rune-text);
-        font: inherit;
-        font-size: var(--rune-fs-sm);
-        padding: 2px 4px;
-      }
       .preview {
         grid-column: 1 / -1;
         margin-top: var(--rune-space-3);
@@ -98,7 +63,6 @@ export class RuneDeviceDialog extends LitElement {
   @state() private _busy = false;
   @state() private _err = "";
   @state() private _form: FormState = { category: "fan" };
-  @state() private _chips: Record<string, string[]> = {};
   private _unsub: (() => void) | null = null;
   private _lastEditingId: string | null = null;
   private _returnFocusTo: HTMLElement | null = null;
@@ -119,7 +83,6 @@ export class RuneDeviceDialog extends LitElement {
     if (editingId !== this._lastEditingId) {
       this._lastEditingId = editingId;
       this._form = this._formFromEditing(editing);
-      this._chips = this._chipsFromEditing(editing);
     }
   }
 
@@ -139,11 +102,6 @@ export class RuneDeviceDialog extends LitElement {
       rf_receiver: rxs[1] ?? "",
       discrete_speed_count: dev["discrete_speed_count"] ?? 3,
     };
-  }
-
-  private _chipsFromEditing(editing: DeviceSummary | null): Record<string, string[]> {
-    if (!editing) return {};
-    return {};
   }
 
   private _setField(key: string, value: unknown): void {
@@ -214,10 +172,6 @@ export class RuneDeviceDialog extends LitElement {
       if (v === undefined || v === "" || v === null) continue;
       payload[f.key] = v;
     }
-    // Append chip arrays.
-    for (const [k, arr] of Object.entries(this._chips)) {
-      if (arr.length > 0) payload[k] = arr;
-    }
     if (payload.category === "fan" && payload.discrete_speed_count === undefined) {
       payload.discrete_speed_count = 3;
     }
@@ -286,13 +240,6 @@ export class RuneDeviceDialog extends LitElement {
     };
   }
 
-  private _loadSensors(): AsyncLoader {
-    // The current WS API doesn't expose a sensor-list endpoint, so we
-    // return an empty list and rely on the user typing the entity_id
-    // via the searchable select. Future: add ``rune/entity/list``.
-    return async () => [];
-  }
-
   private _resolveOptions(field: FieldDef): AsyncLoader | undefined {
     if (field.kind !== "async-select") return undefined;
     if (
@@ -304,13 +251,6 @@ export class RuneDeviceDialog extends LitElement {
     }
     if (field.key === "ir_receiver" || field.key === "rf_receiver" || field.key === "receiver") {
       return this._loadReceivers();
-    }
-    if (
-      field.key === "temperature_sensor" ||
-      field.key === "humidity_sensor" ||
-      field.key === "power_sensor"
-    ) {
-      return this._loadSensors();
     }
     return field.loadOptions;
   }
@@ -378,85 +318,9 @@ export class RuneDeviceDialog extends LitElement {
               this._setField(f.key, ev.detail.value)}
           ></rune-select>
         `;
-      case "chips":
-        return this._renderChips(f);
-      case "switch":
-        return html`
-          <rune-input
-            .label=${labelNode}
-            icon=${f.icon ?? ""}
-            .helper=${helperNode}
-            type="text"
-            .value=${String(value ?? "")}
-            @rune-input=${(ev: CustomEvent<{ value: string }>) =>
-              this._setField(f.key, ev.detail.value)}
-          ></rune-input>
-        `;
       default:
         return nothing;
     }
-  }
-
-  private _renderChips(f: FieldDef): TemplateResult {
-    const values = this._chips[f.key] ?? [];
-    const onKey = (ev: KeyboardEvent): void => {
-      if (ev.key === "Enter" || ev.key === ",") {
-        ev.preventDefault();
-        const target = ev.target as HTMLInputElement;
-        const v = target.value.trim().replace(/,$/, "");
-        if (!v) return;
-        this._chips = {
-          ...this._chips,
-          [f.key]: [...values, v],
-        };
-        target.value = "";
-      } else if (ev.key === "Backspace" && !values.length) {
-        ev.preventDefault();
-        const arr = [...values];
-        arr.pop();
-        this._chips = { ...this._chips, [f.key]: arr };
-      }
-    };
-    return html`
-      <div class="full">
-        <label
-          style="display:block;font-size:10px;font-weight:var(--rune-fw-semibold);color:var(--rune-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px"
-        >
-          ${f.label()}${f.required ? " *" : ""}
-        </label>
-        <div class="chips">
-          ${values.map(
-            (v, i) => html`
-              <rune-chip
-                variant="primary"
-                closable
-                @rune-chip-remove=${() => {
-                  const arr = [...values];
-                  arr.splice(i, 1);
-                  this._chips = { ...this._chips, [f.key]: arr };
-                }}
-              >
-                ${v}
-              </rune-chip>
-            `,
-          )}
-          <input
-            class="chip-input"
-            placeholder=${values.length === 0 ? (f.chipPlaceholder ? String(f.chipPlaceholder()) : "") : ""}
-            @keydown=${onKey}
-          />
-        </div>
-        ${
-          f.helper
-            ? html`<div
-                style="font-size:var(--rune-fs-xs);color:var(--rune-text-muted);margin-top:var(--rune-space-1)"
-              >
-                ${f.helper()}
-              </div>`
-            : nothing
-        }
-      </div>
-    `;
   }
 
   private _renderPreview(): TemplateResult {
@@ -483,15 +347,6 @@ export class RuneDeviceDialog extends LitElement {
           cat === "fan" && this._form.discrete_speed_count
             ? html` ${msg(str` with `)}<strong>${this._form.discrete_speed_count}</strong>
                 ${msg(str`speed step(s)`)}`
-            : nothing
-        }${
-          cat === "media_player" && (this._chips.source_list ?? []).length > 0
-            ? html` ${msg(str` and `)}<strong>${this._chips.source_list.length}</strong>
-                ${msg(str`source(s)`)}`
-            : nothing
-        }${
-          cat === "remote" && this._form.power_sensor
-            ? html` ${msg(str` driven by `)}<strong>${this._form.power_sensor}</strong>`
             : nothing
         }.
       </div>
