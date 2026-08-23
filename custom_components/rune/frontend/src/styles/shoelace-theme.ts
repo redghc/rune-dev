@@ -31,20 +31,6 @@ export const shoelaceThemeCss = `
   --sl-color-primary-900: ${palette.primary[900]};
   --sl-color-primary-950: ${palette.primary[950]};
 
-  --sl-color-neutral-0: ${palette.neutral[0]};
-  --sl-color-neutral-50: ${palette.neutral[50]};
-  --sl-color-neutral-100: ${palette.neutral[100]};
-  --sl-color-neutral-200: ${palette.neutral[200]};
-  --sl-color-neutral-300: ${palette.neutral[300]};
-  --sl-color-neutral-400: ${palette.neutral[400]};
-  --sl-color-neutral-500: ${palette.neutral[500]};
-  --sl-color-neutral-600: ${palette.neutral[600]};
-  --sl-color-neutral-700: ${palette.neutral[700]};
-  --sl-color-neutral-800: ${palette.neutral[800]};
-  --sl-color-neutral-900: ${palette.neutral[900]};
-  --sl-color-neutral-950: ${palette.neutral[950]};
-  --sl-color-neutral-1000: ${palette.neutral[1000]};
-
   --sl-color-success-600: ${palette.success[600]};
   --sl-color-warning-600: ${palette.warning[600]};
   --sl-color-danger-600: ${palette.danger[600]};
@@ -69,12 +55,48 @@ export const shoelaceThemeCss = `
 }
 
 :root, .sl-theme-light {
+  --sl-color-neutral-0: ${palette.neutral[0]};
+  --sl-color-neutral-50: ${palette.neutral[50]};
+  --sl-color-neutral-100: ${palette.neutral[100]};
+  --sl-color-neutral-200: ${palette.neutral[200]};
+  --sl-color-neutral-300: ${palette.neutral[300]};
+  --sl-color-neutral-400: ${palette.neutral[400]};
+  --sl-color-neutral-500: ${palette.neutral[500]};
+  --sl-color-neutral-600: ${palette.neutral[600]};
+  --sl-color-neutral-700: ${palette.neutral[700]};
+  --sl-color-neutral-800: ${palette.neutral[800]};
+  --sl-color-neutral-900: ${palette.neutral[900]};
+  --sl-color-neutral-950: ${palette.neutral[950]};
+  --sl-color-neutral-1000: ${palette.neutral[1000]};
+
+  --sl-panel-background-color: ${palette.neutral[0]};
+  --sl-panel-border-color: ${palette.neutral[200]};
+  --sl-overlay-background-color: rgb(0 0 0 / 0.35);
+
   --sl-color-primary-600: ${lightPrimary};
   --sl-color-primary-700: ${lightPrimaryHover};
   --sl-color-primary-800: ${lightPrimaryActive};
 }
 
 .sl-theme-dark {
+  --sl-color-neutral-0: ${palette.neutral[900]};
+  --sl-color-neutral-50: ${palette.neutral[800]};
+  --sl-color-neutral-100: ${palette.neutral[700]};
+  --sl-color-neutral-200: ${palette.neutral[600]};
+  --sl-color-neutral-300: ${palette.neutral[500]};
+  --sl-color-neutral-400: ${palette.neutral[400]};
+  --sl-color-neutral-500: ${palette.neutral[300]};
+  --sl-color-neutral-600: ${palette.neutral[200]};
+  --sl-color-neutral-700: ${palette.neutral[100]};
+  --sl-color-neutral-800: ${palette.neutral[50]};
+  --sl-color-neutral-900: ${palette.neutral[0]};
+  --sl-color-neutral-950: ${palette.neutral[0]};
+  --sl-color-neutral-1000: ${palette.neutral[0]};
+
+  --sl-panel-background-color: ${palette.neutral[900]};
+  --sl-panel-border-color: ${palette.neutral[800]};
+  --sl-overlay-background-color: rgb(0 0 0 / 0.55);
+
   --sl-color-primary-600: ${darkPrimary};
   --sl-color-primary-700: ${darkPrimaryHover};
   --sl-color-primary-800: ${darkPrimaryActive};
@@ -82,6 +104,24 @@ export const shoelaceThemeCss = `
 
 @media (prefers-color-scheme: dark) {
   :root:not(.sl-theme-light) {
+    --sl-color-neutral-0: ${palette.neutral[900]};
+    --sl-color-neutral-50: ${palette.neutral[800]};
+    --sl-color-neutral-100: ${palette.neutral[700]};
+    --sl-color-neutral-200: ${palette.neutral[600]};
+    --sl-color-neutral-300: ${palette.neutral[500]};
+    --sl-color-neutral-400: ${palette.neutral[400]};
+    --sl-color-neutral-500: ${palette.neutral[300]};
+    --sl-color-neutral-600: ${palette.neutral[200]};
+    --sl-color-neutral-700: ${palette.neutral[100]};
+    --sl-color-neutral-800: ${palette.neutral[50]};
+    --sl-color-neutral-900: ${palette.neutral[0]};
+    --sl-color-neutral-950: ${palette.neutral[0]};
+    --sl-color-neutral-1000: ${palette.neutral[0]};
+
+    --sl-panel-background-color: ${palette.neutral[900]};
+    --sl-panel-border-color: ${palette.neutral[800]};
+    --sl-overlay-background-color: rgb(0 0 0 / 0.55);
+
     --sl-color-primary-600: ${darkPrimary};
     --sl-color-primary-700: ${darkPrimaryHover};
     --sl-color-primary-800: ${darkPrimaryActive};

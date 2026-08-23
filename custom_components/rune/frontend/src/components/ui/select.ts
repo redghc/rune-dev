@@ -66,25 +66,86 @@ export class RuneSelect extends LitElement {
         color: var(--rune-text-muted);
         margin-top: 2px;
       }
-      sl-option::part(base):hover {
-        background: var(--rune-primary-soft);
+      sl-select::part(listbox) {
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-md);
+        box-shadow: var(--rune-shadow-3);
+        padding: var(--rune-space-1);
+      }
+      sl-option::part(base) {
+        border-radius: var(--rune-radius-sm);
+        font-family: var(--rune-font);
+        color: var(--rune-text);
+        padding: var(--rune-space-2) var(--rune-space-2);
+        transition:
+          background var(--rune-dur-fast) var(--rune-ease),
+          color var(--rune-dur-fast) var(--rune-ease);
+      }
+      sl-option:hover::part(base),
+      sl-option[current]::part(base) {
+        background-color: var(--rune-primary-soft);
+        color: var(--rune-text-strong);
+      }
+      sl-option[aria-selected="true"]::part(base) {
+        background-color: var(--rune-primary-soft);
+        color: var(--rune-primary-text);
+      }
+      sl-option::part(checked-icon) {
+        color: var(--rune-primary);
       }
       .row {
         display: flex;
         align-items: center;
         gap: var(--rune-space-2);
+        width: 100%;
       }
       .row i {
         color: var(--rune-text-subtle);
-        font-size: 1.05em;
+        font-size: 1.1em;
+        flex-shrink: 0;
+        transition: color var(--rune-dur-fast) var(--rune-ease);
       }
       .opt-label {
         display: flex;
         flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .opt-title {
+        color: var(--rune-text);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
+        line-height: 1.3;
+        transition: color var(--rune-dur-fast) var(--rune-ease);
       }
       .opt-desc {
         font-size: var(--rune-fs-xs);
         color: var(--rune-text-muted);
+        line-height: 1.2;
+        transition: color var(--rune-dur-fast) var(--rune-ease);
+      }
+      sl-option:hover .opt-title,
+      sl-option[current] .opt-title {
+        color: var(--rune-text-strong);
+      }
+      sl-option:hover .opt-desc,
+      sl-option[current] .opt-desc {
+        color: var(--rune-text-muted);
+      }
+      sl-option:hover .row i,
+      sl-option[current] .row i {
+        color: var(--rune-primary);
+      }
+      sl-option[aria-selected="true"] .opt-title {
+        color: var(--rune-primary-text);
+        font-weight: var(--rune-fw-semibold);
+      }
+      sl-option[aria-selected="true"] .opt-desc {
+        color: var(--rune-text-muted);
+      }
+      sl-option[aria-selected="true"] .row i {
+        color: var(--rune-primary);
       }
       .spinner {
         color: var(--rune-text-subtle);
@@ -163,7 +224,7 @@ export class RuneSelect extends LitElement {
         <div class="row">
           ${o.icon ? html`<i class="ti ${tablerClass(o.icon).replace("ti ", "")}"></i>` : nothing}
           <div class="opt-label">
-            <span>${labelNode}</span>
+            <span class="opt-title">${labelNode}</span>
             ${descNode ? html`<span class="opt-desc">${descNode}</span>` : nothing}
           </div>
         </div>
