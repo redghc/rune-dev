@@ -580,9 +580,9 @@ async def _ws_debug_registry_check(
     ``area`` / ``device_name`` come back blank from ``transmitter/list``.
     """
     target = msg.get("entity_id")
-    area_by_entity, device_by_entity = _entity_indexes(ctx.hass)
-    device_by_id = _device_index(ctx.hass)
-    area_by_id = _area_index(ctx.hass)
+    area_by_entity, device_by_entity, registry_ok = _entity_indexes_debug(ctx.hass)
+    device_by_id, device_registry_ok = _device_index_debug(ctx.hass)
+    area_by_id, area_registry_ok = _area_index_debug(ctx.hass)
     rows: list[dict[str, Any]] = []
     for state in ctx.hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
@@ -595,6 +595,7 @@ async def _ws_debug_registry_check(
         device = device_by_id.get(entity_device_id, {}) if entity_device_id else {}
         device_area_id = device.get("area_id", "")
         resolved_area_id = entity_area_id or device_area_id
+        attrs = getattr(state, "attributes", {}) or {}
         rows.append(
             {
                 "entity_id": state.entity_id,
@@ -609,12 +610,79 @@ async def _ws_debug_registry_check(
                 "resolved_area_name": area_by_id.get(resolved_area_id, "") or None,
                 "device_area_name": area_by_id.get(device_area_id, "") or None,
                 "entity_area_name": area_by_id.get(entity_area_id, "") or None,
-                "state_attributes_area": getattr(state, "attributes", {}).get(
-                    "area_id"
-                ),
+                "state_attributes_area": attrs.get("area_id"),
+                "state_attributes_device": attrs.get("device_id"),
+                "entity_platform": attrs.get("entity_platform") or attrs.get("platform"),
             }
         )
-    return {"rows": rows}
+    return {
+        "registries": {
+            "entity_registry_ok": registry_ok,
+            "entity_count": len(area_by_entity) + len(device_by_entity) // 2,
+            "device_registry_ok": device_registry_ok,
+            "device_count": len(device_by_id),
+            "area_registry_ok": area_registry_ok,
+            "area_count": len(area_by_id),
+        },
+        "rows": rows,
+    }
+
+
+def _entity_indexes_debug(hass: Any) -> tuple[dict[str, str], dict[str, str], bool]:
+    try:
+        registry = hass.helpers.entity_registry.async_get(hass)
+        entities = registry.entities
+        area: dict[str, str] = {}
+        device: dict[str, str] = {}
+        for entry in entities.values():
+            area_id = getattr(entry, "area_id", None)
+            device_id = getattr(entry, "device_id", None)
+            if area_id:
+                area[entry.entity_id] = area_id
+            if device_id:
+                device[entry.entity_id] = device_id
+        return area, device, True
+    except Exception:
+        return {}, {}, False
+
+
+def _device_index_debug(hass: Any) -> tuple[dict[str, dict[str, str]], bool]:
+    try:
+        registry = hass.helpers.device_registry.async_get(hass)
+        out: dict[str, dict[str, str]] = {}
+        for entry in registry.devices.values():
+            name = (
+                getattr(entry, "name", None)
+                or " ".join(
+                    part
+                    for part in (
+                        getattr(entry, "manufacturer", None),
+                        getattr(entry, "model", None),
+                    )
+                    if part
+                )
+                or getattr(entry, "id", "")
+            )
+            out[entry.id] = {
+                "name": str(name) if name else "",
+                "area_id": str(getattr(entry, "area_id", None) or ""),
+            }
+        return out, True
+    except Exception:
+        return {}, False
+
+
+def _area_index_debug(hass: Any) -> tuple[dict[str, str], bool]:
+    try:
+        registry = hass.helpers.area_registry.async_get(hass)
+        out: dict[str, str] = {}
+        for entry in registry.areas.values():
+            name = getattr(entry, "name", None) or getattr(entry, "id", "")
+            if name:
+                out[entry.id] = str(name)
+        return out, True
+    except Exception:
+        return {}, False
 
 
 # ---------------------------------------------------------------------------
