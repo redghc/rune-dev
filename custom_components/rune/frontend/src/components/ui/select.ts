@@ -76,20 +76,25 @@ export class RuneSelect extends LitElement {
       sl-option::part(base) {
         border-radius: var(--rune-radius-sm);
         font-family: var(--rune-font);
-        color: var(--rune-text);
-        padding: var(--rune-space-2) var(--rune-space-2);
+        color: var(--rune-text) !important;
+        padding: var(--rune-space-2) var(--rune-space-3);
+        background-color: transparent !important;
         transition:
           background var(--rune-dur-fast) var(--rune-ease),
           color var(--rune-dur-fast) var(--rune-ease);
       }
       sl-option:hover::part(base),
-      sl-option[current]::part(base) {
-        background-color: var(--rune-primary-soft);
-        color: var(--rune-text-strong);
+      sl-option:focus-visible::part(base) {
+        background-color: var(--rune-surface-alt) !important;
+        color: var(--rune-text-strong) !important;
       }
       sl-option[aria-selected="true"]::part(base) {
-        background-color: var(--rune-primary-soft);
-        color: var(--rune-primary-text);
+        background-color: var(--rune-primary-soft) !important;
+        color: var(--rune-primary-text) !important;
+      }
+      sl-option[aria-selected="true"]:hover::part(base) {
+        background-color: var(--rune-primary-soft) !important;
+        color: var(--rune-primary-text) !important;
       }
       sl-option::part(checked-icon) {
         color: var(--rune-primary);
@@ -126,15 +131,15 @@ export class RuneSelect extends LitElement {
         transition: color var(--rune-dur-fast) var(--rune-ease);
       }
       sl-option:hover .opt-title,
-      sl-option[current] .opt-title {
+      sl-option:focus-visible .opt-title {
         color: var(--rune-text-strong);
       }
       sl-option:hover .opt-desc,
-      sl-option[current] .opt-desc {
-        color: var(--rune-text-muted);
+      sl-option:focus-visible .opt-desc {
+        color: var(--rune-primary-text);
       }
       sl-option:hover .row i,
-      sl-option[current] .row i {
+      sl-option:focus-visible .row i {
         color: var(--rune-primary);
       }
       sl-option[aria-selected="true"] .opt-title {
@@ -142,7 +147,8 @@ export class RuneSelect extends LitElement {
         font-weight: var(--rune-fw-semibold);
       }
       sl-option[aria-selected="true"] .opt-desc {
-        color: var(--rune-text-muted);
+        color: var(--rune-primary-hover);
+        opacity: 0.95;
       }
       sl-option[aria-selected="true"] .row i {
         color: var(--rune-primary);
