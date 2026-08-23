@@ -184,7 +184,7 @@ export class RuneSelect extends LitElement {
         ?required=${this.required}
         ?clearable=${this.clearable}
         ?multiple=${this.multiple}
-        ?hoisted=${true}
+        ?hoist=${true}
         label=${labelStr || nothing}
         placeholder=${placeholderStr || nothing}
         value=${this.value || nothing}

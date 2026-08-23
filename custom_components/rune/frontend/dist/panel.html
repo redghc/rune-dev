@@ -23433,7 +23433,7 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         ?required=${this.required}
         ?clearable=${this.clearable}
         ?multiple=${this.multiple}
-        ?hoisted=${!0}
+        ?hoist=${!0}
         label=${e||k}
         placeholder=${t||k}
         value=${this.value||k}
@@ -23615,7 +23615,7 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
           </footer>
         </div>
       </div>
-    `}};us.styles=[jr,cs],us.dependencies={"sl-icon-button":q},S([R(`.dialog`)],us.prototype,`dialog`,2),S([R(`.dialog__panel`)],us.prototype,`panel`,2),S([R(`.dialog__overlay`)],us.prototype,`overlay`,2),S([I({type:Boolean,reflect:!0})],us.prototype,`open`,2),S([I({reflect:!0})],us.prototype,`label`,2),S([I({attribute:`no-header`,type:Boolean,reflect:!0})],us.prototype,`noHeader`,2),S([B(`open`,{waitUntilFirstUpdate:!0})],us.prototype,`handleOpenChange`,1),Bo(`dialog.show`,{keyframes:[{opacity:0,scale:.8},{opacity:1,scale:1}],options:{duration:250,easing:`ease`}}),Bo(`dialog.hide`,{keyframes:[{opacity:1,scale:1},{opacity:0,scale:.8}],options:{duration:250,easing:`ease`}}),Bo(`dialog.denyClose`,{keyframes:[{scale:1},{scale:1.02},{scale:1}],options:{duration:250}}),Bo(`dialog.overlay.show`,{keyframes:[{opacity:0},{opacity:1}],options:{duration:250}}),Bo(`dialog.overlay.hide`,{keyframes:[{opacity:1},{opacity:0}],options:{duration:250}}),us.define(`sl-dialog`),j();var ds=class extends A{constructor(...e){super(...e),this.label=``,this.open=!1,this.size=`medium`,this.noHeader=!1,this.closable=!0,this._overlayClickSwallowed=!1,this._onDocMouseDown=e=>{if(this._overlayClickSwallowed=!1,!this.open)return;let t=this._findOpenSelect(this);t&&!e.composedPath().includes(t)&&(this._overlayClickSwallowed=!0)},this._onRequestClose=e=>{e.detail?.source===`overlay`&&this._overlayClickSwallowed&&(this._overlayClickSwallowed=!1,e.preventDefault())}}static{this.styles=[P,E`
+    `}};us.styles=[jr,cs],us.dependencies={"sl-icon-button":q},S([R(`.dialog`)],us.prototype,`dialog`,2),S([R(`.dialog__panel`)],us.prototype,`panel`,2),S([R(`.dialog__overlay`)],us.prototype,`overlay`,2),S([I({type:Boolean,reflect:!0})],us.prototype,`open`,2),S([I({reflect:!0})],us.prototype,`label`,2),S([I({attribute:`no-header`,type:Boolean,reflect:!0})],us.prototype,`noHeader`,2),S([B(`open`,{waitUntilFirstUpdate:!0})],us.prototype,`handleOpenChange`,1),Bo(`dialog.show`,{keyframes:[{opacity:0,scale:.8},{opacity:1,scale:1}],options:{duration:250,easing:`ease`}}),Bo(`dialog.hide`,{keyframes:[{opacity:1,scale:1},{opacity:0,scale:.8}],options:{duration:250,easing:`ease`}}),Bo(`dialog.denyClose`,{keyframes:[{scale:1},{scale:1.02},{scale:1}],options:{duration:250}}),Bo(`dialog.overlay.show`,{keyframes:[{opacity:0},{opacity:1}],options:{duration:250}}),Bo(`dialog.overlay.hide`,{keyframes:[{opacity:1},{opacity:0}],options:{duration:250}}),us.define(`sl-dialog`),j();var ds=class extends A{constructor(...e){super(...e),this.label=``,this.open=!1,this.size=`medium`,this.noHeader=!1,this.closable=!0,this._overlayClickSwallowed=!1,this._onDocMouseDown=e=>{this._overlayClickSwallowed=!1,this.open&&this._findOpenSelect(this)&&(this._overlayClickSwallowed=!0)},this._onRequestClose=e=>{e.detail?.source===`overlay`&&this._overlayClickSwallowed&&(this._overlayClickSwallowed=!1,e.preventDefault())}}static{this.styles=[P,E`
       :host {
         display: contents;
       }
@@ -23663,7 +23663,7 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         -webkit-backdrop-filter: blur(6px) saturate(140%);
         background: rgb(0 0 0 / 0.35);
       }
-    `]}_findOpenSelect(e){let t=e.querySelector(`sl-select[open]`);if(t)return t;for(let t of Array.from(e.querySelectorAll(`*`))){let e=t.shadowRoot;if(e){let t=this._findOpenSelect(e);if(t)return t}}return null}connectedCallback(){super.connectedCallback(),document.addEventListener(`mousedown`,this._onDocMouseDown,!0)}disconnectedCallback(){document.removeEventListener(`mousedown`,this._onDocMouseDown,!0),super.disconnectedCallback()}render(){return D`
+    `]}_findOpenSelect(e){let t=e.querySelector(`sl-select[open], sl-dropdown[open]`);if(t)return t;for(let t of Array.from(e.querySelectorAll(`*`))){let e=t.shadowRoot;if(e){let t=this._findOpenSelect(e);if(t)return t}}return null}connectedCallback(){super.connectedCallback(),document.addEventListener(`mousedown`,this._onDocMouseDown,!0)}disconnectedCallback(){document.removeEventListener(`mousedown`,this._onDocMouseDown,!0),super.disconnectedCallback()}render(){return D`
       <sl-dialog
         label=${typeof this.label==`string`?this.label:``}
         ?open=${this.open}

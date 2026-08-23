@@ -71,7 +71,7 @@ export class RuneDialog extends LitElement {
   private _overlayClickSwallowed = false;
 
   private _findOpenSelect(root: ParentNode): HTMLElement | null {
-    const direct = root.querySelector("sl-select[open]");
+    const direct = root.querySelector("sl-select[open], sl-dropdown[open]");
     if (direct) {
       return direct as HTMLElement;
     }
@@ -87,18 +87,20 @@ export class RuneDialog extends LitElement {
     return null;
   }
 
-  private _onDocMouseDown = (ev: MouseEvent): void => {
+  private _onDocMouseDown = (_ev: MouseEvent): void => {
     this._overlayClickSwallowed = false;
     if (!this.open) {
       return;
     }
-    // Capture phase: runs before Shoelace's own document mousedown
-    // handler hides the open ``<sl-select>``, so ``[open]`` is still
-    // present. The select consumes this interaction when the press
-    // happens outside of it, so the dialog must ignore the overlay
-    // click that follows.
+    // Capture phase: runs before Shoelace's own document mousedown/mouseup
+    // handlers hide the open ``<sl-select>`` / ``<sl-dropdown>``.
+    // If a select/dropdown was open when mousedown fired, this interaction
+    // belongs to the select (either picking an option or dismissing it).
+    // When the option/popup hides on mouseup, the trailing click event
+    // can land on the underlying dialog overlay backdrop. We must swallow
+    // that overlay close request.
     const openSelect = this._findOpenSelect(this);
-    if (openSelect && !ev.composedPath().includes(openSelect)) {
+    if (openSelect) {
       this._overlayClickSwallowed = true;
     }
   };
