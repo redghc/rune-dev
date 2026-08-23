@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -8,17 +9,37 @@ import type { RuneTheme } from "@/state/theme.js";
 
 interface Option {
   value: RuneTheme;
-  label: string;
   icon: string;
 }
 
 const OPTIONS: Option[] = [
-  { value: "auto", label: "Auto", icon: "sun-moon" },
-  { value: "light", label: "Light", icon: "sun" },
-  { value: "dark", label: "Dark", icon: "moon" },
+  { value: "auto", icon: "sun-moon" },
+  { value: "light", icon: "sun" },
+  { value: "dark", icon: "moon" },
 ];
 
+// Title attribute is a native HTML attribute (string only) so we keep
+// an English fallback. Localizers will see the visible labels above
+// via msg(); the title is a minor mouse-hover hint.
+const TITLE_LABELS: Record<RuneTheme, string> = {
+  auto: "Auto",
+  light: "Light",
+  dark: "Dark",
+};
+
+function optionLabel(v: RuneTheme) {
+  switch (v) {
+    case "auto":
+      return msg(str`Auto`);
+    case "light":
+      return msg(str`Light`);
+    case "dark":
+      return msg(str`Dark`);
+  }
+}
+
 @customElement("rune-theme-toggle")
+@localized()
 export class RuneThemeToggle extends LitElement {
   static styles = [
     sharedStyles,
@@ -103,11 +124,11 @@ export class RuneThemeToggle extends LitElement {
               class="opt ${this._value === o.value ? "active" : ""}"
               role="radio"
               aria-checked=${this._value === o.value ? "true" : "false"}
-              title=${o.label}
+              title=${TITLE_LABELS[o.value]}
               @click=${() => this._pick(o.value)}
             >
               <i class="ti ti-${o.icon}" aria-hidden="true"></i>
-              <span>${o.label}</span>
+              <span>${optionLabel(o.value)}</span>
             </button>
           `,
         )}

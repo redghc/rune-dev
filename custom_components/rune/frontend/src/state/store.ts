@@ -15,7 +15,7 @@ export type Section = "devices" | "sniffer" | "actions" | "settings";
 
 export interface ToastMsg {
   id: number;
-  text: string;
+  text: string | unknown;
   kind?: "ok" | "err";
 }
 
@@ -24,11 +24,18 @@ export interface DeviceDialogState {
   editing: DeviceSummary | null;
 }
 
+export type LearnStatus =
+  | { kind: "idle" }
+  | { kind: "capturing" }
+  | { kind: "captured"; protocol: string; carrierHz: number }
+  | { kind: "no_signal" }
+  | { kind: "failed"; message: string };
+
 export interface LearnDialogState {
   open: boolean;
   deviceId: string | null;
   commandKey: string;
-  status: string;
+  status: LearnStatus;
   captured: LearnResult["captured"] | null;
   rawTimings: number[] | null;
   carrierHz: number | null;
@@ -37,6 +44,7 @@ export interface LearnDialogState {
 export const store = {
   version: "0.4.0",
   entryId: "" as string,
+  locale: "" as string,
   section: "devices" as Section,
   devices: [] as DeviceSummary[],
   remotes: [] as Remote[],
@@ -49,7 +57,7 @@ export const store = {
     open: false,
     deviceId: null,
     commandKey: "",
-    status: "Idle — click Start learn",
+    status: { kind: "idle" } as LearnStatus,
     captured: null,
     rawTimings: null,
     carrierHz: null,
@@ -60,7 +68,7 @@ export const store = {
     notify();
   },
 
-  pushToast(text: string, kind?: "ok" | "err"): void {
+  pushToast(text: string | unknown, kind?: "ok" | "err"): void {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     this.toasts = [...this.toasts, { id, text, kind }];
     notify();
@@ -85,7 +93,7 @@ export const store = {
       open: true,
       deviceId,
       commandKey,
-      status: "Idle — click Start learn",
+      status: { kind: "idle" },
       captured: null,
       rawTimings: null,
       carrierHz: null,
@@ -98,7 +106,7 @@ export const store = {
       open: false,
       deviceId: null,
       commandKey: "",
-      status: "Idle — click Start learn",
+      status: { kind: "idle" },
       captured: null,
       rawTimings: null,
       carrierHz: null,

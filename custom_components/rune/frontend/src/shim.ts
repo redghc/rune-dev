@@ -22,6 +22,7 @@
 interface RunePanelConfig {
   entry_id?: string;
   version?: string;
+  locale?: string;
 }
 
 interface BridgeRequest {
@@ -49,16 +50,18 @@ class RunePanel extends HTMLElement {
   private _listeners: Array<(event: MessageEvent) => void> = [];
   private _version: string | null = null;
   private _entryId: string | null = null;
+  private _locale: string | null = null;
 
   set hass(hass: HassLike) {
     this._hass = hass;
   }
 
   setConfig(config: RunePanelConfig) {
-    // HA supplies the panel config (``entry_id``, ``version``); stash
-    // them so the iframe can pull them via postMessage once it loads.
+    // HA supplies the panel config (``entry_id``, ``version``, ``locale``);
+    // stash them so the iframe can pull them via postMessage once it loads.
     this._version = config.version ?? null;
     this._entryId = config.entry_id ?? null;
+    this._locale = config.locale ?? null;
   }
 
   connectedCallback(): void {
@@ -97,7 +100,12 @@ class RunePanel extends HTMLElement {
       // this entry, etc. The panel listens for ``rune-init`` and
       // hydrates its store from there.
       iframe.contentWindow?.postMessage(
-        { type: "rune-init", version: this._version ?? null, entry_id: this._entryId ?? null },
+        {
+          type: "rune-init",
+          version: this._version ?? null,
+          entry_id: this._entryId ?? null,
+          locale: this._locale ?? null,
+        },
         "*",
       );
     });

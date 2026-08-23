@@ -45,6 +45,7 @@ interface InitMessage {
   type: "rune-init";
   version?: string;
   entry_id?: string;
+  locale?: string;
 }
 
 type IncomingMessage = Partial<BridgeResultMessage | InitMessage>;
@@ -61,6 +62,9 @@ window.addEventListener("message", (event: MessageEvent) => {
     }
     if (typeof data.entry_id === "string" && data.entry_id.length > 0) {
       store.entryId = data.entry_id;
+    }
+    if (typeof data.locale === "string" && data.locale.length > 0) {
+      store.locale = data.locale;
     }
     return;
   }

@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -8,6 +9,7 @@ import { store, subscribe } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 @customElement("rune-settings-view")
+@localized()
 export class RuneSettingsView extends LitElement {
   static styles = [
     sharedStyles,
@@ -171,7 +173,7 @@ export class RuneSettingsView extends LitElement {
       store.setReceivers(receivers ?? []);
       store.setDevices(devices ?? []);
     } catch (err) {
-      store.pushToast(`Load settings: ${(err as Error).message}`, "err");
+      store.pushToast(msg(str`Load settings: ${(err as Error).message}`), "err");
     }
   }
 
@@ -180,37 +182,37 @@ export class RuneSettingsView extends LitElement {
     const signalTotal = store.remotes.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <div class="head">
-        <h2>Settings</h2>
-        <div class="sub">Integration health and discovered entities.</div>
+        <h2>${msg(str`Settings`)}</h2>
+        <div class="sub">${msg(str`Integration health and discovered entities.`)}</div>
       </div>
 
       <div class="stats">
         <div class="stat">
           <div class="stat-icon"><i class="ti ti-remote"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Integration</div>
-            <div class="stat-value">RUNE</div>
+            <div class="stat-label">${msg(str`Integration`)}</div>
+            <div class="stat-value">${msg(str`RUNE`)}</div>
             <div class="stat-meta">v${store.version}</div>
           </div>
         </div>
         <div class="stat">
           <div class="stat-icon neutral"><i class="ti ti-devices"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Devices</div>
+            <div class="stat-label">${msg(str`Devices`)}</div>
             <div class="stat-value">${store.devices.length}</div>
           </div>
         </div>
         <div class="stat">
           <div class="stat-icon warning"><i class="ti ti-antenna"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Sniffer signals</div>
+            <div class="stat-label">${msg(str`Sniffer signals`)}</div>
             <div class="stat-value">${signalTotal}</div>
           </div>
         </div>
         <div class="stat">
           <div class="stat-icon success"><i class="ti ti-wand"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Action bindings</div>
+            <div class="stat-label">${msg(str`Action bindings`)}</div>
             <div class="stat-value">${store.actions.length}</div>
           </div>
         </div>
@@ -218,15 +220,15 @@ export class RuneSettingsView extends LitElement {
 
       <div class="section-title">
         <i class="ti ti-antenna-bars-5"></i>
-        Available transmitters
+        ${msg(str`Available transmitters`)}
         <rune-chip variant="neutral">${store.transmitters.length}</rune-chip>
       </div>
       ${
         store.transmitters.length === 0
           ? html`<rune-empty-state
               icon="antenna-bars-5"
-              heading="No IR/RF emitters found"
-              message="Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first."
+              heading=${msg(str`No IR/RF emitters found`)}
+              message=${msg(str`Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first.`)}
             ></rune-empty-state>`
           : html`
               <div class="entities">
@@ -249,15 +251,15 @@ export class RuneSettingsView extends LitElement {
 
       <div class="section-title">
         <i class="ti ti-antenna"></i>
-        Available receivers
+        ${msg(str`Available receivers`)}
         <rune-chip variant="neutral">${store.receivers.length}</rune-chip>
       </div>
       ${
         store.receivers.length === 0
           ? html`<rune-empty-state
               icon="antenna"
-              heading="No IR/RF receivers found"
-              message="Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows."
+              heading=${msg(str`No IR/RF receivers found`)}
+              message=${msg(str`Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows.`)}
             ></rune-empty-state>`
           : html`
               <div class="entities">

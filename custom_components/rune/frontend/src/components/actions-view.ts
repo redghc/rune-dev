@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -10,6 +11,7 @@ import { sharedStyles } from "@/styles/shared.js";
 import type { ActionBinding } from "@/types.js";
 
 @customElement("rune-actions-view")
+@localized()
 export class RuneActionsView extends LitElement {
   static styles = [
     sharedStyles,
@@ -105,7 +107,7 @@ export class RuneActionsView extends LitElement {
       const { actions } = await api.listActions();
       store.setActions(actions ?? []);
     } catch (err) {
-      store.pushToast(`Load actions: ${(err as Error).message}`, "err");
+      store.pushToast(msg(str`Load actions: ${(err as Error).message}`), "err");
     } finally {
       this._loading = false;
     }
@@ -121,9 +123,12 @@ export class RuneActionsView extends LitElement {
             <rune-chip variant="primary" icon="target">${a.target.kind}</rune-chip>
             <span>
               <i class="ti ti-fingerprint"></i>
-              signal ${a.signal_id.slice(0, 8)}…
+              ${msg(str`signal`)} ${a.signal_id.slice(0, 8)}…
             </span>
-            <span> <i class="ti ti-bolt"></i> min_hits: ${a.min_hits} </span>
+            <span>
+              <i class="ti ti-bolt"></i>
+              ${msg(str`min_hits: ${a.min_hits}`)}
+            </span>
           </div>
         </div>
       </div>
@@ -135,9 +140,9 @@ export class RuneActionsView extends LitElement {
     const actions = store.actions;
     return html`
       <div class="toolbar">
-        <h2>Actions</h2>
+        <h2>${msg(str`Actions`)}</h2>
         <rune-chip variant="neutral" icon="wand"
-          >${actions.length} binding${actions.length === 1 ? "" : "s"}</rune-chip
+          >${msg(str`${actions.length} binding${actions.length === 1 ? "" : "s"}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -147,23 +152,21 @@ export class RuneActionsView extends LitElement {
             ?loading=${this._loading}
             @click=${this.refresh}
           >
-            Refresh
+            ${msg(str`Refresh`)}
           </rune-button>
         </rune-tooltip>
       </div>
       <div class="help">
-        <i class="ti ti-info-circle"></i> Action bindings connect a captured signal to a
-        side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or
-        fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands
-        in v0.4).
+        <i class="ti ti-info-circle"></i>
+        ${msg(str`Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).`)}
       </div>
       ${
         actions.length === 0
           ? html`
               <rune-empty-state
                 icon="wand"
-                heading="No action bindings yet"
-                message="Create bindings from the API or wait for the v0.4 editor."
+                heading=${msg(str`No action bindings yet`)}
+                message=${msg(str`Create bindings from the API or wait for the v0.4 editor.`)}
               ></rune-empty-state>
             `
           : html` <div class="actions">${actions.map((a) => this._renderAction(a))}</div> `

@@ -13,8 +13,8 @@ import { tablerClass } from "./icon.js";
 
 export interface RuneSelectOption {
   value: string;
-  label: string;
-  description?: string;
+  label: string | (() => unknown);
+  description?: string | (() => unknown);
   icon?: string;
   disabled?: boolean;
 }
@@ -92,11 +92,11 @@ export class RuneSelect extends LitElement {
     `,
   ];
 
-  @property({ type: String }) label = "";
-  @property({ type: String }) placeholder = "Select…";
+  @property() label: string | unknown = "";
+  @property() placeholder: string | unknown = "Select…";
   @property({ type: String }) value = "";
   @property({ type: String }) name = "";
-  @property({ type: String }) helper = "";
+  @property() helper: string | unknown = "";
   @property({ type: String }) error = "";
   @property({ type: String }) icon = "";
   @property({ type: String }) size: RuneSelectSize = "medium";
@@ -105,9 +105,9 @@ export class RuneSelect extends LitElement {
   @property({ type: Boolean }) clearable = false;
   @property({ type: Boolean }) searchable = false;
   @property({ type: Boolean }) multiple = false;
-  @property({ type: Object }) options: RuneSelectOption[] = [];
+  @property({ attribute: false }) options: RuneSelectOption[] = [];
   @property({ attribute: false }) loadOptions: AsyncLoader | null = null;
-  @property({ type: String }) emptyText = "No options";
+  @property() emptyText: string | unknown = "No options";
 
   @state() private _loading = false;
   @state() private _asyncLoaded = false;
@@ -152,13 +152,19 @@ export class RuneSelect extends LitElement {
   };
 
   private _renderOption(o: RuneSelectOption) {
+    const labelNode = typeof o.label === "function" ? o.label() : o.label;
+    const descNode = o.description
+      ? typeof o.description === "function"
+        ? o.description()
+        : o.description
+      : null;
     return html`
       <sl-option value=${o.value} ?disabled=${o.disabled ?? false}>
         <div class="row">
           ${o.icon ? html`<i class="ti ${tablerClass(o.icon).replace("ti ", "")}"></i>` : nothing}
           <div class="opt-label">
-            <span>${o.label}</span>
-            ${o.description ? html`<span class="opt-desc">${o.description}</span>` : nothing}
+            <span>${labelNode}</span>
+            ${descNode ? html`<span class="opt-desc">${descNode}</span>` : nothing}
           </div>
         </div>
       </sl-option>
@@ -166,6 +172,11 @@ export class RuneSelect extends LitElement {
   }
 
   protected render() {
+    const labelStr = typeof this.label === "string" ? this.label : "";
+    const placeholderStr = typeof this.placeholder === "string" ? this.placeholder : "";
+    const helperStr =
+      typeof this.helper === "string" && this.helper ? this.helper : this.error || "";
+    const emptyStr = typeof this.emptyText === "string" ? this.emptyText : "";
     return html`
       <sl-select
         size=${this.size}
@@ -174,15 +185,30 @@ export class RuneSelect extends LitElement {
         ?clearable=${this.clearable}
         ?multiple=${this.multiple}
         ?hoisted=${true}
-        label=${this.label || nothing}
-        placeholder=${this.placeholder || nothing}
+        label=${labelStr || nothing}
+        placeholder=${placeholderStr || nothing}
         value=${this.value || nothing}
         name=${this.name || nothing}
-        help-text=${this.helper || this.error || nothing}
+        help-text=${helperStr || nothing}
         ?loading=${this._loading}
-        empty=${this.emptyText}
+        empty=${emptyStr}
         @sl-change=${this._onChange}
       >
+        ${
+          this.label && typeof this.label !== "string"
+            ? html`<span slot="label">${this.label}</span>`
+            : null
+        }
+        ${
+          this.placeholder && typeof this.placeholder !== "string"
+            ? html`<span slot="placeholder">${this.placeholder}</span>`
+            : null
+        }
+        ${
+          (this.helper && typeof this.helper !== "string") || this.error
+            ? html`<span slot="help-text">${this.helper || this.error}</span>`
+            : null
+        }
         ${
           this.icon
             ? html`<i

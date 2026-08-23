@@ -5,16 +5,25 @@
 // upstream values. Add a new field here once and every device creation
 // / edit form picks it up automatically — no dialog code changes
 // required.
+//
+// Localizable strings are stored as getter functions (e.g. ``label``)
+// rather than plain strings so that ``msg()`` is re-evaluated on every
+// render. That keeps the dialog fully reactive when the user switches
+// locale — ``@localized()`` triggers ``requestUpdate()``, which calls
+// the getters again with the current locale.
+
+import { msg, str } from "@lit/localize";
 
 import type { AsyncLoader } from "@/components/ui/select.js";
+import type { TemplateResult } from "lit";
 
 export type FieldKind =
   "text" | "textarea" | "number" | "select" | "async-select" | "chips" | "switch";
 
 export interface SelectOption {
   value: string;
-  label: string;
-  description?: string;
+  label: () => TemplateResult | string;
+  description?: () => TemplateResult | string;
   icon?: string;
 }
 
@@ -22,13 +31,13 @@ export interface FieldDef {
   /** Stable key — used to read/write the value from form state. */
   key: string;
   /** Human label rendered above the input. */
-  label: string;
+  label: () => TemplateResult | string;
   /** Helper text shown below the input. */
-  helper?: string;
+  helper?: () => TemplateResult | string;
   /** Tabler icon name (e.g. ``"device-gamepad"``). */
   icon?: string;
   kind: FieldKind;
-  placeholder?: string;
+  placeholder?: () => TemplateResult | string;
   required?: boolean;
   /** Show this field only when the predicate returns true. */
   visibleWhen?: (state: FormState) => boolean;
@@ -48,7 +57,7 @@ export interface FieldDef {
   clearable?: boolean;
 
   // chips
-  chipPlaceholder?: string;
+  chipPlaceholder?: () => TemplateResult | string;
 }
 
 export interface FormState {
@@ -60,66 +69,70 @@ export interface FormState {
 const COMMON_FIELDS: FieldDef[] = [
   {
     key: "name",
-    label: "Name",
-    helper: "How the device appears in Home Assistant",
+    label: () => msg(str`Name`),
+    helper: () => msg(str`How the device appears in Home Assistant`),
     icon: "device-gamepad",
     kind: "text",
-    placeholder: "Bedroom fan",
+    placeholder: () => msg(str`Bedroom fan`),
     required: true,
     maxLength: 64,
   },
   {
     key: "category",
-    label: "Category",
-    helper: "Determines which entities HA exposes",
+    label: () => msg(str`Category`),
+    helper: () => msg(str`Determines which entities HA exposes`),
     icon: "category",
     kind: "select",
     required: true,
     options: [
-      { value: "fan", label: "Fan", icon: "fan" },
-      { value: "climate", label: "Climate", icon: "temperature" },
-      { value: "light", label: "Light", icon: "bulb" },
-      { value: "cover", label: "Cover / Blinds", icon: "blinds" },
-      { value: "media_player", label: "Media player", icon: "device-tv" },
-      { value: "switch", label: "Switch / Outlet", icon: "plug" },
-      { value: "remote", label: "Generic remote", icon: "remote" },
+      { value: "fan", label: () => msg(str`Fan`), icon: "fan" },
+      { value: "climate", label: () => msg(str`Climate`), icon: "temperature" },
+      { value: "light", label: () => msg(str`Light`), icon: "bulb" },
+      { value: "cover", label: () => msg(str`Cover / Blinds`), icon: "blinds" },
+      {
+        value: "media_player",
+        label: () => msg(str`Media player`),
+        icon: "device-tv",
+      },
+      { value: "switch", label: () => msg(str`Switch / Outlet`), icon: "plug" },
+      { value: "remote", label: () => msg(str`Generic remote`), icon: "remote" },
     ],
   },
   {
     key: "transmitter",
-    label: "Transmitter",
-    helper: "IR / RF emitter entity that sends commands",
+    label: () => msg(str`Transmitter`),
+    helper: () => msg(str`IR / RF emitter entity that sends commands`),
     icon: "antenna-bars-5",
     kind: "async-select",
     required: true,
     searchable: true,
     clearable: false,
-    placeholder: "Pick an emitter…",
+    placeholder: () => msg(str`Pick an emitter…`),
   },
   {
     key: "receiver",
-    label: "Receiver",
-    helper: "Optional — needed for cover / learn workflows",
+    label: () => msg(str`Receiver`),
+    helper: () => msg(str`Optional — needed for cover / learn workflows`),
     icon: "antenna",
     kind: "async-select",
     searchable: true,
     clearable: true,
-    placeholder: "(none)",
+    placeholder: () => msg(str`(none)`),
   },
   {
     key: "manufacturer",
-    label: "Manufacturer",
+    label: () => msg(str`Manufacturer`),
     icon: "building",
     kind: "text",
-    placeholder: "Broadlink, ESPHome, …",
+    placeholder: () => msg(str`Broadlink, ESPHome, …`),
     maxLength: 64,
   },
   {
     key: "model",
-    label: "Model",
+    label: () => msg(str`Model`),
     icon: "barcode",
     kind: "text",
-    placeholder: "RM4 Pro, FRM97, …",
+    placeholder: () => msg(str`RM4 Pro, FRM97, …`),
     maxLength: 64,
   },
 ];
@@ -130,8 +143,8 @@ const CATEGORY_FIELDS: FieldDef[] = [
   // ---- fan ----
   {
     key: "discrete_speed_count",
-    label: "Speed steps",
-    helper: "How many discrete speed levels this fan exposes",
+    label: () => msg(str`Speed steps`),
+    helper: () => msg(str`How many discrete speed levels this fan exposes`),
     icon: "gauge",
     kind: "number",
     min: 1,
@@ -141,76 +154,88 @@ const CATEGORY_FIELDS: FieldDef[] = [
   },
   {
     key: "speed_mode",
-    label: "Speed mode",
-    helper: "Hybrid sends both step + percent commands",
+    label: () => msg(str`Speed mode`),
+    helper: () => msg(str`Hybrid sends both step + percent commands`),
     icon: "adjustments",
     kind: "select",
     visibleWhen: (s) => s.category === "fan",
     options: [
-      { value: "hybrid", label: "Hybrid (recommended)", description: "Steps + percent" },
-      { value: "discrete", label: "Discrete only", description: "Just the steps" },
-      { value: "percent", label: "Percent only", description: "Smooth percentage" },
+      {
+        value: "hybrid",
+        label: () => msg(str`Hybrid (recommended)`),
+        description: () => msg(str`Steps + percent`),
+      },
+      {
+        value: "discrete",
+        label: () => msg(str`Discrete only`),
+        description: () => msg(str`Just the steps`),
+      },
+      {
+        value: "percent",
+        label: () => msg(str`Percent only`),
+        description: () => msg(str`Smooth percentage`),
+      },
     ],
   },
 
   // ---- climate ----
   {
     key: "climate_matrix",
-    label: "Full HVAC matrix",
-    helper: "Generate every (mode × fan) × (on/off) combo",
+    label: () => msg(str`Full HVAC matrix`),
+    helper: () => msg(str`Generate every (mode × fan) × (on/off) combo`),
     icon: "matrix",
     kind: "switch",
     visibleWhen: (s) => s.category === "climate",
   },
   {
     key: "temperature_sensor",
-    label: "Temperature sensor",
-    helper: "Optional — drives current temp on the climate entity",
+    label: () => msg(str`Temperature sensor`),
+    helper: () => msg(str`Optional — drives current temp on the climate entity`),
     icon: "temperature",
     kind: "async-select",
     searchable: true,
     clearable: true,
-    placeholder: "(none)",
+    placeholder: () => msg(str`(none)`),
     visibleWhen: (s) => s.category === "climate",
   },
   {
     key: "humidity_sensor",
-    label: "Humidity sensor",
+    label: () => msg(str`Humidity sensor`),
     icon: "droplet",
     kind: "async-select",
     searchable: true,
     clearable: true,
-    placeholder: "(none)",
+    placeholder: () => msg(str`(none)`),
     visibleWhen: (s) => s.category === "climate",
   },
 
   // ---- media_player ----
   {
     key: "source_list",
-    label: "Sources",
-    helper: "Press Enter to add each source name",
+    label: () => msg(str`Sources`),
+    helper: () => msg(str`Press Enter to add each source name`),
     icon: "list",
     kind: "chips",
-    chipPlaceholder: "HDMI1, Bluetooth, …",
+    chipPlaceholder: () => msg(str`HDMI1, Bluetooth, …`),
     visibleWhen: (s) => s.category === "media_player",
   },
 
   // ---- remote (power-aware) ----
   {
     key: "power_sensor",
-    label: "Power sensor",
-    helper: "W sensor — used to detect real on/off state",
+    label: () => msg(str`Power sensor`),
+    helper: () => msg(str`W sensor — used to detect real on/off state`),
     icon: "bolt",
     kind: "async-select",
     searchable: true,
     clearable: true,
-    placeholder: "(none)",
+    placeholder: () => msg(str`(none)`),
     visibleWhen: (s) => s.category === "remote",
   },
   {
     key: "power_off_below_w",
-    label: "Off threshold (W)",
-    helper: "Device is off when reading drops below this",
+    label: () => msg(str`Off threshold (W)`),
+    helper: () => msg(str`Device is off when reading drops below this`),
     icon: "battery-3",
     kind: "number",
     min: 0,
@@ -220,8 +245,8 @@ const CATEGORY_FIELDS: FieldDef[] = [
   },
   {
     key: "power_on_above_w",
-    label: "On threshold (W)",
-    helper: "Device is on when reading rises above this",
+    label: () => msg(str`On threshold (W)`),
+    helper: () => msg(str`Device is on when reading rises above this`),
     icon: "battery-4",
     kind: "number",
     min: 0,

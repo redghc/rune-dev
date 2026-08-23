@@ -6,7 +6,10 @@
   "description": "RUNE Home Assistant panel — Lit SPA bundled for the iframe target.",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm typecheck && pnpm lint && pnpm format:check && vite build --config vite.spa.config.ts && vite build --config vite.shim.config.ts",
+    "localize:extract": "lit-localize extract",
+    "localize:build": "lit-localize build",
+    "localize": "pnpm localize:extract && pnpm localize:build",
+    "build": "pnpm localize && pnpm typecheck && pnpm lint && pnpm format:check && vite build --config vite.spa.config.ts && vite build --config vite.shim.config.ts",
     "build:spa": "vite build --config vite.spa.config.ts",
     "build:shim": "vite build --config vite.shim.config.ts",
     "preview": "vite preview",
@@ -18,16 +21,19 @@
     "knip": "knip",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium --with-deps",
-    "ci": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build && pnpm test:e2e"
+    "ci": "pnpm localize && pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm build && pnpm test:e2e"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
+    "@lit/localize": "^0.12.2",
+    "@shoelace-style/localize": "^3.2.3",
     "@shoelace-style/shoelace": "^2.20.1",
     "@tabler/icons-webfont": "^3.46.0",
     "lit": "^3.3.3"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+    "@lit/localize-tools": "^0.8.2",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.0.0",
     "knip": "^6.32.0",

@@ -16,6 +16,8 @@
     "enumMembers": "warn",
     "types": "warn"
   },
+  "ignore": ["src/generated/**"],
+  "ignoreDependencies": ["@lit/localize-tools"],
   "ignoreIssues": {
     "src/components/ui/index.ts": ["exports", "nsExports", "nsTypes", "types"],
     "src/components/ui/floating.ts": ["exports"],

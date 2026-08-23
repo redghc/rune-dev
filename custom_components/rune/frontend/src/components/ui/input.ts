@@ -53,13 +53,13 @@ export class RuneInput extends LitElement {
     `,
   ];
 
-  @property({ type: String }) label = "";
-  @property({ type: String }) placeholder = "";
+  @property() label: string | unknown = "";
+  @property() placeholder: string | unknown = "";
   @property({ type: String }) value = "";
   @property({ type: String }) type:
     "text" | "search" | "email" | "url" | "tel" | "password" | "number" = "text";
   @property({ type: String }) name = "";
-  @property({ type: String }) helper = "";
+  @property() helper: string | unknown = "";
   @property({ type: String }) error = "";
   @property({ type: String }) icon = "";
   @property({ type: String }) size: RuneInputSize = "medium";
@@ -87,18 +87,22 @@ export class RuneInput extends LitElement {
   };
 
   protected render() {
+    const labelStr = typeof this.label === "string" ? this.label : "";
+    const placeholderStr = typeof this.placeholder === "string" ? this.placeholder : "";
+    const helperStr =
+      typeof this.helper === "string" && this.helper ? this.helper : this.error || "";
     return html`
       <sl-input
         size=${this.size}
         ?disabled=${this.disabled}
         ?required=${this.required}
         ?clearable=${this.clearable}
-        label=${this.label || nothing}
-        placeholder=${this.placeholder || nothing}
+        label=${labelStr || nothing}
+        placeholder=${placeholderStr || nothing}
         value=${this.value}
         type=${this.type}
         name=${this.name || nothing}
-        help-text=${this.helper || this.error || nothing}
+        help-text=${helperStr || nothing}
         autocomplete=${this.autocomplete ?? nothing}
         inputmode=${this.inputmode ?? nothing}
         maxlength=${this.maxlength ?? nothing}
@@ -107,6 +111,21 @@ export class RuneInput extends LitElement {
         step=${this.step ?? nothing}
         @sl-input=${this._onInput}
       >
+        ${
+          this.label && typeof this.label !== "string"
+            ? html`<span slot="label">${this.label}</span>`
+            : null
+        }
+        ${
+          this.placeholder && typeof this.placeholder !== "string"
+            ? html`<span slot="placeholder">${this.placeholder}</span>`
+            : null
+        }
+        ${
+          (this.helper && typeof this.helper !== "string") || this.error
+            ? html`<span slot="help-text">${this.helper || this.error}</span>`
+            : null
+        }
         ${
           this.icon
             ? html`<i

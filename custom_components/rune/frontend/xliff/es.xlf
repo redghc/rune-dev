@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+<file target-language="es" source-language="en" original="lit-localize-inputs" datatype="plaintext">
+<body>
+<trans-unit id="s951b8802c208fb7e">
+  <source>Load actions: <x id="0" equiv-text="${(err as Error).message}"/></source>
+    <target>Error al cargar acciones: <x id="0" equiv-text="${(err as Error).message}"/></target>
+  </trans-unit>
+<trans-unit id="s5062cd8f7a7fd349">
+  <source>signal</source>
+    <target>señal</target>
+  </trans-unit>
+<trans-unit id="s87a77041823eefca">
+  <source>min_hits: <x id="0" equiv-text="${a.min_hits}"/></source>
+    <target>min_hits: <x id="0" equiv-text="${a.min_hits}"/></target>
+  </trans-unit>
+<trans-unit id="s8af61807443f32a4">
+  <source>Actions</source>
+    <target>Acciones</target>
+  </trans-unit>
+<trans-unit id="sf538066dd56bd6e6">
+  <source><x id="0" equiv-text="${actions.length}"/> binding<x id="1" equiv-text="${actions.length === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+    <target><x id="0" equiv-text="${actions.length}"/> enlace<x id="1" equiv-text="${actions.length === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
+  </trans-unit>
+<trans-unit id="sdaf3cc7acb678d84">
+  <source>Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).</source>
+    <target>Las acciones vinculan una señal capturada a un efecto secundario: disparar un pulso en un dispositivo, llamar a un servicio, activar una escena, ejecutar un script o disparar un evento. Las vinculaciones se gestionan mediante la API (estable; un editor visual llegará en v0.4).</target>
+  </trans-unit>
+<trans-unit id="sb8e241afc5e40694">
+  <source>No action bindings yet</source>
+    <target>Aún no hay acciones</target>
+  </trans-unit>
+<trans-unit id="s91f8eb17bf27c84b">
+  <source>Create bindings from the API or wait for the v0.4 editor.</source>
+    <target>Crea vinculaciones desde la API o espera al editor de v0.4.</target>
+  </trans-unit>
+<trans-unit id="sd5e9b70ffb7a8b46">
+  <source>Skip to content</source>
+    <target>Saltar al contenido</target>
+  </trans-unit>
+<trans-unit id="s82a4e28ab5b56670">
+  <source>Connected</source>
+    <target>Conectado</target>
+  </trans-unit>
+<trans-unit id="s5a112be88c24dada">
+  <source><x id="0" equiv-text="${d.command_count}"/> command<x id="1" equiv-text="${d.command_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+    <target><x id="0" equiv-text="${d.command_count}"/> comando<x id="1" equiv-text="${d.command_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
+  </trans-unit>
+<trans-unit id="sb5d97f1c860c58ec">
+  <source>Learn command</source>
+    <target>Aprender comando</target>
+  </trans-unit>
+<trans-unit id="s06b9bf22e6eb6d38">
+  <source>Field "<x id="0" equiv-text="${labelStr}"/>" is required</source>
+    <target>El campo "<x id="0" equiv-text="${labelStr}"/>" es obligatorio</target>
+  </trans-unit>
+<trans-unit id="s10d2dbc4613397f0">
+  <source>Updated</source>
+    <target>Actualizado</target>
+  </trans-unit>
+<trans-unit id="sb41b2cfbbc52565b">
+  <source>Created</source>
+    <target>Creado</target>
+  </trans-unit>
+<trans-unit id="s424dd51313286bed">
+  <source>(no receivers)</source>
+    <target>(sin receptores)</target>
+  </trans-unit>
+<trans-unit id="s97c9b4e57b70fc8c">
+  <source>Add an RF receiver first</source>
+    <target>Añade primero un receptor RF</target>
+  </trans-unit>
+<trans-unit id="s69d88ef4b2618980">
+  <source>Cover</source>
+    <target>Cubierta</target>
+  </trans-unit>
+<trans-unit id="s8e114dd98aeedf91">
+  <source>Switch</source>
+    <target>Interruptor</target>
+  </trans-unit>
+<trans-unit id="sea47f4110bb2b0b3">
+  <source>Remote</source>
+    <target>Mando</target>
+  </trans-unit>
+<trans-unit id="hc74c45668e7ba599">
+  <source>HA will expose a <x id="0" equiv-text="&lt;strong&gt;${label}&lt;/strong&gt;"/> entity</source>
+    <target>HA expondrá una <x id="0" equiv-text="&lt;strong&gt;${label}&lt;/strong&gt;"/> entidad</target>
+  </trans-unit>
+<trans-unit id="s87c879d8ca016bf8">
+  <source> named </source>
+    <target>llamada</target>
+  </trans-unit>
+<trans-unit id="seb4678c45dbbdec5">
+  <source> with </source>
+    <target>con</target>
+  </trans-unit>
+<trans-unit id="s2f34a7485bf6391a">
+  <source>speed step(s)</source>
+    <target>nivel(es) de velocidad</target>
+  </trans-unit>
+<trans-unit id="s3c0a015edb522c38">
+  <source> and </source>
+    <target>y</target>
+  </trans-unit>
+<trans-unit id="s08e884966fa25250">
+  <source>source(s)</source>
+    <target>fuente(s)</target>
+  </trans-unit>
+<trans-unit id="sf797076f9a1cdffa">
+  <source> driven by </source>
+    <target>controlada por</target>
+  </trans-unit>
+<trans-unit id="s64de9eceb8172269">
+  <source>Edit device</source>
+    <target>Editar dispositivo</target>
+  </trans-unit>
+<trans-unit id="s2ceb11be2290bb1b">
+  <source>Cancel</source>
+    <target>Cancelar</target>
+  </trans-unit>
+<trans-unit id="s33f85f24c0f5f008">
+  <source>Save</source>
+    <target>Guardar</target>
+  </trans-unit>
+<trans-unit id="s382a2aa3984474dd">
+  <source>Create</source>
+    <target>Crear</target>
+  </trans-unit>
+<trans-unit id="s68fee534c2b180f6">
+  <source>Load devices: <x id="0" equiv-text="${(err as Error).message}"/></source>
+    <target>Error al cargar dispositivos: <x id="0" equiv-text="${(err as Error).message}"/></target>
+  </trans-unit>
+<trans-unit id="scfe39d24bc958960">
+  <source>Devices</source>
+    <target>Dispositivos</target>
+  </trans-unit>
+<trans-unit id="s7b7163270e57e8b4">
+  <source>Refresh</source>
+    <target>Recargar</target>
+  </trans-unit>
+<trans-unit id="saf4fbd5a1625e7f0">
+  <source> Add device </source>
+    <target>Añadir dispositivo</target>
+  </trans-unit>
+<trans-unit id="hd8adfdda18c24d3f">
+  <source>IR / RF devices RUNE controls in Home Assistant. Click
+            <x id="0" equiv-text="&lt;strong&gt;"/>+ Add device<x id="1" equiv-text="&lt;/strong&gt;"/> to create one, or use the config flow.</source>
+    <target>Dispositivos IR / RF que RUNE controla en Home Assistant. Pulsa <x id="0" equiv-text="&lt;strong&gt;"/>+ Añadir dispositivo<x id="1" equiv-text="&lt;/strong&gt;"/> para crear uno, o usa el flujo de configuración.</target>
+  </trans-unit>
+<trans-unit id="s69f4d544bf92eb97">
+  <source>No devices yet</source>
+    <target>Aún no hay dispositivos</target>
+  </trans-unit>
+<trans-unit id="sb4d106dc4034997c">
+  <source>Create your first IR / RF device — pick a category, name it, and choose the emitter entity.</source>
+    <target>Crea tu primer dispositivo IR / RF — elige una categoría, asígnale un nombre y selecciona la entidad emisora.</target>
+  </trans-unit>
+<trans-unit id="s665f2a2247cf9c36">
+  <source>Add device</source>
+    <target>Añadir dispositivo</target>
+  </trans-unit>
+<trans-unit id="sef49aec68fd1dc66">
+  <source>Name</source>
+    <target>Nombre</target>
+  </trans-unit>
+<trans-unit id="s5d6470bf9c092be4">
+  <source>How the device appears in Home Assistant</source>
+    <target>Cómo aparece el dispositivo en Home Assistant</target>
+  </trans-unit>
+<trans-unit id="sd7aa2f57ae0517e2">
+  <source>Bedroom fan</source>
+    <target>Ventilador del dormitorio</target>
+  </trans-unit>
+<trans-unit id="s079a052719914d71">
+  <source>Category</source>
+    <target>Categoría</target>
+  </trans-unit>
+<trans-unit id="s489d4c9535923e35">
+  <source>Determines which entities HA exposes</source>
+    <target>Determina qué entidades expone HA</target>
+  </trans-unit>
+<trans-unit id="sf2c294199c98fed2">
+  <source>Fan</source>
+    <target>Ventilador</target>
+  </trans-unit>
+<trans-unit id="s8ee873a2c3081974">
+  <source>Climate</source>
+    <target>Clima</target>
+  </trans-unit>
+<trans-unit id="s1fd450a6b64d643b">
+  <source>Cover / Blinds</source>
+    <target>Cubierta / Persianas</target>
+  </trans-unit>
+<trans-unit id="s73b2eed2782eeec4">
+  <source>Media player</source>
+    <target>Reproductor multimedia</target>
+  </trans-unit>
+<trans-unit id="s6f17f43b5bf68a35">
+  <source>Switch / Outlet</source>
+    <target>Interruptor / Enchufe</target>
+  </trans-unit>
+<trans-unit id="sd36c2c0b43bce5dc">
+  <source>Generic remote</source>
+    <target>Mando genérico</target>
+  </trans-unit>
+<trans-unit id="s1c0dbd44908000bc">
+  <source>Transmitter</source>
+    <target>Emisor</target>
+  </trans-unit>
+<trans-unit id="s26784aabe4790712">
+  <source>IR / RF emitter entity that sends commands</source>
+    <target>Entidad emisora IR / RF que envía los comandos</target>
+  </trans-unit>
+<trans-unit id="s480319bdb5b281d9">
+  <source>Pick an emitter…</source>
+    <target>Elige un emisor…</target>
+  </trans-unit>
+<trans-unit id="s752f979ba5e52e70">
+  <source>Receiver</source>
+    <target>Receptor</target>
+  </trans-unit>
+<trans-unit id="s494e1353612d405f">
+  <source>Optional — needed for cover / learn workflows</source>
+    <target>Opcional — necesario para flujos de cubierta / aprendizaje</target>
+  </trans-unit>
+<trans-unit id="s8c36545f724b9460">
+  <source>(none)</source>
+    <target>(ninguno)</target>
+  </trans-unit>
+<trans-unit id="scb320e45978d3390">
+  <source>Manufacturer</source>
+    <target>Fabricante</target>
+  </trans-unit>
+<trans-unit id="s6ebae7cf5cfc2978">
+  <source>Broadlink, ESPHome, …</source>
+    <target>Broadlink, ESPHome, …</target>
+  </trans-unit>
+<trans-unit id="s5da52af9b083c29a">
+  <source>Model</source>
+    <target>Modelo</target>
+  </trans-unit>
+<trans-unit id="s96fe278555c86904">
+  <source>RM4 Pro, FRM97, …</source>
+    <target>RM4 Pro, FRM97, …</target>
+  </trans-unit>
+<trans-unit id="sf3ba82f4ac082dc3">
+  <source>Speed steps</source>
+    <target>Niveles de velocidad</target>
+  </trans-unit>
+<trans-unit id="sdcbcf60376a56045">
+  <source>How many discrete speed levels this fan exposes</source>
+    <target>Cuántos niveles de velocidad discretos expone este ventilador</target>
+  </trans-unit>
+<trans-unit id="s72fe11e8c403c953">
+  <source>Speed mode</source>
+    <target>Modo de velocidad</target>
+  </trans-unit>
+<trans-unit id="s8a3770ba1998d4fb">
+  <source>Hybrid sends both step + percent commands</source>
+    <target>El modo híbrido envía comandos de nivel + porcentaje</target>
+  </trans-unit>
+<trans-unit id="s59638e124a2a7595">
+  <source>Hybrid (recommended)</source>
+    <target>Híbrido (recomendado)</target>
+  </trans-unit>
+<trans-unit id="sa6506f431fb2b564">
+  <source>Steps + percent</source>
+    <target>Niveles + porcentaje</target>
+  </trans-unit>
+<trans-unit id="sccd1e5d87aefc018">
+  <source>Discrete only</source>
+    <target>Solo niveles</target>
+  </trans-unit>
+<trans-unit id="sd72e877f664fce57">
+  <source>Just the steps</source>
+    <target>Únicamente los niveles</target>
+  </trans-unit>
+<trans-unit id="s717307aaceee9058">
+  <source>Percent only</source>
+    <target>Solo porcentaje</target>
+  </trans-unit>
+<trans-unit id="sce0a92e256e4dffd">
+  <source>Smooth percentage</source>
+    <target>Porcentaje suave</target>
+  </trans-unit>
+<trans-unit id="s40f8447beb72d313">
+  <source>Full HVAC matrix</source>
+    <target>Matriz HVAC completa</target>
+  </trans-unit>
+<trans-unit id="s7dee57c3bd388350">
+  <source>Generate every (mode × fan) × (on/off) combo</source>
+    <target>Genera cada combinación (modo × ventilador) × (on/off)</target>
+  </trans-unit>
+<trans-unit id="s8d5e3bfaf548b031">
+  <source>Temperature sensor</source>
+    <target>Sensor de temperatura</target>
+  </trans-unit>
+<trans-unit id="s55154e17d3d093c3">
+  <source>Optional — drives current temp on the climate entity</source>
+    <target>Opcional — controla la temperatura actual en la entidad de clima</target>
+  </trans-unit>
+<trans-unit id="s52c54752e913762e">
+  <source>Humidity sensor</source>
+    <target>Sensor de humedad</target>
+  </trans-unit>
+<trans-unit id="s91e3a47599412f51">
+  <source>Sources</source>
+    <target>Fuentes</target>
+  </trans-unit>
+<trans-unit id="s27607e7c871127e1">
+  <source>Press Enter to add each source name</source>
+    <target>Pulsa Enter para añadir cada nombre de fuente</target>
+  </trans-unit>
+<trans-unit id="s5ede650152933796">
+  <source>HDMI1, Bluetooth, …</source>
+    <target>HDMI1, Bluetooth, …</target>
+  </trans-unit>
+<trans-unit id="s51b1067adcc7af14">
+  <source>Power sensor</source>
+    <target>Sensor de potencia</target>
+  </trans-unit>
+<trans-unit id="s057ec3af47dfdbd3">
+  <source>W sensor — used to detect real on/off state</source>
+    <target>Sensor W — usado para detectar el estado real de encendido/apagado</target>
+  </trans-unit>
+<trans-unit id="sc238f747efd09139">
+  <source>Off threshold (W)</source>
+    <target>Umbral de apagado (W)</target>
+  </trans-unit>
+<trans-unit id="sad8fb09219793281">
+  <source>Device is off when reading drops below this</source>
+    <target>El dispositivo está apagado cuando la lectura cae por debajo de este valor</target>
+  </trans-unit>
+<trans-unit id="s696c5844cd70580f">
+  <source>On threshold (W)</source>
+    <target>Umbral de encendido (W)</target>
+  </trans-unit>
+<trans-unit id="s14a7f851d25cf20b">
+  <source>Device is on when reading rises above this</source>
+    <target>El dispositivo está encendido cuando la lectura supera este valor</target>
+  </trans-unit>
+<trans-unit id="s064a4f8afa514ca2">
+  <source>Learned "<x id="0" equiv-text="${commandKey}"/>"</source>
+    <target>Aprendido "<x id="0" equiv-text="${commandKey}"/>"</target>
+  </trans-unit>
+<trans-unit id="s1ee96debc21e1e35">
+  <source>Idle — click Start learn</source>
+    <target>Inactivo — pulsa Iniciar aprendizaje</target>
+  </trans-unit>
+<trans-unit id="s5b55db76417c9d56">
+  <source>Capturing… press the button on your remote NOW</source>
+    <target>Capturando… pulsa el botón del mando AHORA</target>
+  </trans-unit>
+<trans-unit id="sb0a3ab9fec778bb7">
+  <source>Captured: <x id="0" equiv-text="${status.protocol}"/> @ <x id="1" equiv-text="${status.carrierHz}"/> Hz</source>
+    <target>Capturado: <x id="0" equiv-text="${status.protocol}"/> @ <x id="1" equiv-text="${status.carrierHz}"/> Hz</target>
+  </trans-unit>
+<trans-unit id="s5b224298bf2add8c">
+  <source>No signal captured</source>
+    <target>No se capturó ninguna señal</target>
+  </trans-unit>
+<trans-unit id="s9a44f95f7acf28e0">
+  <source>Failed: <x id="0" equiv-text="${status.message}"/></source>
+    <target>Error: <x id="0" equiv-text="${status.message}"/></target>
+  </trans-unit>
+<trans-unit id="hef26ee9d6c0a1943">
+  <source>Point your remote at the receiver and press the button you want to capture. RUNE records the raw timings and writes them into the command slot.</source>
+    <target>Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra los tiempos en crudo y los escribe en la ranura del comando.</target>
+  </trans-unit>
+<trans-unit id="s8bea2885ff2d1272">
+  <source>Command</source>
+    <target>Comando</target>
+  </trans-unit>
+<trans-unit id="sad3e3c8146fc920f">
+  <source>Status</source>
+    <target>Estado</target>
+  </trans-unit>
+<trans-unit id="s7a739056ef970404">
+  <source>Captured timings</source>
+    <target>Tiempos capturados</target>
+  </trans-unit>
+<trans-unit id="scea6918d3880f133">
+  <source>Re-learn</source>
+    <target>Re-aprender</target>
+  </trans-unit>
+<trans-unit id="s380f188d5f77d6cd">
+  <source>Start learn</source>
+    <target>Iniciar aprendizaje</target>
+  </trans-unit>
+<trans-unit id="sb76488ba10c89f3a">
+  <source>Save &amp; close</source>
+    <target>Guardar y cerrar</target>
+  </trans-unit>
+<trans-unit id="s78602c85e48547f6">
+  <source>Load settings: <x id="0" equiv-text="${(err as Error).message}"/></source>
+    <target>Error al cargar ajustes: <x id="0" equiv-text="${(err as Error).message}"/></target>
+  </trans-unit>
+<trans-unit id="s9d8b8aa2b404c2c8">
+  <source>Settings</source>
+    <target>Ajustes</target>
+  </trans-unit>
+<trans-unit id="s4cb9ebef9edf03fd">
+  <source>Integration health and discovered entities.</source>
+    <target>Salud de la integración y entidades descubiertas.</target>
+  </trans-unit>
+<trans-unit id="s03970aa76a09982d">
+  <source>Integration</source>
+    <target>Integración</target>
+  </trans-unit>
+<trans-unit id="s00f1132c0edd135d">
+  <source>RUNE</source>
+    <target>RUNE</target>
+  </trans-unit>
+<trans-unit id="s289128a4d2f964c1">
+  <source>Sniffer signals</source>
+    <target>Señales del sniffer</target>
+  </trans-unit>
+<trans-unit id="s713bff2861720fab">
+  <source>Action bindings</source>
+    <target>Acciones</target>
+  </trans-unit>
+<trans-unit id="s06725aa6ca689120">
+  <source>Available transmitters</source>
+    <target>Emisores disponibles</target>
+  </trans-unit>
+<trans-unit id="s9ea5b084355da7ad">
+  <source>No IR/RF emitters found</source>
+    <target>No se encontraron emisores IR/RF</target>
+  </trans-unit>
+<trans-unit id="s6ad3d5f6461ff385">
+  <source>Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first.</source>
+    <target>Añade primero una entidad emisora Broadlink / ESPHome / MQTT en Home Assistant.</target>
+  </trans-unit>
+<trans-unit id="s0bc012c2b3eb8cb2">
+  <source>Available receivers</source>
+    <target>Receptores disponibles</target>
+  </trans-unit>
+<trans-unit id="s1d3e7ffaf97696e0">
+  <source>No IR/RF receivers found</source>
+    <target>No se encontraron receptores IR/RF</target>
+  </trans-unit>
+<trans-unit id="sc65da9f5018d9fc8">
+  <source>Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows.</source>
+    <target>Añade un receptor Broadlink / ESPHome RF para habilitar los flujos de sniffer y aprendizaje.</target>
+  </trans-unit>
+<trans-unit id="sf1c6be1ae4098f62">
+  <source>Load sniffer: <x id="0" equiv-text="${(err as Error).message}"/></source>
+    <target>Error al cargar sniffer: <x id="0" equiv-text="${(err as Error).message}"/></target>
+  </trans-unit>
+<trans-unit id="s893185e1b567e215">
+  <source><x id="0" equiv-text="${s.hit_count}"/> hits</source>
+    <target><x id="0" equiv-text="${s.hit_count}"/> capturas</target>
+  </trans-unit>
+<trans-unit id="sd6f81935eece3b94">
+  <source>Sniffer</source>
+    <target>Sniffer</target>
+  </trans-unit>
+<trans-unit id="s2ffa65c6918a1790">
+  <source><x id="0" equiv-text="${visible.length}"/> remote<x id="1" equiv-text="${visible.length === 1 ? &quot;&quot; : &quot;s&quot;}"/> · <x id="2" equiv-text="${totalSignals}"/> signal<x id="3" equiv-text="${totalSignals === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+    <target><x id="0" equiv-text="${visible.length}"/> mando<x id="1" equiv-text="${visible.length === 1 ? &quot;&quot; : &quot;s&quot;}"/> · <x id="2" equiv-text="${totalSignals}"/> señal<x id="3" equiv-text="${totalSignals === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
+  </trans-unit>
+<trans-unit id="hf1f6e8798e7e33a8">
+  <source>Live signals captured from every receiver you've configured. The sniffer listens on each receiver entity automatically once you add a device. Assign a signal to a device command via the <x id="0" equiv-text="&lt;strong&gt;"/>Actions<x id="1" equiv-text="&lt;/strong&gt;"/> tab, or dismiss the whole remote here.</source>
+    <target>Señales en vivo capturadas de cada receptor que hayas configurado. El sniffer escucha en cada entidad receptora automáticamente al añadir un dispositivo. Asigna una señal a un comando de dispositivo desde la pestaña <x id="0" equiv-text="&lt;strong&gt;"/>Acciones<x id="1" equiv-text="&lt;/strong&gt;"/>, o descarta todo el mando aquí.</target>
+  </trans-unit>
+<trans-unit id="sb3a8dc87930f19ab">
+  <source>No captured signals yet</source>
+    <target>Aún no hay señales capturadas</target>
+  </trans-unit>
+<trans-unit id="se89ef05b905c26ef">
+  <source>Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time.</source>
+    <target>Añade un receptor (IR o RF) y RUNE empezará a escuchar. Las señales capturadas aparecen aquí en tiempo real.</target>
+  </trans-unit>
+<trans-unit id="s498865c7bd1f3959">
+  <source>unknown</source>
+    <target>desconocido</target>
+  </trans-unit>
+<trans-unit id="s55eaa18a9834d457">
+  <source><x id="0" equiv-text="${r.signal_count}"/> signal<x id="1" equiv-text="${r.signal_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+    <target><x id="0" equiv-text="${r.signal_count}"/> señal<x id="1" equiv-text="${r.signal_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
+  </trans-unit>
+<trans-unit id="s640907ad61220bd2">
+  <source>Re-activate</source>
+    <target>Reactivar</target>
+  </trans-unit>
+<trans-unit id="s12d6dde9b30c3093">
+  <source>Dismiss</source>
+    <target>Descartar</target>
+  </trans-unit>
+<trans-unit id="sdb73788b3c975f16">
+  <source>Auto</source>
+    <target>Auto</target>
+  </trans-unit>
+<trans-unit id="s3b0ab4b52326316f">
+  <source>Light</source>
+    <target>Claro</target>
+  </trans-unit>
+<trans-unit id="sac895c732f350ac5">
+  <source>Dark</source>
+    <target>Oscuro</target>
+  </trans-unit>
+</body>
+</file>
+</xliff>

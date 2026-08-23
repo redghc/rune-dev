@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -16,6 +17,7 @@ import type { AsyncLoader } from "@/components/ui/select.js";
 import type { DeviceSummary, TxEntity } from "@/types.js";
 
 @customElement("rune-device-dialog")
+@localized()
 export class RuneDeviceDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -180,7 +182,8 @@ export class RuneDeviceDialog extends LitElement {
     for (const f of required) {
       const v = this._form[f.key];
       if (v === undefined || v === null || v === "") {
-        this._err = `Field "${f.label}" is required`;
+        const labelStr = typeof f.label === "function" ? String(f.label()) : f.label;
+        this._err = msg(str`Field "${labelStr}" is required`);
         return;
       }
     }
@@ -202,10 +205,10 @@ export class RuneDeviceDialog extends LitElement {
     try {
       if (editing) {
         await api.updateDevice({ device_id: editing.id, ...payload });
-        store.pushToast("Updated", "ok");
+        store.pushToast(msg(str`Updated`), "ok");
       } else {
         await api.createDevice(payload);
-        store.pushToast("Created", "ok");
+        store.pushToast(msg(str`Created`), "ok");
       }
       this._lastEditingId = null;
       store.closeDeviceDialog();
@@ -235,7 +238,13 @@ export class RuneDeviceDialog extends LitElement {
       const r = await api.receivers();
       const rxs = (r.receivers ?? []) as TxEntity[];
       if (rxs.length === 0) {
-        return [{ value: "", label: "(no receivers)", description: "Add an RF receiver first" }];
+        return [
+          {
+            value: "",
+            label: msg(str`(no receivers)`),
+            description: msg(str`Add an RF receiver first`),
+          },
+        ];
       }
       return rxs.map((t) => ({
         value: t.entity_id,
@@ -268,15 +277,17 @@ export class RuneDeviceDialog extends LitElement {
 
   private _renderField(f: FieldDef): TemplateResult | typeof nothing {
     const value = this._form[f.key] ?? "";
-    const common = f.required ? " * " : " ";
+    const labelNode = f.required ? html`${f.label()} <span aria-hidden="true">*</span>` : f.label();
+    const helperNode = f.helper ? f.helper() : "";
+    const placeholderNode = f.placeholder ? f.placeholder() : "";
     switch (f.kind) {
       case "text":
         return html`
           <rune-input
-            label=${f.label + common}
+            .label=${labelNode}
             icon=${f.icon ?? ""}
-            placeholder=${f.placeholder ?? ""}
-            helper=${f.helper ?? ""}
+            .placeholder=${placeholderNode}
+            .helper=${helperNode}
             .value=${String(value)}
             maxlength=${f.maxLength ?? null}
             ?required=${f.required ?? false}
@@ -287,9 +298,9 @@ export class RuneDeviceDialog extends LitElement {
       case "number":
         return html`
           <rune-input
-            label=${f.label + common}
+            .label=${labelNode}
             icon=${f.icon ?? ""}
-            helper=${f.helper ?? ""}
+            .helper=${helperNode}
             type="number"
             .value=${String(value)}
             min=${f.min ?? null}
@@ -302,9 +313,9 @@ export class RuneDeviceDialog extends LitElement {
       case "select":
         return html`
           <rune-select
-            label=${f.label + common}
+            .label=${labelNode}
             icon=${f.icon ?? ""}
-            helper=${f.helper ?? ""}
+            .helper=${helperNode}
             .options=${f.options ?? []}
             .value=${String(value)}
             ?required=${f.required ?? false}
@@ -315,10 +326,10 @@ export class RuneDeviceDialog extends LitElement {
       case "async-select":
         return html`
           <rune-select
-            label=${f.label + common}
+            .label=${labelNode}
             icon=${f.icon ?? ""}
-            helper=${f.helper ?? ""}
-            placeholder=${f.placeholder ?? ""}
+            .helper=${helperNode}
+            .placeholder=${placeholderNode}
             ?searchable=${f.searchable ?? false}
             ?clearable=${f.clearable ?? false}
             .loadOptions=${this._resolveOptions(f)}
@@ -332,9 +343,9 @@ export class RuneDeviceDialog extends LitElement {
       case "switch":
         return html`
           <rune-input
-            label=${f.label + common}
+            .label=${labelNode}
             icon=${f.icon ?? ""}
-            helper=${f.helper ?? ""}
+            .helper=${helperNode}
             type="text"
             .value=${String(value ?? "")}
             @rune-input=${(ev: CustomEvent<{ value: string }>) =>
@@ -371,7 +382,7 @@ export class RuneDeviceDialog extends LitElement {
         <label
           style="display:block;font-size:10px;font-weight:var(--rune-fw-semibold);color:var(--rune-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px"
         >
-          ${f.label}${f.required ? " *" : ""}
+          ${f.label()}${f.required ? " *" : ""}
         </label>
         <div class="chips">
           ${values.map(
@@ -391,7 +402,7 @@ export class RuneDeviceDialog extends LitElement {
           )}
           <input
             class="chip-input"
-            placeholder=${values.length === 0 ? (f.chipPlaceholder ?? "") : ""}
+            placeholder=${values.length === 0 ? (f.chipPlaceholder ? String(f.chipPlaceholder()) : "") : ""}
             @keydown=${onKey}
           />
         </div>
@@ -400,7 +411,7 @@ export class RuneDeviceDialog extends LitElement {
             ? html`<div
                 style="font-size:var(--rune-fs-xs);color:var(--rune-text-muted);margin-top:var(--rune-space-1)"
               >
-                ${f.helper}
+                ${f.helper()}
               </div>`
             : nothing
         }
@@ -412,41 +423,38 @@ export class RuneDeviceDialog extends LitElement {
     const cat = this._form.category || "fan";
     const label =
       cat === "fan"
-        ? "Fan"
+        ? msg(str`Fan`)
         : cat === "climate"
-          ? "Climate"
+          ? msg(str`Climate`)
           : cat === "light"
-            ? "Light"
+            ? msg(str`Light`)
             : cat === "cover"
-              ? "Cover"
+              ? msg(str`Cover`)
               : cat === "media_player"
-                ? "Media player"
+                ? msg(str`Media player`)
                 : cat === "switch"
-                  ? "Switch"
-                  : "Remote";
+                  ? msg(str`Switch`)
+                  : msg(str`Remote`);
     return html`
       <div class="preview">
-        HA will expose a <strong>${label}</strong> entity${
-          this._form.name ? html` named <strong>${this._form.name}</strong>` : ""
+        ${msg(html`HA will expose a <strong>${label}</strong> entity`)}${
+          this._form.name ? html` ${msg(str` named `)}<strong>${this._form.name}</strong>` : ""
         }
         ${
           cat === "fan" && this._form.discrete_speed_count
-            ? html` with
-                <strong>${this._form.discrete_speed_count}</strong>
-                speed step(s)`
+            ? html` ${msg(str` with `)}<strong>${this._form.discrete_speed_count}</strong>
+                ${msg(str`speed step(s)`)}`
             : nothing
         }
         ${
           cat === "media_player" && (this._chips.source_list ?? []).length > 0
-            ? html` and
-                <strong>${this._chips.source_list.length}</strong>
-                source(s)`
+            ? html` ${msg(str` and `)}<strong>${this._chips.source_list.length}</strong>
+                ${msg(str`source(s)`)}`
             : nothing
         }
         ${
           cat === "remote" && this._form.power_sensor
-            ? html` driven by
-                <strong>${this._form.power_sensor}</strong>`
+            ? html` ${msg(str` driven by `)}<strong>${this._form.power_sensor}</strong>`
             : nothing
         }
         .
@@ -463,7 +471,7 @@ export class RuneDeviceDialog extends LitElement {
       <rune-dialog
         ?open=${open}
         size="large"
-        label=${editing ? "Edit device" : "Add device"}
+        .label=${editing ? msg(str`Edit device`) : msg(str`Add device`)}
         @sl-show=${this._onShow}
         @sl-after-hide=${this._onAfterHide}
       >
@@ -474,7 +482,7 @@ export class RuneDeviceDialog extends LitElement {
         </div>
         <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
           <rune-button variant="secondary" icon="x" ?disabled=${this._busy} @click=${this._onClose}>
-            Cancel
+            ${msg(str`Cancel`)}
           </rune-button>
           <rune-button
             variant="primary"
@@ -482,7 +490,7 @@ export class RuneDeviceDialog extends LitElement {
             ?loading=${this._busy}
             @click=${this._save}
           >
-            ${editing ? "Save" : "Create"}
+            ${editing ? msg(str`Save`) : msg(str`Create`)}
           </rune-button>
         </div>
       </rune-dialog>

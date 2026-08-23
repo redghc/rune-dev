@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -7,7 +8,10 @@ import { api } from "@/api/bridge.js";
 import { store, subscribe } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
+import type { LearnStatus } from "@/state/store.js";
+
 @customElement("rune-learn-dialog")
+@localized()
 export class RuneLearnDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -155,7 +159,7 @@ export class RuneLearnDialog extends LitElement {
   private async _start(): Promise<void> {
     const { deviceId, commandKey } = store.learnDialog;
     if (!deviceId || !commandKey) return;
-    store.updateLearn({ status: "Capturing… press the button on your remote NOW" });
+    store.updateLearn({ status: { kind: "capturing" } });
     this._busy = true;
     try {
       const result = await api.learnCommand({
@@ -165,16 +169,22 @@ export class RuneLearnDialog extends LitElement {
       });
       if (result?.captured) {
         store.updateLearn({
-          status: `Captured: ${result.captured.protocol_label ?? "raw"} @ ${result.carrier_frequency_hz} Hz`,
+          status: {
+            kind: "captured",
+            protocol: result.captured.protocol_label ?? "raw",
+            carrierHz: result.carrier_frequency_hz,
+          },
           captured: result.captured,
           rawTimings: result.raw_timings,
           carrierHz: result.carrier_frequency_hz,
         });
       } else {
-        store.updateLearn({ status: "No signal captured" });
+        store.updateLearn({ status: { kind: "no_signal" } });
       }
     } catch (err) {
-      store.updateLearn({ status: `Failed: ${(err as Error).message}` });
+      store.updateLearn({
+        status: { kind: "failed", message: (err as Error).message },
+      });
     } finally {
       this._busy = false;
     }
@@ -197,7 +207,7 @@ export class RuneLearnDialog extends LitElement {
         payload: { ...captured.payload, raw_timings: rawTimings },
       };
       await api.updateDevice({ device_id: deviceId, commands });
-      store.pushToast(`Learned "${commandKey}"`, "ok");
+      store.pushToast(msg(str`Learned "${commandKey}"`), "ok");
       store.closeLearnDialog();
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
@@ -205,6 +215,21 @@ export class RuneLearnDialog extends LitElement {
       store.pushToast((err as Error).message, "err");
     } finally {
       this._saving = false;
+    }
+  }
+
+  private _renderStatus(status: LearnStatus) {
+    switch (status.kind) {
+      case "idle":
+        return msg(str`Idle — click Start learn`);
+      case "capturing":
+        return msg(str`Capturing… press the button on your remote NOW`);
+      case "captured":
+        return msg(str`Captured: ${status.protocol} @ ${status.carrierHz} Hz`);
+      case "no_signal":
+        return msg(str`No signal captured`);
+      case "failed":
+        return msg(str`Failed: ${status.message}`);
     }
   }
 
@@ -221,41 +246,42 @@ export class RuneLearnDialog extends LitElement {
     let dotClass = "";
     if (this._busy) dotClass = "live";
     else if (ld.captured) dotClass = "ok";
-    else if (ld.status.startsWith("Failed")) dotClass = "err";
+    else if (ld.status.kind === "failed") dotClass = "err";
 
     return html`
       <rune-dialog
         ?open=${ld.open}
         size="medium"
-        label="Learn command"
+        .label=${msg(str`Learn command`)}
         @sl-show=${this._onShow}
         @sl-after-hide=${this._onAfterHide}
       >
         <div class="body">
           <div class="help">
             <i class="ti ti-info-circle"></i>
-            Point your remote at the receiver and press the button you want to capture. RUNE records
-            the raw timings and writes them into the command slot.
+            ${msg(html`Point your remote at the receiver and press the button you want to capture. RUNE records the raw timings and writes them into the command slot.`)}
           </div>
 
-          <div class="section-label">Command</div>
+          <div class="section-label">${msg(str`Command`)}</div>
           <div class="target">
             <span class="target-value">${deviceName}</span>
             <i class="ti ti-arrow-right arrow"></i>
             <rune-chip variant="primary">${ld.commandKey}</rune-chip>
           </div>
 
-          <div class="section-label">Status</div>
+          <div class="section-label">${msg(str`Status`)}</div>
           <div class="status">
             <span class="status-dot ${dotClass}"></span>
-            <span>${ld.status}</span>
+            <span>${this._renderStatus(ld.status)}</span>
           </div>
 
-          <div class="section-label">Captured timings</div>
+          <div class="section-label">${msg(str`Captured timings`)}</div>
           <pre class="timings">${timingsText}</pre>
         </div>
         <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
-          <rune-button variant="secondary" icon="x" @click=${this._cancel}> Cancel </rune-button>
+          <rune-button variant="secondary" icon="x" @click=${this._cancel}>
+            ${msg(str`Cancel`)}
+          </rune-button>
           <rune-button
             variant="ghost"
             icon="antenna"
@@ -263,7 +289,7 @@ export class RuneLearnDialog extends LitElement {
             ?disabled=${ld.captured !== null && !this._busy}
             @click=${this._start}
           >
-            ${ld.captured ? "Re-learn" : "Start learn"}
+            ${ld.captured ? msg(str`Re-learn`) : msg(str`Start learn`)}
           </rune-button>
           <rune-button
             variant="primary"
@@ -272,7 +298,7 @@ export class RuneLearnDialog extends LitElement {
             ?disabled=${!canSave}
             @click=${this._save}
           >
-            Save &amp; close
+            ${msg(str`Save & close`)}
           </rune-button>
         </div>
       </rune-dialog>

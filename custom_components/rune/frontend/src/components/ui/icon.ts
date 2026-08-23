@@ -12,12 +12,10 @@
 //   html`<span class="icon">${tablerIcon("remote")}</span>`
 //   html`<rune-icon name="remote"></rune-icon>`
 
-// @ts-expect-error — webfont package has no TS types
 import tablerWoff2 from "@tabler/icons-webfont/dist/fonts/tabler-icons.woff2?url";
 // ``?raw`` returns the file as a string WITHOUT Vite rewriting any
 // ``url(...)`` references — critical because the bundled CSS points
 // at woff + ttf + woff2 and ``?inline`` would inline all three fonts.
-// @ts-expect-error — webfont package has no TS types
 import codepoints from "@tabler/icons-webfont/dist/tabler-icons.css?raw";
 
 let injected = false;

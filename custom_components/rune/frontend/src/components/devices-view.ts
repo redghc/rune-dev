@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -10,6 +11,7 @@ import { sharedStyles } from "@/styles/shared.js";
 import "./device-card.js";
 
 @customElement("rune-devices-view")
+@localized()
 export class RuneDevicesView extends LitElement {
   static styles = [
     sharedStyles,
@@ -64,7 +66,7 @@ export class RuneDevicesView extends LitElement {
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
     } catch (err) {
-      store.pushToast(`Load devices: ${(err as Error).message}`, "err");
+      store.pushToast(msg(str`Load devices: ${(err as Error).message}`), "err");
     } finally {
       this._loading = false;
     }
@@ -79,7 +81,7 @@ export class RuneDevicesView extends LitElement {
     const devices = store.devices;
     return html`
       <div class="toolbar" role="toolbar" aria-label="Devices toolbar">
-        <h2>Devices</h2>
+        <h2>${msg(str`Devices`)}</h2>
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
           <rune-button
@@ -88,14 +90,18 @@ export class RuneDevicesView extends LitElement {
             ?loading=${this._loading}
             @click=${this.refresh}
           >
-            Refresh
+            ${msg(str`Refresh`)}
           </rune-button>
         </rune-tooltip>
-        <rune-button variant="primary" icon="plus" @click=${this._add}> Add device </rune-button>
+        <rune-button variant="primary" icon="plus" @click=${this._add}
+          >${msg(str` Add device `)}</rune-button
+        >
       </div>
       <div class="subtitle">
-        IR / RF devices RUNE controls in Home Assistant. Click
-        <strong>+ Add device</strong> to create one, or use the config flow.
+        ${msg(
+          html`IR / RF devices RUNE controls in Home Assistant. Click
+            <strong>+ Add device</strong> to create one, or use the config flow.`,
+        )}
       </div>
       ${
         this._loading && devices.length === 0
@@ -117,11 +123,11 @@ export class RuneDevicesView extends LitElement {
           ? html`
               <rune-empty-state
                 icon="devices"
-                heading="No devices yet"
-                message="Create your first IR / RF device — pick a category, name it, and choose the emitter entity."
+                heading=${msg(str`No devices yet`)}
+                message=${msg(str`Create your first IR / RF device — pick a category, name it, and choose the emitter entity.`)}
               >
                 <rune-button slot="action" variant="primary" icon="plus" @click=${this._add}>
-                  Add device
+                  ${msg(str`Add device`)}
                 </rune-button>
               </rune-empty-state>
             `

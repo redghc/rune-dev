@@ -62,7 +62,7 @@ export class RuneDialog extends LitElement {
     `,
   ];
 
-  @property({ type: String }) label = "";
+  @property() label: string | unknown = "";
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: String }) size: RuneDialogSize = "medium";
   @property({ type: Boolean }) noHeader = false;
@@ -88,13 +88,18 @@ export class RuneDialog extends LitElement {
   protected render() {
     return html`
       <sl-dialog
-        label=${this.label || ""}
+        label=${typeof this.label === "string" ? this.label : ""}
         ?open=${this.open}
         size=${this.size}
         ?no-header=${this.noHeader}
         ?closable=${this.closable}
         @sl-request-close=${this._onRequestClose}
       >
+        ${
+          this.label && typeof this.label !== "string"
+            ? html`<span slot="label">${this.label}</span>`
+            : null
+        }
         <slot></slot>
         <slot name="footer" slot="footer"></slot>
       </sl-dialog>

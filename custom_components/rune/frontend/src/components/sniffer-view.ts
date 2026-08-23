@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -10,6 +11,7 @@ import { sharedStyles } from "@/styles/shared.js";
 import type { Remote, RemoteSignal } from "@/types.js";
 
 @customElement("rune-sniffer-view")
+@localized()
 export class RuneSnifferView extends LitElement {
   static styles = [
     sharedStyles,
@@ -162,7 +164,7 @@ export class RuneSnifferView extends LitElement {
       const { remotes } = await api.listSniffer();
       store.setRemotes(remotes ?? []);
     } catch (err) {
-      store.pushToast(`Load sniffer: ${(err as Error).message}`, "err");
+      store.pushToast(msg(str`Load sniffer: ${(err as Error).message}`), "err");
     } finally {
       this._loading = false;
     }
@@ -193,7 +195,7 @@ export class RuneSnifferView extends LitElement {
             }
           </div>
         </div>
-        <rune-chip variant="primary" icon="bolt">${s.hit_count} hits</rune-chip>
+        <rune-chip variant="primary" icon="bolt">${msg(str`${s.hit_count} hits`)}</rune-chip>
       </div>
     `;
   }
@@ -204,10 +206,9 @@ export class RuneSnifferView extends LitElement {
     const totalSignals = visible.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <div class="toolbar">
-        <h2>Sniffer</h2>
+        <h2>${msg(str`Sniffer`)}</h2>
         <rune-chip variant="neutral" icon="antenna"
-          >${visible.length} remote${visible.length === 1 ? "" : "s"} · ${totalSignals}
-          signal${totalSignals === 1 ? "" : "s"}</rune-chip
+          >${msg(str`${visible.length} remote${visible.length === 1 ? "" : "s"} · ${totalSignals} signal${totalSignals === 1 ? "" : "s"}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -217,23 +218,21 @@ export class RuneSnifferView extends LitElement {
             ?loading=${this._loading}
             @click=${this.refresh}
           >
-            Refresh
+            ${msg(str`Refresh`)}
           </rune-button>
         </rune-tooltip>
       </div>
       <div class="help">
-        <i class="ti ti-info-circle"></i> Live signals captured from every receiver you've
-        configured. The sniffer listens on each receiver entity automatically once you add a device.
-        Assign a signal to a device command via the <strong>Actions</strong> tab, or dismiss the
-        whole remote here.
+        <i class="ti ti-info-circle"></i>
+        ${msg(html`Live signals captured from every receiver you've configured. The sniffer listens on each receiver entity automatically once you add a device. Assign a signal to a device command via the <strong>Actions</strong> tab, or dismiss the whole remote here.`)}
       </div>
       ${
         visible.length === 0
           ? html`
               <rune-empty-state
                 icon="antenna"
-                heading="No captured signals yet"
-                message="Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time."
+                heading=${msg(str`No captured signals yet`)}
+                message=${msg(str`Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time.`)}
               ></rune-empty-state>
             `
           : html`
@@ -249,9 +248,13 @@ export class RuneSnifferView extends LitElement {
                             ${
                               r.protocol_label
                                 ? html`<rune-chip variant="primary">${r.protocol_label}</rune-chip>`
-                                : html`<rune-chip variant="neutral">unknown</rune-chip>`
+                                : html`<rune-chip variant="neutral"
+                                    >${msg(str`unknown`)}</rune-chip
+                                  >`
                             }
-                            <span>${r.signal_count} signal${r.signal_count === 1 ? "" : "s"}</span>
+                            <span
+                              >${msg(str`${r.signal_count} signal${r.signal_count === 1 ? "" : "s"}`)}</span
+                            >
                           </div>
                         </div>
                         <rune-tooltip
@@ -266,7 +269,7 @@ export class RuneSnifferView extends LitElement {
                             icon=${r.dismissed ? "rotate" : "x"}
                             @click=${() => this._dismiss(r)}
                           >
-                            ${r.dismissed ? "Re-activate" : "Dismiss"}
+                            ${r.dismissed ? msg(str`Re-activate`) : msg(str`Dismiss`)}
                           </rune-button>
                         </rune-tooltip>
                       </div>

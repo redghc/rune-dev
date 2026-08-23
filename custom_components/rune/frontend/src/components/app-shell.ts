@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
@@ -18,17 +19,29 @@ import "./learn-dialog.js";
 
 interface NavItem {
   id: Section;
-  label: string;
   icon: string;
   shortcut: [string, string];
 }
 
 const NAV: NavItem[] = [
-  { id: "devices", label: "Devices", icon: "devices", shortcut: ["g", "d"] },
-  { id: "sniffer", label: "Sniffer", icon: "antenna", shortcut: ["g", "s"] },
-  { id: "actions", label: "Actions", icon: "wand", shortcut: ["g", "a"] },
-  { id: "settings", label: "Settings", icon: "settings", shortcut: ["g", "x"] },
+  { id: "devices", icon: "devices", shortcut: ["g", "d"] },
+  { id: "sniffer", icon: "antenna", shortcut: ["g", "s"] },
+  { id: "actions", icon: "wand", shortcut: ["g", "a"] },
+  { id: "settings", icon: "settings", shortcut: ["g", "x"] },
 ];
+
+function sectionLabel(id: Section) {
+  switch (id) {
+    case "devices":
+      return msg(str`Devices`);
+    case "sniffer":
+      return msg(str`Sniffer`);
+    case "actions":
+      return msg(str`Actions`);
+    case "settings":
+      return msg(str`Settings`);
+  }
+}
 
 const SHORTCUT_MAP: Record<string, Section> = {
   d: "devices",
@@ -38,6 +51,7 @@ const SHORTCUT_MAP: Record<string, Section> = {
 };
 
 @customElement("rune-app")
+@localized()
 export class RuneApp extends LitElement {
   static styles = [
     sharedStyles,
@@ -363,13 +377,13 @@ export class RuneApp extends LitElement {
   render() {
     void this._tick;
     return html`
-      <a class="skip-link" href="#main-content">Skip to content</a>
+      <a class="skip-link" href="#main-content">${msg(str`Skip to content`)}</a>
       <nav aria-label="Primary">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">
             <i class="ti ti-remote"></i>
           </span>
-          <h1>RUNE<span class="pill">v${store.version}</span></h1>
+          <h1>${msg(str`RUNE`)}<span class="pill">v${store.version}</span></h1>
         </div>
         ${NAV.map(
           (n) => html`
@@ -380,7 +394,7 @@ export class RuneApp extends LitElement {
               @click=${() => this._select(n.id)}
             >
               <i class="ti ti-${n.icon}" aria-hidden="true"></i>
-              <span class="label">${n.label}</span>
+              <span class="label">${sectionLabel(n.id)}</span>
               <span class="kbd" aria-hidden="true">
                 <kbd>${n.shortcut[0]}</kbd><kbd>${n.shortcut[1]}</kbd>
               </span>
@@ -391,7 +405,7 @@ export class RuneApp extends LitElement {
           <rune-theme-toggle compact></rune-theme-toggle>
           <div class="status-row" role="status" aria-live="polite">
             <span class="dot"></span>
-            <span>Connected</span>
+            <span>${msg(str`Connected`)}</span>
           </div>
         </div>
       </nav>

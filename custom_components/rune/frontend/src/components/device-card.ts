@@ -1,3 +1,4 @@
+import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -20,6 +21,7 @@ const CATEGORY_ICON: Record<DeviceCategory, string> = {
 };
 
 @customElement("rune-device-card")
+@localized()
 export class RuneDeviceCard extends LitElement {
   static styles = [
     sharedStyles,
@@ -221,8 +223,8 @@ export class RuneDeviceCard extends LitElement {
               <div class="meta">
                 <rune-chip variant="primary" icon=${icon}>${d.category}</rune-chip>
                 <span class="meta-item">
-                  <i class="ti ti-bolt"></i>${d.command_count}
-                  command${d.command_count === 1 ? "" : "s"}
+                  <i class="ti ti-bolt"></i
+                  >${msg(str`${d.command_count} command${d.command_count === 1 ? "" : "s"}`)}
                 </span>
                 <span class="meta-item"> <i class="ti ti-antenna-bars-5"></i>${tx} </span>
                 ${
@@ -269,7 +271,7 @@ export class RuneDeviceCard extends LitElement {
           )}
           <button class="cmd placeholder" @click=${this._learn}>
             <i class="ti ti-plus"></i>
-            <span>Learn command</span>
+            <span>${msg(str`Learn command`)}</span>
           </button>
         </div>
       </div>

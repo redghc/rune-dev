@@ -353,7 +353,11 @@ async def _register_panel(hass: Any, entry: Any) -> None:
             sidebar_title=PANEL_TITLE,
             sidebar_icon=PANEL_ICON,
             frontend_url_path=PANEL_URL,
-            config={"entry_id": entry.entry_id, "version": __version__},
+            config={
+                "entry_id": entry.entry_id,
+                "version": __version__,
+                "locale": getattr(hass.config, "language", None) or "en",
+            },
             require_admin=False,  # MVP: every user can manage devices
             embed_iframe=False,
             trust_external=False,

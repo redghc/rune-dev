@@ -60,8 +60,8 @@ export class RuneEmptyState extends LitElement {
   ];
 
   @property({ type: String }) icon = "inbox";
-  @property({ type: String }) heading = "";
-  @property({ type: String }) message = "";
+  @property() heading: string | unknown = "";
+  @property() message: string | unknown = "";
   @property({ type: Boolean }) compact = false;
 
   protected render() {
