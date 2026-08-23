@@ -13,13 +13,13 @@ import { pluralize } from "@/utils/format.js";
 import type { DeviceCategory, DeviceSummary, PulseCommand } from "@/types.js";
 
 const CATEGORY_ICON: Record<DeviceCategory, string> = {
-  fan: "fan",
+  fan: "wind",
   climate: "temperature",
   light: "bulb",
-  cover: "blinds",
+  cover: "blind",
   media_player: "device-tv",
   switch: "plug",
-  remote: "remote",
+  remote: "device-remote",
 };
 
 const FLASH_MS = 380;

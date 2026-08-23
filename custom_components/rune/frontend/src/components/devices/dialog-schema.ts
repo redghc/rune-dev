@@ -81,24 +81,28 @@ const COMMON_FIELDS: FieldDef[] = [
     kind: "select",
     required: true,
     options: [
-      { value: "fan", label: () => msg(str`Fan`), icon: "fan" },
+      { value: "fan", label: () => msg(str`Fan`), icon: "wind" },
       { value: "climate", label: () => msg(str`Climate`), icon: "temperature" },
       { value: "light", label: () => msg(str`Light`), icon: "bulb" },
-      { value: "cover", label: () => msg(str`Cover / Blinds`), icon: "blinds" },
+      { value: "cover", label: () => msg(str`Cover / Blinds`), icon: "blind" },
       {
         value: "media_player",
         label: () => msg(str`Media player`),
         icon: "device-tv",
       },
       { value: "switch", label: () => msg(str`Switch / Outlet`), icon: "plug" },
-      { value: "remote", label: () => msg(str`Generic remote`), icon: "remote" },
+      {
+        value: "remote",
+        label: () => msg(str`Generic remote`),
+        icon: "device-remote",
+      },
     ],
   },
   {
     key: "ir_transmitter",
     label: () => msg(str`IR Transmitter`),
     helper: () => msg(str`IR emitter entity that sends commands`),
-    icon: "antenna-bars-5",
+    icon: "scan-eye",
     kind: "async-select",
     searchable: true,
     clearable: true,
@@ -108,7 +112,7 @@ const COMMON_FIELDS: FieldDef[] = [
     key: "rf_transmitter",
     label: () => msg(str`RF Transmitter`),
     helper: () => msg(str`RF emitter entity that sends commands`),
-    icon: "antenna-bars-5",
+    icon: "antenna-bars-3",
     kind: "async-select",
     searchable: true,
     clearable: true,
@@ -118,7 +122,7 @@ const COMMON_FIELDS: FieldDef[] = [
     key: "ir_receiver",
     label: () => msg(str`IR Receiver`),
     helper: () => msg(str`Optional — receiver for IR signals & learn`),
-    icon: "antenna",
+    icon: "scan-eye",
     kind: "async-select",
     searchable: true,
     clearable: true,
@@ -128,7 +132,7 @@ const COMMON_FIELDS: FieldDef[] = [
     key: "rf_receiver",
     label: () => msg(str`RF Receiver`),
     helper: () => msg(str`Optional — receiver for RF signals & learn`),
-    icon: "antenna",
+    icon: "antenna-bars-3",
     kind: "async-select",
     searchable: true,
     clearable: true,
@@ -205,9 +209,9 @@ export interface EntityLike {
  *  in the rich row. Falls back to a generic entry for unknown
  *  domains. */
 const DOMAIN_META: Record<string, { label: () => TemplateResult | string; icon: string }> = {
-  remote: { label: () => msg(str`Radio Frequency`), icon: "antenna-bars-5" },
-  infrared: { label: () => msg(str`Infrared`), icon: "antenna" },
-  esphome: { label: () => msg(str`ESPHome`), icon: "wifi" },
+  remote: { label: () => msg(str`Radio Frequency`), icon: "antenna-bars-3" },
+  infrared: { label: () => msg(str`Infrared`), icon: "scan-eye" },
+  esphome: { label: () => msg(str`ESPHome`), icon: "cpu" },
 };
 const FALLBACK_META = { label: () => msg(str`Other`), icon: "broadcast" };
 

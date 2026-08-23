@@ -25,8 +25,8 @@ const OPTIONS: Option[] = [
     aria: msg(str`Follow Home Assistant locale`),
     icon: "language",
   },
-  { value: "en", short: "EN", aria: msg(str`English`), icon: "letter-english" },
-  { value: "es", short: "ES", aria: msg(str`Español`), icon: "letter-spanish" },
+  { value: "en", short: "EN", aria: msg(str`English`), icon: "circle-letter-e" },
+  { value: "es", short: "ES", aria: msg(str`Español`), icon: "circle-letter-s" },
 ];
 
 @customElement("rune-locale-toggle")

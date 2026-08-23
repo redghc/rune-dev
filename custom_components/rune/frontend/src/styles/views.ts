@@ -71,4 +71,8 @@ export const entityCardStyles = css`
     background: var(--rune-text-subtle);
     box-shadow: 0 0 0 3px var(--rune-surface-alt);
   }
+  .dot.unknown {
+    background: var(--rune-warning);
+    box-shadow: 0 0 0 3px var(--rune-warning-soft);
+  }
 `;

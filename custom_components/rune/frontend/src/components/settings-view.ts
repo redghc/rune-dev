@@ -13,7 +13,8 @@ import { entityCardStyles, toolbarStyles } from "@/styles/views.js";
 import type { TxEntity } from "@/types.js";
 import type { TemplateResult } from "lit";
 
-const OFF_STATES = new Set(["off", "unavailable"]);
+const OFF_STATES = new Set(["off", "unavailable", "closed", "idle", "standby"]);
+const UNKNOWN_STATES = new Set(["unknown", "none", "none-pending"]);
 
 @customElement("rune-settings-view")
 @localized()
@@ -143,6 +144,8 @@ export class RuneSettingsView extends LitElement {
 
   private _renderEntity(e: TxEntity): TemplateResult {
     const off = OFF_STATES.has(e.state);
+    const unknown = !off && UNKNOWN_STATES.has(e.state);
+    const dotCls = off ? "off" : unknown ? "unknown" : "";
     return html`
       <div class="entity">
         <div style="display:flex;flex-direction:column;gap:2px">
@@ -156,7 +159,7 @@ export class RuneSettingsView extends LitElement {
           }
         </div>
         <span class="entity-state">
-          <span class="dot ${off ? "off" : ""}"></span>
+          <span class="dot ${dotCls}"></span>
           ${e.state}
         </span>
       </div>
@@ -197,7 +200,7 @@ export class RuneSettingsView extends LitElement {
 
       <div class="stats">
         <div class="stat">
-          <div class="stat-icon"><i class="ti ti-remote"></i></div>
+          <div class="stat-icon"><i class="ti ti-device-remote"></i></div>
           <div class="stat-body">
             <div class="stat-label">${msg(str`Integration`)}</div>
             <div class="stat-value">${msg(str`RUNE`)}</div>

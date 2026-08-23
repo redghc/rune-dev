@@ -389,7 +389,7 @@ export class RuneApp extends LitElement {
       <nav aria-label="Primary">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">
-            <i class="ti ti-remote"></i>
+            <i class="ti ti-device-remote"></i>
           </span>
           <h1>${msg(str`RUNE`)}<span class="pill">v${store.version}</span></h1>
         </div>
