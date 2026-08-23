@@ -26,20 +26,22 @@ test.describe("select inside dialog", () => {
       await expect(frame.locator("rune-input").first()).toBeVisible({ timeout: 5_000 });
 
       const dialog = frame.locator("rune-dialog sl-dialog[open]").first();
-      const select = frame.locator("rune-select sl-select").first();
-      await select.locator('[part="combobox"]').click();
-      await expect(select).toHaveAttribute("open", "");
-      await select.locator("sl-option", { hasText: name }).first().click();
+      const selects = frame.locator("rune-select");
+      const first = selects.nth(0);
+      const firstSl = first.locator("sl-select");
+      await first.locator(".display").click();
+      await expect(firstSl).toHaveAttribute("open", "");
+      await firstSl.locator("sl-option", { hasText: name }).first().click();
       await expect(dialog).toHaveAttribute("open", "", { timeout: 3_000 });
 
       // Second select (async transmitter) if visible.
-      const selects = frame.locator("rune-select sl-select");
       const count = await selects.count();
       if (count > 1) {
         const second = selects.nth(1);
-        await second.locator('[part="combobox"]').click();
-        await expect(second).toHaveAttribute("open", "", { timeout: 5_000 });
-        await second.locator("sl-option").first().click();
+        const secondSl = second.locator("sl-select");
+        await second.locator(".display").click();
+        await expect(secondSl).toHaveAttribute("open", "", { timeout: 5_000 });
+        await secondSl.locator("sl-option").first().click();
         await expect(dialog).toHaveAttribute("open", "", { timeout: 3_000 });
       }
     });
@@ -56,14 +58,15 @@ test.describe("select inside dialog", () => {
     await expect(frame.locator("rune-input").first()).toBeVisible({ timeout: 5_000 });
 
     const dialog = frame.locator("rune-dialog sl-dialog[open]").first();
-    const select = frame.locator("rune-select sl-select").first();
-    await select.locator('[part="combobox"]').click();
-    await expect(select).toHaveAttribute("open", "");
+    const select = frame.locator("rune-select").first();
+    const selectSl = select.locator("sl-select");
+    await select.locator(".display").click();
+    await expect(selectSl).toHaveAttribute("open", "");
 
     // Click on dialog overlay backdrop: dismisses select, dialog stays open
     const overlay = dialog.locator('[part="overlay"]');
     await overlay.click({ position: { x: 10, y: 10 } });
-    await expect(select).not.toHaveAttribute("open", "");
+    await expect(selectSl).not.toHaveAttribute("open", "");
     await expect(dialog).toHaveAttribute("open", "", { timeout: 3_000 });
 
     // Subsequent click on overlay with no select open: dialog closes
@@ -82,7 +85,7 @@ test.describe("select inside dialog", () => {
     await expect(frame.locator("rune-input").first()).toBeVisible({ timeout: 5_000 });
 
     // Verify IR & RF transmitter fields are visible
-    const selects = frame.locator("rune-select sl-select");
+    const selects = frame.locator("rune-select");
     const irTx = selects.nth(1);
     const rfTx = selects.nth(2);
     const irRx = selects.nth(3);
@@ -104,8 +107,9 @@ test.describe("select inside dialog", () => {
     ).toBeVisible({ timeout: 3_000 });
 
     // Pick IR transmitter
-    await irTx.locator('[part="combobox"]').click();
-    await irTx.locator("sl-option").first().click();
+    const irTxSl = irTx.locator("sl-select");
+    await irTx.locator(".display").click();
+    await irTxSl.locator("sl-option").first().click();
 
     // Create device should now submit without the transmitter error
     await frame.getByRole("button", { name: /Create/ }).click();

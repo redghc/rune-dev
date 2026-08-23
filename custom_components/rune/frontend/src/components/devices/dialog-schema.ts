@@ -225,8 +225,12 @@ function objectIdOf(entityId: string): string {
  *
  *  Each row carries four slots that mirror the entity picker shown in
  *  the design mockup:
- *    • ``label``     → entity friendly name (top line, bold)
+ *    • ``label``     → entity friendly name (top line, bold; also
+ *                      doubles as the device name in this domain since
+ *                      each entity IS its own device)
  *    • ``description``→ breadcrumb sub-line ``location ▸ type-name``
+ *    • ``id``        → entity_id shown as a third monospace line in
+ *                      the dropdown
  *    • ``meta``      → right-aligned category tag (e.g. "Radio
  *                      Frequency"), derived from the entity domain
  *    • ``icon``      → tabler icon picked from the same domain map
@@ -249,6 +253,7 @@ export function entityOptions(
       value: e.entity_id,
       label: e.name || e.entity_id,
       description: `${location}${separator}${typeName}`,
+      id: e.entity_id,
       icon: meta.icon,
       meta: meta.label,
     };

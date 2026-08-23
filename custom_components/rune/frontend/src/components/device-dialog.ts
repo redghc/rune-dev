@@ -43,15 +43,14 @@ export class RuneDeviceDialog extends LitElement {
       }
       .grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0 var(--rune-space-3);
+        grid-template-columns: 1fr;
+        gap: 0;
         row-gap: 0;
       }
-      .grid > .full {
+      .grid > * {
         grid-column: 1 / -1;
       }
       .preview {
-        grid-column: 1 / -1;
         margin-top: var(--rune-space-3);
         padding: var(--rune-space-3);
         background: var(--rune-primary-soft);
@@ -64,7 +63,6 @@ export class RuneDeviceDialog extends LitElement {
         font-weight: var(--rune-fw-semibold);
       }
       .err {
-        grid-column: 1 / -1;
         color: var(--rune-danger-text);
         background: var(--rune-danger-soft);
         padding: var(--rune-space-2) var(--rune-space-3);

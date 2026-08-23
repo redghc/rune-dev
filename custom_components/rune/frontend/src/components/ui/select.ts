@@ -1,5 +1,6 @@
 import { css, html, LitElement, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 
 import type { PropertyValues } from "lit";
 
@@ -14,17 +15,29 @@ import { tablerClass } from "./icon.js";
 export interface RuneSelectOption {
   value: string;
   label: string | (() => unknown);
+  /** Sub-line rendered under the label in both the dropdown and the
+   *  closed combobox (e.g. ``"Living Room › RM4 pro"``). */
   description?: string | (() => unknown);
-  /** Right-aligned tag rendered at the end of the row (e.g. ``"Radio
-   *  Frequency"``). Use a getter so it stays reactive to locale. */
+  /** Right-aligned tag rendered at the end of the dropdown row only
+   *  (e.g. ``"Radio Frequency"``). Use a getter so it stays reactive
+   *  to locale. */
   meta?: string | (() => unknown);
   icon?: string;
+  /** Third line rendered in the dropdown row only (e.g. entity_id). */
+  id?: string | (() => unknown);
   disabled?: boolean;
 }
 
 export type AsyncLoader = () => Promise<RuneSelectOption[]>;
 
 export type RuneSelectSize = "small" | "medium";
+
+/** Subset of ``<sl-select>``'s imperative surface that we poke. */
+interface SlSelectHandle extends HTMLElement {
+  show: () => Promise<void>;
+  hide: () => Promise<void>;
+  open: boolean;
+}
 
 @customElement("rune-select")
 export class RuneSelect extends LitElement {
@@ -35,28 +48,11 @@ export class RuneSelect extends LitElement {
         display: block;
         margin-bottom: var(--rune-space-2);
       }
-      sl-select::part(combobox) {
-        border-radius: var(--rune-radius-sm);
-        font-family: var(--rune-font);
-        transition:
-          box-shadow var(--rune-dur-fast) var(--rune-ease),
-          border-color var(--rune-dur-fast) var(--rune-ease);
+      .wrapper {
+        position: relative;
+        display: block;
       }
-      sl-select::part(combobox):hover:not([disabled]) {
-        border-color: var(--rune-border-strong);
-      }
-      sl-select::part(combobox):focus-within {
-        border-color: var(--rune-primary);
-        box-shadow: var(--rune-focus-ring);
-      }
-      sl-select::part(control):hover:not([disabled]) {
-        border-color: var(--rune-border-strong);
-      }
-      sl-select::part(control):focus-within {
-        border-color: var(--rune-primary);
-        box-shadow: var(--rune-focus-ring);
-      }
-      sl-select::part(form-control-label) {
+      .lbl {
         font-size: 10px;
         font-weight: var(--rune-fw-semibold);
         color: var(--rune-text-muted);
@@ -64,12 +60,138 @@ export class RuneSelect extends LitElement {
         letter-spacing: 0.05em;
         margin-bottom: 2px;
       }
-      sl-select::part(help-text) {
-        font-size: 11px;
-        color: var(--rune-text-muted);
-        margin-top: 2px;
+      .combo {
+        position: relative;
       }
-      sl-select::part(listbox) {
+      /* The underlying sl-select contributes the dropdown popup. We
+         strip every visual part (display-input, prefix, expand-icon,
+         clear-button, …) and let the host collapse to a 1px shell so
+         the popup anchor sits over our custom display. We deliberately
+         leave pointer-events intact — disabling them on the host also
+         disables the sl-option items inside the popup, making the
+         dropdown unclickable. z-index: 2 keeps the popup (which lives
+         inside the sl-select's shadow DOM and inherits this host's
+         stacking context) on top of our .display (z-index: 1). */
+      sl-select.underlying {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        font-size: 0;
+        z-index: 2;
+      }
+      sl-select.underlying::part(combobox) {
+        cursor: pointer;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: 100%;
+      }
+      sl-select.underlying::part(display-input),
+      sl-select.underlying::part(display-label),
+      sl-select.underlying::part(prefix),
+      sl-select.underlying::part(suffix),
+      sl-select.underlying::part(expand-icon),
+      sl-select.underlying::part(clear-button),
+      sl-select.underlying::part(checked-icon),
+      sl-select.underlying::part(form-control-label),
+      sl-select.underlying::part(help-text) {
+        display: none !important;
+      }
+      /* ---- Custom rich display (closed state) ---- */
+      .display {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-3);
+        min-height: 42px;
+        padding: 6px 12px;
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        background: var(--rune-surface);
+        color: var(--rune-text);
+        font-family: var(--rune-font);
+        cursor: pointer;
+        transition:
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          box-shadow var(--rune-dur-fast) var(--rune-ease);
+      }
+      .display:hover:not(.disabled) {
+        border-color: var(--rune-border-strong);
+      }
+      .wrapper:focus-within .display,
+      .wrapper.open .display {
+        border-color: var(--rune-primary);
+        box-shadow: var(--rune-focus-ring);
+      }
+      .display.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .display .d-icon {
+        color: var(--rune-text-subtle);
+        font-size: 1.2em;
+        flex-shrink: 0;
+      }
+      .display .d-info {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .display .d-title {
+        color: var(--rune-text);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .display .d-desc {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .display.placeholder .d-ph {
+        color: var(--rune-text-subtle);
+        font-size: var(--rune-fs-sm);
+      }
+      .display .d-chev {
+        color: var(--rune-text-subtle);
+        font-size: 1em;
+        flex-shrink: 0;
+        transition: transform var(--rune-dur-fast) var(--rune-ease);
+      }
+      .wrapper.open .display .d-chev {
+        transform: rotate(180deg);
+      }
+      .display .d-clear {
+        flex-shrink: 0;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--rune-text-subtle);
+        padding: 4px;
+        border-radius: var(--rune-radius-sm);
+        display: flex;
+        align-items: center;
+      }
+      .display .d-clear:hover {
+        color: var(--rune-text);
+        background: var(--rune-surface-alt);
+      }
+      /* ---- Dropdown styling ---- */
+      sl-select.underlying::part(listbox) {
         background: var(--rune-surface);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-md);
@@ -95,35 +217,52 @@ export class RuneSelect extends LitElement {
         background-color: var(--rune-primary-soft) !important;
         color: var(--rune-primary-text) !important;
       }
-      sl-option[aria-selected="true"]:hover::part(base) {
-        background-color: var(--rune-primary-soft) !important;
-        color: var(--rune-primary-text) !important;
-      }
-      sl-option::part(checked-icon) {
-        color: var(--rune-primary);
-      }
-      .row {
+      .opt-row {
         display: flex;
         align-items: center;
         gap: var(--rune-space-3);
         width: 100%;
       }
-      .row i {
+      .opt-row .o-icon {
         color: var(--rune-text-subtle);
-        font-size: 1.1em;
+        font-size: 1.15em;
         flex-shrink: 0;
         transition: color var(--rune-dur-fast) var(--rune-ease);
       }
-      .opt-label {
+      .opt-row .o-label {
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         gap: 2px;
         min-width: 0;
-        flex: 1 1 auto;
       }
-      .opt-meta {
+      .opt-row .o-title {
+        color: var(--rune-text);
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-medium);
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .opt-row .o-desc {
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .opt-row .o-id {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--rune-text-subtle);
+        line-height: 1.2;
+        opacity: 0.85;
+        word-break: break-all;
+      }
+      .opt-row .o-meta {
         flex-shrink: 0;
-        margin-left: auto;
         padding: 2px 10px;
         font-size: var(--rune-fs-xs);
         font-weight: var(--rune-fw-medium);
@@ -138,46 +277,38 @@ export class RuneSelect extends LitElement {
           border-color var(--rune-dur-fast) var(--rune-ease),
           background-color var(--rune-dur-fast) var(--rune-ease);
       }
-      .opt-title {
-        color: var(--rune-text);
-        font-size: var(--rune-fs-sm);
-        font-weight: var(--rune-fw-medium);
-        line-height: 1.3;
-        transition: color var(--rune-dur-fast) var(--rune-ease);
-      }
-      .opt-desc {
-        font-size: var(--rune-fs-xs);
-        color: var(--rune-text-muted);
-        line-height: 1.2;
-        transition: color var(--rune-dur-fast) var(--rune-ease);
-      }
-      sl-option:hover .opt-title,
-      sl-option:focus-visible .opt-title {
-        color: var(--rune-text-strong);
-      }
-      sl-option:hover .opt-desc,
-      sl-option:focus-visible .opt-desc {
-        color: var(--rune-primary-text);
-      }
-      sl-option:hover .row i,
-      sl-option:focus-visible .row i {
+      sl-option:hover .o-icon,
+      sl-option:focus-visible .o-icon {
         color: var(--rune-primary);
       }
-      sl-option[aria-selected="true"] .opt-title {
+      sl-option:hover .o-title,
+      sl-option:focus-visible .o-title {
+        color: var(--rune-text-strong);
+      }
+      sl-option:hover .o-desc,
+      sl-option:focus-visible .o-desc {
+        color: var(--rune-primary-text);
+      }
+      sl-option[aria-selected="true"] .o-title {
         color: var(--rune-primary-text);
         font-weight: var(--rune-fw-semibold);
       }
-      sl-option[aria-selected="true"] .opt-desc {
+      sl-option[aria-selected="true"] .o-desc {
         color: var(--rune-primary-hover);
         opacity: 0.95;
       }
-      sl-option[aria-selected="true"] .row i {
-        color: var(--rune-primary);
-      }
-      sl-option[aria-selected="true"] .opt-meta {
+      sl-option[aria-selected="true"] .o-meta {
         color: var(--rune-primary-text);
         border-color: var(--rune-primary);
         background: transparent;
+      }
+      .help {
+        font-size: 11px;
+        color: var(--rune-text-muted);
+        margin-top: 2px;
+      }
+      .help.err {
+        color: var(--rune-danger-text);
       }
       .spinner {
         color: var(--rune-text-subtle);
@@ -204,6 +335,9 @@ export class RuneSelect extends LitElement {
 
   @state() private _loading = false;
   @state() private _asyncLoaded = false;
+  @state() private _open = false;
+
+  @query("sl-select.underlying") private _slSelect!: SlSelectHandle;
 
   protected async firstUpdated(_changed: PropertyValues): Promise<void> {
     void _changed;
@@ -232,6 +366,17 @@ export class RuneSelect extends LitElement {
     }
   }
 
+  private _onDisplayClick = (ev: MouseEvent): void => {
+    if (this.disabled) return;
+    if ((ev.target as HTMLElement).closest(".d-clear")) return;
+    if (!this._slSelect) return;
+    if (this._slSelect.open) {
+      void this._slSelect.hide();
+    } else {
+      void this._slSelect.show();
+    }
+  };
+
   private _onChange = (ev: Event): void => {
     const target = ev.target as HTMLSelectElement & { value: string | string[] };
     this.value = target.value as string;
@@ -244,82 +389,148 @@ export class RuneSelect extends LitElement {
     );
   };
 
+  private _onShow = (): void => {
+    this._open = true;
+  };
+
+  private _onAfterHide = (): void => {
+    this._open = false;
+  };
+
+  private _onClear = (ev: Event): void => {
+    ev.stopPropagation();
+    this.value = "";
+    this.dispatchEvent(
+      new CustomEvent("rune-change", {
+        detail: { value: "", name: this.name },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
+
+  private _resolveText(v: string | (() => unknown) | undefined): unknown {
+    if (v === undefined) return null;
+    return typeof v === "function" ? v() : v;
+  }
+
   private _renderOption(o: RuneSelectOption) {
-    const labelNode = typeof o.label === "function" ? o.label() : o.label;
-    const descNode = o.description
-      ? typeof o.description === "function"
-        ? o.description()
-        : o.description
-      : null;
-    const metaNode = o.meta ? (typeof o.meta === "function" ? o.meta() : o.meta) : null;
+    const labelNode = this._resolveText(o.label);
+    const descNode = o.description ? this._resolveText(o.description) : null;
+    const metaNode = o.meta ? this._resolveText(o.meta) : null;
+    const idNode = o.id ? this._resolveText(o.id) : null;
     return html`
       <sl-option value=${o.value} ?disabled=${o.disabled ?? false}>
-        <div class="row">
-          ${o.icon ? html`<i class="ti ${tablerClass(o.icon)}"></i>` : nothing}
-          <div class="opt-label">
-            <span class="opt-title">${labelNode}</span>
-            ${descNode ? html`<span class="opt-desc">${descNode}</span>` : nothing}
+        <div class="opt-row">
+          ${o.icon ? html`<i class="ti ${tablerClass(o.icon)} o-icon"></i>` : nothing}
+          <div class="o-label">
+            <span class="o-title">${labelNode}</span>
+            ${descNode ? html`<span class="o-desc">${descNode}</span>` : nothing}
+            ${idNode ? html`<span class="o-id">${idNode}</span>` : nothing}
           </div>
-          ${metaNode ? html`<span class="opt-meta">${metaNode}</span>` : nothing}
+          ${metaNode ? html`<span class="o-meta">${metaNode}</span>` : nothing}
         </div>
       </sl-option>
     `;
   }
 
+  private _renderDisplay() {
+    const selected = this.options.find((o) => o.value === this.value);
+    const isDisabled = this.disabled;
+    if (!selected) {
+      const ph = typeof this.placeholder === "string" ? this.placeholder : "";
+      return html`
+        <div
+          class=${classMap({
+            display: true,
+            placeholder: true,
+            disabled: !!isDisabled,
+          })}
+          role="button"
+          tabindex=${isDisabled ? -1 : 0}
+          @click=${this._onDisplayClick}
+        >
+          <span class="d-ph">${ph || "Select…"}</span>
+          <i class="ti ti-chevron-down d-chev"></i>
+        </div>
+      `;
+    }
+    const labelNode = this._resolveText(selected.label);
+    const descNode = selected.description ? this._resolveText(selected.description) : null;
+    return html`
+      <div
+        class=${classMap({
+          display: true,
+          "has-value": true,
+          disabled: !!isDisabled,
+        })}
+        role="button"
+        tabindex=${isDisabled ? -1 : 0}
+        @click=${this._onDisplayClick}
+      >
+        ${selected.icon ? html`<i class="ti ${tablerClass(selected.icon)} d-icon"></i>` : nothing}
+        <div class="d-info">
+          <div class="d-title">${labelNode}</div>
+          ${descNode ? html`<div class="d-desc">${descNode}</div>` : nothing}
+        </div>
+        ${
+          this.clearable && !isDisabled && this.value
+            ? html`
+                <button class="d-clear" type="button" aria-label="Clear" @click=${this._onClear}>
+                  <i class="ti ti-x"></i>
+                </button>
+              `
+            : nothing
+        }
+        <i class="ti ti-chevron-down d-chev"></i>
+      </div>
+    `;
+  }
+
   protected render() {
     const labelStr = typeof this.label === "string" ? this.label : "";
-    const placeholderStr = typeof this.placeholder === "string" ? this.placeholder : "";
     const helperStr =
       typeof this.helper === "string" && this.helper ? this.helper : this.error || "";
     const emptyStr = typeof this.emptyText === "string" ? this.emptyText : "";
+    const wrapperClasses = {
+      wrapper: true,
+      open: this._open,
+      disabled: this.disabled,
+    };
     return html`
-      <sl-select
-        size=${this.size}
-        ?disabled=${this.disabled}
-        ?required=${this.required}
-        ?clearable=${this.clearable}
-        ?multiple=${this.multiple}
-        ?hoist=${true}
-        label=${labelStr || nothing}
-        placeholder=${placeholderStr || nothing}
-        value=${this.value || nothing}
-        name=${this.name || nothing}
-        help-text=${helperStr || nothing}
-        ?loading=${this._loading}
-        empty=${emptyStr}
-        @sl-change=${this._onChange}
-      >
+      <div class=${classMap(wrapperClasses)}>
+        ${labelStr ? html`<div class="lbl">${labelStr}</div>` : nothing}
+        <div class="combo">
+          <sl-select
+            class="underlying"
+            size=${this.size}
+            ?disabled=${this.disabled}
+            ?required=${this.required}
+            ?multiple=${this.multiple}
+            ?hoist=${true}
+            value=${this.value || nothing}
+            name=${this.name || nothing}
+            empty=${emptyStr}
+            ?loading=${this._loading}
+            @sl-change=${this._onChange}
+            @sl-show=${this._onShow}
+            @sl-after-hide=${this._onAfterHide}
+          >
+            ${this.options.map((o) => this._renderOption(o))}
+            ${
+              this._loading && this.options.length === 0
+                ? html`<sl-spinner class="spinner"></sl-spinner>`
+                : nothing
+            }
+          </sl-select>
+          ${this._renderDisplay()}
+        </div>
         ${
-          this.label && typeof this.label !== "string"
-            ? html`<span slot="label">${this.label}</span>`
-            : null
-        }
-        ${
-          this.placeholder && typeof this.placeholder !== "string"
-            ? html`<span slot="placeholder">${this.placeholder}</span>`
-            : null
-        }
-        ${
-          (this.helper && typeof this.helper !== "string") || this.error
-            ? html`<span slot="help-text">${this.helper || this.error}</span>`
-            : null
-        }
-        ${
-          this.icon
-            ? html`<i
-                slot="prefix"
-                class="ti ${tablerClass(this.icon)}"
-                style="color:var(--rune-text-subtle);font-size:1.05em"
-              ></i>`
+          helperStr
+            ? html`<div class=${classMap({ help: true, err: !!this.error })}>${helperStr}</div>`
             : nothing
         }
-        ${this.options.map((o) => this._renderOption(o))}
-        ${
-          this._loading && this.options.length === 0
-            ? html`<sl-spinner class="spinner"></sl-spinner>`
-            : nothing
-        }
-      </sl-select>
+      </div>
     `;
   }
 }
