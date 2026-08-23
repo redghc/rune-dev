@@ -1,6 +1,5 @@
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { classMap } from "lit/directives/class-map.js";
 
 import type { PropertyValues } from "lit";
 
@@ -16,10 +15,10 @@ export interface RuneSelectOption {
   value: string;
   label: string | (() => unknown);
   /** Sub-line rendered under the label in both the dropdown and the
-   *  closed combobox (e.g. ``"Living Room › RM4 pro"``). */
+   *  closed combobox (e.g. ``Living Room › RM4 pro``). */
   description?: string | (() => unknown);
   /** Right-aligned tag rendered at the end of the dropdown row only
-   *  (e.g. ``"Radio Frequency"``). Use a getter so it stays reactive
+   *  (e.g. ``Radio Frequency``). Use a getter so it stays reactive
    *  to locale. */
   meta?: string | (() => unknown);
   icon?: string;
@@ -62,33 +61,30 @@ export class RuneSelect extends LitElement {
       }
       .combo {
         position: relative;
+        min-height: 42px;
       }
       /* The underlying sl-select contributes the dropdown popup. We
-         strip every visual part (display-input, prefix, expand-icon,
-         clear-button, …) and let the host collapse to a 1px shell so
-         the popup anchor sits over our custom display. We deliberately
-         leave pointer-events intact — disabling them on the host also
-         disables the sl-option items inside the popup, making the
-         dropdown unclickable. z-index: 2 keeps the popup (which lives
-         inside the sl-select's shadow DOM and inherits this host's
-         stacking context) on top of our .display (z-index: 1). */
+         strip every visual part and disable pointer events on the host
+         so our custom display catches clicks instead; the listbox +
+         options re-enable pointer-events on themselves so the popup
+         stays interactive. No z-index on the host so the popup's own
+         stacking context escapes to the document level. */
       sl-select.underlying {
         position: absolute;
         inset: 0;
         width: 100%;
         height: 100%;
-        opacity: 0;
-        font-size: 0;
-        z-index: 2;
+        pointer-events: none;
       }
       sl-select.underlying::part(combobox) {
-        cursor: pointer;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
         min-height: 0 !important;
         height: 100%;
+        cursor: pointer;
+        color: transparent !important;
       }
       sl-select.underlying::part(display-input),
       sl-select.underlying::part(display-label),
@@ -101,7 +97,11 @@ export class RuneSelect extends LitElement {
       sl-select.underlying::part(help-text) {
         display: none !important;
       }
-      /* ---- Custom rich display (closed state) ---- */
+      /* ---- Custom rich display (closed state) ----
+         On top of the sl-select so it gets the visual treatment (icon,
+         name, sub-line, chevron). Catches clicks to open the popup via
+         the imperative slSelect.show() call. The clear button has its
+         own pointer-events re-enabled so it stays clickable. */
       .display {
         position: absolute;
         inset: 0;
@@ -124,8 +124,8 @@ export class RuneSelect extends LitElement {
       .display:hover:not(.disabled) {
         border-color: var(--rune-border-strong);
       }
-      .wrapper:focus-within .display,
-      .wrapper.open .display {
+      .wrapper.open .display,
+      .wrapper:focus-within .display {
         border-color: var(--rune-primary);
         box-shadow: var(--rune-focus-ring);
       }
@@ -185,6 +185,7 @@ export class RuneSelect extends LitElement {
         border-radius: var(--rune-radius-sm);
         display: flex;
         align-items: center;
+        pointer-events: auto;
       }
       .display .d-clear:hover {
         color: var(--rune-text);
@@ -197,6 +198,8 @@ export class RuneSelect extends LitElement {
         border-radius: var(--rune-radius-md);
         box-shadow: var(--rune-shadow-3);
         padding: var(--rune-space-1);
+        z-index: 9999;
+        pointer-events: auto;
       }
       sl-option::part(base) {
         border-radius: var(--rune-radius-sm);
@@ -441,11 +444,7 @@ export class RuneSelect extends LitElement {
       const ph = typeof this.placeholder === "string" ? this.placeholder : "";
       return html`
         <div
-          class=${classMap({
-            display: true,
-            placeholder: true,
-            disabled: !!isDisabled,
-          })}
+          class=${`display placeholder${isDisabled ? " disabled" : ""}`}
           role="button"
           tabindex=${isDisabled ? -1 : 0}
           @click=${this._onDisplayClick}
@@ -459,11 +458,7 @@ export class RuneSelect extends LitElement {
     const descNode = selected.description ? this._resolveText(selected.description) : null;
     return html`
       <div
-        class=${classMap({
-          display: true,
-          "has-value": true,
-          disabled: !!isDisabled,
-        })}
+        class=${`display has-value${isDisabled ? " disabled" : ""}`}
         role="button"
         tabindex=${isDisabled ? -1 : 0}
         @click=${this._onDisplayClick}
@@ -488,18 +483,15 @@ export class RuneSelect extends LitElement {
   }
 
   protected render() {
-    const labelStr = typeof this.label === "string" ? this.label : "";
+    const hasLabel = this.label !== undefined && this.label !== null && this.label !== "";
+    const hasHelper = this.helper !== undefined && this.helper !== null && this.helper !== "";
     const helperStr =
       typeof this.helper === "string" && this.helper ? this.helper : this.error || "";
     const emptyStr = typeof this.emptyText === "string" ? this.emptyText : "";
-    const wrapperClasses = {
-      wrapper: true,
-      open: this._open,
-      disabled: this.disabled,
-    };
+    const wrapperClasses = `wrapper${this._open ? " open" : ""}${this.disabled ? " disabled" : ""}`;
     return html`
-      <div class=${classMap(wrapperClasses)}>
-        ${labelStr ? html`<div class="lbl">${labelStr}</div>` : nothing}
+      <div class=${wrapperClasses}>
+        ${hasLabel ? html`<div class="lbl">${this.label}</div>` : nothing}
         <div class="combo">
           <sl-select
             class="underlying"
@@ -526,8 +518,10 @@ export class RuneSelect extends LitElement {
           ${this._renderDisplay()}
         </div>
         ${
-          helperStr
-            ? html`<div class=${classMap({ help: true, err: !!this.error })}>${helperStr}</div>`
+          hasHelper
+            ? html`<div class=${`help${this.error ? " err" : ""}`}>
+                ${helperStr || this.helper}
+              </div>`
             : nothing
         }
       </div>
