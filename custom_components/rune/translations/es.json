@@ -29,13 +29,8 @@
                 "description": "{{ empty_message }}\n\n{{ device_list }}"
             }
         },
-        "error": {
-            "no_transmitter": "No se encontró un emisor compatible. Añade un blaster IR o RF primero.",
-            "cannot_connect": "No se puede alcanzar el núcleo de Home Assistant."
-        },
-        "abort": {
-            "already_configured": "Este dispositivo ya está configurado."
-        }
+        "error": {},
+        "abort": {}
     },
     "options": {
         "step": {

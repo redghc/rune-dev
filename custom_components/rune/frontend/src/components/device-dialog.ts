@@ -326,7 +326,7 @@ export class RuneDeviceDialog extends LitElement {
         }${
           cat === "fan" && this._form.discrete_speed_count
             ? html` ${msg(str` and `)}<strong>${this._form.discrete_speed_count}</strong>
-                ${msg(str`speed step(s)`)}`
+                ${msg(str`${this._form.discrete_speed_count === 1 ? msg(str`speed step`) : msg(str`speed steps`)}`)}`
             : nothing
         }.
       </div>

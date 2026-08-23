@@ -70,10 +70,6 @@
   <source>HA will expose a <x id="0" equiv-text="&lt;strong&gt;${label}&lt;/strong&gt;"/> entity</source>
     <target>HA expondrá una entidad de tipo <x id="0" equiv-text="&lt;strong&gt;${label}&lt;/strong&gt;"/></target>
   </trans-unit>
-<trans-unit id="s2f34a7485bf6391a">
-  <source>speed step(s)</source>
-    <target>nivel(es) de velocidad</target>
-  </trans-unit>
 <trans-unit id="s64de9eceb8172269">
   <source>Edit device</source>
     <target>Editar dispositivo</target>
@@ -96,7 +92,7 @@
   </trans-unit>
 <trans-unit id="s7b7163270e57e8b4">
   <source>Refresh</source>
-    <target>Recargar</target>
+    <target>Actualizar</target>
   </trans-unit>
 <trans-unit id="saf4fbd5a1625e7f0">
   <source> Add device </source>
@@ -201,7 +197,7 @@
 </trans-unit>
 <trans-unit id="s5b55db76417c9d56">
   <source>Capturing… press the button on your remote NOW</source>
-    <target>Capturando… pulsa el botón del mando AHORA</target>
+    <target>Capturando… pulsa el botón del mando ahora mismo</target>
   </trans-unit>
 <trans-unit id="sb0a3ab9fec778bb7">
   <source>Captured: <x id="0" equiv-text="${s.protocol}"/> @ <x id="1" equiv-text="${s.carrierHz}"/> Hz</source>
@@ -524,6 +520,18 @@ Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
 <trans-unit id="sefcf950b3cc4fc3b">
   <source>Language</source>
     <target>Idioma</target>
+</trans-unit>
+<trans-unit id="saf63d34c8601dd41">
+  <source><x id="0" equiv-text="${this._form.discrete_speed_count === 1 ? msg(str `speed step`) : msg(str `speed steps`)}"/></source>
+    <target><x id="0" equiv-text="${this._form.discrete_speed_count === 1 ? msg(str `nivel de velocidad`) : msg(str `niveles de velocidad`)}"/></target>
+</trans-unit>
+<trans-unit id="s040fd73de6a91e62">
+  <source>speed step</source>
+    <target>nivel de velocidad</target>
+</trans-unit>
+<trans-unit id="s9008cf2ef15e16e3">
+  <source>speed steps</source>
+    <target>niveles de velocidad</target>
 </trans-unit>
 </body>
 </file>

@@ -29,13 +29,8 @@
                 "description": "{{ empty_message }}\n\n{{ device_list }}"
             }
         },
-        "error": {
-            "no_transmitter": "No compatible emitter found. Add an IR or RF blaster first.",
-            "cannot_connect": "Cannot reach Home Assistant core."
-        },
-        "abort": {
-            "already_configured": "This device is already configured."
-        }
+        "error": {},
+        "abort": {}
     },
     "options": {
         "step": {
