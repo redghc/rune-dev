@@ -61,6 +61,67 @@ class _FakeState:
         self.name = name or entity_id
 
 
+class _FakeRegEntry:
+    def __init__(
+        self,
+        entity_id: str,
+        area_id: str | None = None,
+        device_id: str | None = None,
+    ) -> None:
+        self.entity_id = entity_id
+        self.area_id = area_id
+        self.device_id = device_id
+
+
+class _FakeDeviceEntry:
+    def __init__(
+        self,
+        device_id: str,
+        name: str | None = None,
+        manufacturer: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        self.id = device_id
+        self.name = name
+        self.manufacturer = manufacturer
+        self.model = model
+
+
+class _FakeAreaEntry:
+    def __init__(self, area_id: str, name: str) -> None:
+        self.id = area_id
+        self.name = name
+
+
+class FakeHassWithRegistries(FakeHass):
+    """Fake hass that also exposes entity/area/device registries."""
+
+    def __init__(
+        self,
+        states: list[tuple[str, str] | tuple[str, str, str]],
+        entities: list[_FakeRegEntry] | None = None,
+        areas: list[_FakeAreaEntry] | None = None,
+        devices: list[_FakeDeviceEntry] | None = None,
+    ) -> None:
+        super().__init__(states)
+        import types as _types
+
+        entity_map = {e.entity_id: e for e in (entities or [])}
+        area_map = {a.id: a for a in (areas or [])}
+        device_map = {d.id: d for d in (devices or [])}
+        self.helpers = _types.SimpleNamespace(
+            entity_registry=_types.SimpleNamespace(
+                async_get=lambda _h, m=entity_map: _types.SimpleNamespace(entities=m)
+            ),
+            area_registry=_types.SimpleNamespace(
+                async_get=lambda _h, m=area_map: _types.SimpleNamespace(areas=m)
+            ),
+            device_registry=_types.SimpleNamespace(
+                async_get=lambda _h, m=device_map: _types.SimpleNamespace(devices=m)
+            ),
+        )
+
+
 def _ctx(states: list[tuple[str, str]] | None = None) -> RuneWebSocketContext:
     return RuneWebSocketContext(hass=FakeHass(states), connection_id=None)
 
@@ -297,6 +358,47 @@ class TestWsEntityListers:
         names = {entry["name"] for entry in result["receivers"]}
         assert ids == {"infrared.bedroom_rx", "remote.broadlink_rf_rx", "esphome.living_room_rx"}
         assert names == {"Bedroom IR Receiver", "Broadlink RF Receiver", "Living Room RX"}
+
+    @pytest.mark.asyncio
+    async def test_transmitter_list_resolves_area_and_device_name(self) -> None:
+        """Each transmitter row should carry the entity's area name
+        (from the HA area registry) and the parent device's friendly
+        name (from the HA device registry). Missing links surface as
+        empty strings — never as fabricated values."""
+        from custom_components.rune.websocket_api import _ws_transmitter_list
+
+        hass = FakeHassWithRegistries(
+            states=[
+                ("remote.salon_tv", "idle", "Salon TV"),
+                ("remote.bedroom_tv", "idle", "Bedroom TV"),
+                ("remote.loose", "idle", "Loose Entity"),
+            ],
+            entities=[
+                _FakeRegEntry("remote.salon_tv", area_id="a-salon", device_id="d-rm4"),
+                _FakeRegEntry("remote.bedroom_tv", area_id="a-bed", device_id=None),
+                _FakeRegEntry("remote.loose", area_id=None, device_id="d-loose"),
+            ],
+            areas=[
+                _FakeAreaEntry("a-salon", "Salon"),
+                _FakeAreaEntry("a-bed", "Bedroom"),
+            ],
+            devices=[
+                _FakeDeviceEntry("d-rm4", name="RM4 Pro"),
+                _FakeDeviceEntry("d-loose", name="Loose Device"),
+            ],
+        )
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        result = await _ws_transmitter_list(ctx, {})
+        by_id = {e["entity_id"]: e for e in result["transmitters"]}
+
+        assert by_id["remote.salon_tv"]["area"] == "Salon"
+        assert by_id["remote.salon_tv"]["device_name"] == "RM4 Pro"
+
+        assert by_id["remote.bedroom_tv"]["area"] == "Bedroom"
+        assert by_id["remote.bedroom_tv"]["device_name"] == ""
+
+        assert by_id["remote.loose"]["area"] == ""
+        assert by_id["remote.loose"]["device_name"] == "Loose Device"
 
 
 class TestDeviceSummary:
