@@ -144,12 +144,16 @@ export class RuneLearnDialog extends LitElement {
     store.closeLearnDialog();
   };
 
-  private _onShow = (): void => {
+  private _onShow = (ev: Event): void => {
+    // Only react to the dialog's own lifecycle events — composed
+    // ``sl-show`` from nested popups bubbles to this host too.
+    if (ev.target !== ev.currentTarget) return;
     this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
       .activeElement as HTMLElement | null;
   };
 
-  private _onAfterHide = (): void => {
+  private _onAfterHide = (ev: Event): void => {
+    if (ev.target !== ev.currentTarget) return;
     this._returnFocusTo?.focus();
     this._returnFocusTo = null;
     // Sync the store if the user closed the dialog via the X button.

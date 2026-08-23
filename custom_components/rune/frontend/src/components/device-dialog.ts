@@ -152,7 +152,13 @@ export class RuneDeviceDialog extends LitElement {
     store.closeDeviceDialog();
   };
 
-  private _onShow = (): void => {
+  private _onShow = (ev: Event): void => {
+    // Only react to the dialog's own lifecycle events. Shoelace popups
+    // (e.g. ``<sl-select>`` dropdowns) emit composed ``sl-show`` /
+    // ``sl-after-hide`` events that bubble up to this host and would
+    // otherwise steal focus or close the dialog when a select option
+    // is picked.
+    if (ev.target !== ev.currentTarget) return;
     // When sl-dialog opens, capture the currently focused element so
     // we can restore focus when it closes.
     this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
@@ -166,7 +172,8 @@ export class RuneDeviceDialog extends LitElement {
     });
   };
 
-  private _onAfterHide = (): void => {
+  private _onAfterHide = (ev: Event): void => {
+    if (ev.target !== ev.currentTarget) return;
     // After the close animation finishes, restore focus to the element
     // that triggered the dialog (or null if there was none).
     this._returnFocusTo?.focus();
