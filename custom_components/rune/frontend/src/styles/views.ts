@@ -43,6 +43,7 @@ export const entityCardStyles = css`
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--rune-space-3);
     padding: var(--rune-space-3) var(--rune-space-4);
     background: var(--rune-surface);
     border: 1px solid var(--rune-border);
@@ -50,9 +51,25 @@ export const entityCardStyles = css`
     font-family: var(--rune-font-mono);
     font-size: var(--rune-fs-xs);
   }
-  .entity-id {
-    color: var(--rune-text-strong);
+  .entity-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .entity-name {
     font-weight: var(--rune-fw-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .entity-id {
+    color: var(--rune-text-muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .entity-state {
     display: inline-flex;

@@ -148,13 +148,11 @@ export class RuneSettingsView extends LitElement {
     const dotCls = off ? "off" : unknown ? "unknown" : "";
     return html`
       <div class="entity">
-        <div style="display:flex;flex-direction:column;gap:2px">
-          <span style="font-weight:var(--rune-fw-medium)">${e.name || e.entity_id}</span>
+        <div class="entity-meta">
+          <span class="entity-name">${e.name || e.entity_id}</span>
           ${
             e.name && e.name !== e.entity_id
-              ? html`<span class="entity-id" style="font-size:11px;color:var(--rune-text-muted)"
-                  >${e.entity_id}</span
-                >`
+              ? html`<span class="entity-id" title=${e.entity_id}>${e.entity_id}</span>`
               : null
           }
         </div>

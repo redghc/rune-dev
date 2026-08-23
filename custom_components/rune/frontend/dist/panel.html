@@ -24444,6 +24444,7 @@ ${xr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--rune-space-3);
     padding: var(--rune-space-3) var(--rune-space-4);
     background: var(--rune-surface);
     border: 1px solid var(--rune-border);
@@ -24451,9 +24452,25 @@ ${xr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
     font-family: var(--rune-font-mono);
     font-size: var(--rune-fs-xs);
   }
-  .entity-id {
-    color: var(--rune-text-strong);
+  .entity-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .entity-name {
     font-weight: var(--rune-fw-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .entity-id {
+    color: var(--rune-text-muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .entity-state {
     display: inline-flex;
@@ -25139,11 +25156,9 @@ ${xr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
       }
     `]}constructor(){super(),Ts(this)}connectedCallback(){super.connectedCallback(),this._refresh()}async _refresh(){try{let[{transmitters:e},{receivers:t},{devices:n}]=await Promise.all([$.transmitters(),$.receivers(),$.list()]);w.setTransmitters(e??[]),w.setReceivers(t??[]),w.setDevices(n??[])}catch(e){vt(e,m(o`Load settings`))}}_renderEntity(e){let t=Us.has(e.state),n=!t&&Ws.has(e.state),r=t?`off`:n?`unknown`:``;return O`
       <div class="entity">
-        <div style="display:flex;flex-direction:column;gap:2px">
-          <span style="font-weight:var(--rune-fw-medium)">${e.name||e.entity_id}</span>
-          ${e.name&&e.name!==e.entity_id?O`<span class="entity-id" style="font-size:11px;color:var(--rune-text-muted)"
-                  >${e.entity_id}</span
-                >`:null}
+        <div class="entity-meta">
+          <span class="entity-name">${e.name||e.entity_id}</span>
+          ${e.name&&e.name!==e.entity_id?O`<span class="entity-id" title=${e.entity_id}>${e.entity_id}</span>`:null}
         </div>
         <span class="entity-state">
           <span class="dot ${r}"></span>
