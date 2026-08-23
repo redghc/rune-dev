@@ -216,11 +216,6 @@ function domainOf(entityId: string): string {
   return dot >= 0 ? entityId.slice(0, dot) : "";
 }
 
-function objectIdOf(entityId: string): string {
-  const dot = entityId.indexOf(".");
-  return dot >= 0 ? entityId.slice(dot + 1) : entityId;
-}
-
 /** Map entity rows to ``<rune-select>`` options. ``empty`` renders a
  *  single placeholder when the source list is empty (the receiver
  *  picker uses this to nudge the user to add hardware).
@@ -248,13 +243,15 @@ export function entityOptions(
   return entities.map((e) => {
     const domain = domainOf(e.entity_id);
     const meta = DOMAIN_META[domain] ?? FALLBACK_META;
-    const location = e.area ?? domain;
-    const typeName = e.device_name ?? objectIdOf(e.entity_id);
+    const location = e.area ?? "";
+    const typeName = e.device_name ?? "";
     const separator = " ▸ ";
+    const breadcrumb =
+      location && typeName ? `${location}${separator}${typeName}` : location || typeName || "";
     return {
       value: e.entity_id,
       label: e.name || e.entity_id,
-      description: `${location}${separator}${typeName}`,
+      description: breadcrumb,
       id: e.entity_id,
       icon: meta.icon,
       meta: meta.label,
