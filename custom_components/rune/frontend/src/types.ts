@@ -57,8 +57,8 @@ export interface TxEntity {
   state: string;
   /** Optional area / room from the HA registry. */
   area?: string;
-  /** Optional device model from the HA registry. */
-  model?: string;
+  /** Optional device friendly name from the HA device registry. */
+  device_name?: string;
 }
 
 export interface RxEntity {
@@ -67,8 +67,8 @@ export interface RxEntity {
   state: string;
   /** Optional area / room from the HA registry. */
   area?: string;
-  /** Optional device model from the HA registry. */
-  model?: string;
+  /** Optional device friendly name from the HA device registry. */
+  device_name?: string;
 }
 
 export interface ListResponse {

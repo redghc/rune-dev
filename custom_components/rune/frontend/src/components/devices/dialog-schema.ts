@@ -194,9 +194,11 @@ export interface EntityLike {
   /** Optional area / room from the HA registry — surfaced as the
    *  "location" segment of the row sub-line. */
   area?: string;
-  /** Optional device model from the HA registry — surfaced as the
-   *  "type name" segment of the row sub-line. */
-  model?: string;
+  /** Optional device friendly name from the HA device registry —
+   *  surfaced as the "type name" segment of the row sub-line.
+   *  Falls back to the entity's object-id when the backend doesn't
+   *  expose it (older HA cores, tests without a device registry). */
+  device_name?: string;
 }
 
 /** Domain → human label + tabler icon. Drives the right-aligned tag
@@ -247,7 +249,7 @@ export function entityOptions(
     const domain = domainOf(e.entity_id);
     const meta = DOMAIN_META[domain] ?? FALLBACK_META;
     const location = e.area ?? domain;
-    const typeName = e.model ?? objectIdOf(e.entity_id);
+    const typeName = e.device_name ?? objectIdOf(e.entity_id);
     const separator = " ▸ ";
     return {
       value: e.entity_id,
