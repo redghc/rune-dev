@@ -47,17 +47,18 @@ class RunePanel extends HTMLElement {
   private _hass: HassLike | null = null;
   private _iframe: HTMLIFrameElement | null = null;
   private _listeners: Array<(event: MessageEvent) => void> = [];
+  private _version: string | null = null;
+  private _entryId: string | null = null;
 
   set hass(hass: HassLike) {
     this._hass = hass;
   }
 
   setConfig(config: RunePanelConfig) {
-    // HA supplies the panel config (``entry_id``, ``version``); we
-    // currently only need ``hass`` set on the element, but the
-    // setter still needs to exist to satisfy the panel_custom
-    // contract.
-    void config;
+    // HA supplies the panel config (``entry_id``, ``version``); stash
+    // them so the iframe can pull them via postMessage once it loads.
+    this._version = config.version ?? null;
+    this._entryId = config.entry_id ?? null;
   }
 
   connectedCallback(): void {
@@ -78,13 +79,27 @@ class RunePanel extends HTMLElement {
     root.appendChild(errorEl);
 
     const iframe = document.createElement("iframe");
-    iframe.src = "/rune/panel.html";
+    // Cache-bust the inner iframe so HA never serves a stale
+    // ``panel.html`` after a bump to ``__version__``.
+    iframe.src = this._version
+      ? `/rune/panel.html?v=${encodeURIComponent(this._version)}`
+      : "/rune/panel.html";
     iframe.style.cssText = "width:100%;height:100%;min-height:100vh;border:0;display:block;";
     iframe.title = "RUNE";
     iframe.addEventListener("error", () => {
       errorEl.textContent = `RUNE: failed to load ${iframe.src}`;
       errorEl.style.display = "block";
       console.error("[rune] iframe failed to load", iframe.src);
+    });
+    iframe.addEventListener("load", () => {
+      // Push the integration version + entry_id into the iframe so the
+      // Lit SPA can render accurate version pills, route calls back to
+      // this entry, etc. The panel listens for ``rune-init`` and
+      // hydrates its store from there.
+      iframe.contentWindow?.postMessage(
+        { type: "rune-init", version: this._version ?? null, entry_id: this._entryId ?? null },
+        "*",
+      );
     });
     root.appendChild(iframe);
     this._iframe = iframe;

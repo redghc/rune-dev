@@ -1,5 +1,7 @@
 // Typed wrappers around the WS API surface used by the SPA.
 
+import { store } from "@/state/store.js";
+
 import type {
   ActionBinding,
   DeviceSummary,
@@ -16,6 +18,10 @@ import type {
 // a promise; the parent replies with ``rune-bridge-result`` carrying
 // the same numeric id. If no reply arrives within ``BRIDGE_TIMEOUT_MS``
 // the promise rejects so the UI doesn't hang forever on a stuck bridge.
+//
+// On boot the parent posts a ``rune-init`` carrying the integration
+// version + entry_id. We pick those up here so the Lit SPA doesn't have
+// to hardcode either field.
 
 const BRIDGE_TIMEOUT_MS = 8000;
 
@@ -35,9 +41,30 @@ interface BridgeResultMessage {
   error?: string;
 }
 
+interface InitMessage {
+  type: "rune-init";
+  version?: string;
+  entry_id?: string;
+}
+
+type IncomingMessage = Partial<BridgeResultMessage | InitMessage>;
+
 window.addEventListener("message", (event: MessageEvent) => {
-  const data = (event.data ?? {}) as Partial<BridgeResultMessage>;
-  if (!data || data.type !== "rune-bridge-result") return;
+  const data = (event.data ?? {}) as IncomingMessage;
+  if (!data) return;
+  // ``rune-init`` is the bootstrap handshake from the parent shim —
+  // it carries the integration version + entry_id. We only need to
+  // hydrate fields the store doesn't already have right.
+  if (data.type === "rune-init") {
+    if (typeof data.version === "string" && data.version.length > 0) {
+      store.version = data.version;
+    }
+    if (typeof data.entry_id === "string" && data.entry_id.length > 0) {
+      store.entryId = data.entry_id;
+    }
+    return;
+  }
+  if (data.type !== "rune-bridge-result") return;
   if (typeof data.id !== "number") return;
   const r = pending.get(data.id);
   if (!r) return;
