@@ -18,12 +18,12 @@ import tablerWoff2 from "@tabler/icons-webfont/dist/fonts/tabler-icons.woff2?url
 // at woff + ttf + woff2 and ``?inline`` would inline all three fonts.
 import codepoints from "@tabler/icons-webfont/dist/tabler-icons.css?raw";
 
-let injected = false;
+import { injectStyle } from "@/styles/inject-style.js";
+
+const STYLE_ID = "rune-tabler-icons";
 
 function inject(): void {
-  if (injected || typeof document === "undefined") return;
-  injected = true;
-
+  if (typeof document === "undefined") return;
   const raw = codepoints as unknown as string;
 
   // Strip the original @font-face block (which pulls in ttf+woff+woff2)
@@ -56,11 +56,7 @@ function inject(): void {
 }
 ${codepointCss}
 `;
-
-  const style = document.createElement("style");
-  style.setAttribute("data-rune", "tabler-icons");
-  style.textContent = fontCss;
-  document.head.appendChild(style);
+  injectStyle(STYLE_ID, fontCss);
 }
 
 // Side-effect: inject immediately on module load so consumers never
@@ -76,12 +72,17 @@ export function ensureIconCss(): void {
 // injection if an upstream string is tainted).
 const SAFE = /^[a-z][a-z0-9-]{1,39}$/;
 
+/** Returns a complete ``<i class="ti ti-X"></i>`` element string. */
 export function tablerIcon(name: string): string {
   if (!SAFE.test(name)) return "";
   return `<i class="ti ti-${name}" aria-hidden="true"></i>`;
 }
 
+/** Returns just the icon class name (``ti-X``), no font-family class.
+ *  Use this when you already provide the ``ti`` font-family class on
+ *  the parent (avoids the redundant ``class="ti ti ti-X"`` produced
+ *  by the previous two-class helper). */
 export function tablerClass(name: string): string {
   if (!SAFE.test(name)) return "";
-  return `ti ti-${name}`;
+  return `ti-${name}`;
 }

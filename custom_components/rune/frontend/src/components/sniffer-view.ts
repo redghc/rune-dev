@@ -5,8 +5,11 @@ import { customElement, state } from "lit/decorators.js";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { toolbarStyles } from "@/styles/views.js";
+import { pluralize } from "@/utils/format.js";
 
 import type { Remote, RemoteSignal } from "@/types.js";
 
@@ -15,26 +18,8 @@ import type { Remote, RemoteSignal } from "@/types.js";
 export class RuneSnifferView extends LitElement {
   static styles = [
     sharedStyles,
+    toolbarStyles,
     css`
-      .toolbar {
-        display: flex;
-        gap: var(--rune-space-3);
-        align-items: center;
-        margin-bottom: var(--rune-space-5);
-      }
-      .toolbar h2 {
-        margin: 0;
-        font-size: var(--rune-fs-2xl);
-        font-weight: var(--rune-fw-semibold);
-        letter-spacing: -0.02em;
-        color: var(--rune-text-strong);
-      }
-      .grow {
-        flex: 1;
-      }
-      .help {
-        margin-bottom: var(--rune-space-4);
-      }
       .remotes {
         display: flex;
         flex-direction: column;
@@ -143,22 +128,19 @@ export class RuneSnifferView extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
+
   @state() private _loading = false;
-  private _unsub: (() => void) | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-    void this.refresh();
+    void this._refresh();
   }
 
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
-
-  private async refresh(): Promise<void> {
+  private async _refresh(): Promise<void> {
     this._loading = true;
     try {
       const { remotes } = await api.listSniffer();
@@ -173,7 +155,7 @@ export class RuneSnifferView extends LitElement {
   private async _dismiss(r: Remote): Promise<void> {
     try {
       await api.dismissRemote(r.id);
-      await this.refresh();
+      await this._refresh();
     } catch (err) {
       store.pushToast((err as Error).message, "err");
     }
@@ -195,20 +177,21 @@ export class RuneSnifferView extends LitElement {
             }
           </div>
         </div>
-        <rune-chip variant="primary" icon="bolt">${msg(str`${s.hit_count} hits`)}</rune-chip>
+        <rune-chip variant="primary" icon="bolt"
+          >${msg(str`${s.hit_count} hit${s.hit_count === 1 ? "" : "s"}`)}</rune-chip
+        >
       </div>
     `;
   }
 
   render() {
-    void this._tick;
     const visible = store.remotes.filter((r) => !r.dismissed);
     const totalSignals = visible.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <div class="toolbar">
         <h2>${msg(str`Sniffer`)}</h2>
         <rune-chip variant="neutral" icon="antenna"
-          >${msg(str`${visible.length} remote${visible.length === 1 ? "" : "s"} · ${totalSignals} signal${totalSignals === 1 ? "" : "s"}`)}</rune-chip
+          >${msg(str`${pluralize(visible.length, "remote")} · ${pluralize(totalSignals, "signal")}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -216,7 +199,7 @@ export class RuneSnifferView extends LitElement {
             variant="secondary"
             icon="refresh"
             ?loading=${this._loading}
-            @click=${this.refresh}
+            @click=${this._refresh}
           >
             ${msg(str`Refresh`)}
           </rune-button>
@@ -224,7 +207,11 @@ export class RuneSnifferView extends LitElement {
       </div>
       <div class="help">
         <i class="ti ti-info-circle"></i>
-        ${msg(html`Live signals captured from every receiver you've configured. The sniffer listens on each receiver entity automatically once you add a device. Assign a signal to a device command via the <strong>Actions</strong> tab, or dismiss the whole remote here.`)}
+        ${msg(
+          html`Live signals captured from every receiver you've configured. The sniffer listens on
+            each receiver entity automatically once you add a device. Assign a signal to a device
+            command via the <strong>Actions</strong> tab, or dismiss the whole remote here.`,
+        )}
       </div>
       ${
         visible.length === 0
@@ -232,7 +219,9 @@ export class RuneSnifferView extends LitElement {
               <rune-empty-state
                 icon="antenna"
                 heading=${msg(str`No captured signals yet`)}
-                message=${msg(str`Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time.`)}
+                message=${msg(
+                  str`Add a receiver (IR or RF) and RUNE will start listening. Captured signals appear here in real time.`,
+                )}
               ></rune-empty-state>
             `
           : html`
@@ -252,9 +241,7 @@ export class RuneSnifferView extends LitElement {
                                     >${msg(str`unknown`)}</rune-chip
                                   >`
                             }
-                            <span
-                              >${msg(str`${r.signal_count} signal${r.signal_count === 1 ? "" : "s"}`)}</span
-                            >
+                            <span>${msg(str`${pluralize(r.signal_count, "signal")}`)}</span>
                           </div>
                         </div>
                         <rune-tooltip

@@ -1,9 +1,10 @@
 import { css, html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
 
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 @customElement("rune-toast-stack")
@@ -88,21 +89,12 @@ export class RuneToastStack extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
-  private _unsub: (() => void) | null = null;
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
+  constructor() {
+    super();
+    attachStoreController(this);
   }
 
   render() {
-    void this._tick;
     return html`
       <div class="stack" aria-live="polite" aria-atomic="true">
         ${store.toasts.map((t) => {

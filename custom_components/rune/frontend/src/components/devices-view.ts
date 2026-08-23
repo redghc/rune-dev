@@ -5,8 +5,10 @@ import { customElement, state } from "lit/decorators.js";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { toolbarStyles } from "@/styles/views.js";
 
 import "./device-card.js";
 
@@ -15,22 +17,10 @@ import "./device-card.js";
 export class RuneDevicesView extends LitElement {
   static styles = [
     sharedStyles,
+    toolbarStyles,
     css`
-      .toolbar {
-        display: flex;
-        gap: var(--rune-space-3);
-        align-items: center;
-        margin-bottom: var(--rune-space-5);
-      }
       .toolbar h2 {
         margin: 0;
-        font-size: var(--rune-fs-2xl);
-        font-weight: var(--rune-fw-semibold);
-        letter-spacing: -0.02em;
-        color: var(--rune-text-strong);
-      }
-      .toolbar .grow {
-        flex: 1;
       }
       .subtitle {
         margin: -12px 0 var(--rune-space-4);
@@ -42,25 +32,27 @@ export class RuneDevicesView extends LitElement {
         flex-direction: column;
         gap: var(--rune-space-3);
       }
+      .skeletons {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: var(--rune-space-3);
+      }
     `,
   ];
 
-  @state() private _tick = 0;
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
+
   @state() private _loading = false;
-  private _unsub: (() => void) | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-    void this.refresh();
+    void this._refresh();
   }
 
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
-
-  private async refresh(): Promise<void> {
+  private async _refresh(): Promise<void> {
     this._loading = true;
     try {
       const { devices } = await api.list();
@@ -77,7 +69,6 @@ export class RuneDevicesView extends LitElement {
   }
 
   render() {
-    void this._tick;
     const devices = store.devices;
     return html`
       <div class="toolbar" role="toolbar" aria-label="Devices toolbar">
@@ -88,7 +79,7 @@ export class RuneDevicesView extends LitElement {
             variant="secondary"
             icon="refresh"
             ?loading=${this._loading}
-            @click=${this.refresh}
+            @click=${this._refresh}
           >
             ${msg(str`Refresh`)}
           </rune-button>
@@ -106,14 +97,10 @@ export class RuneDevicesView extends LitElement {
       ${
         this._loading && devices.length === 0
           ? html`
-              <div
-                style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--rune-space-3)"
-                aria-busy="true"
-                aria-live="polite"
-              >
-                <rune-skeleton variant="rect" height="120px"></rune-skeleton>
-                <rune-skeleton variant="rect" height="120px"></rune-skeleton>
-                <rune-skeleton variant="rect" height="120px"></rune-skeleton>
+              <div class="skeletons" aria-busy="true" aria-live="polite">
+                ${[0, 1, 2].map(
+                  () => html`<rune-skeleton variant="rect" height="120px"></rune-skeleton>`,
+                )}
               </div>
             `
           : null
@@ -124,7 +111,9 @@ export class RuneDevicesView extends LitElement {
               <rune-empty-state
                 icon="devices"
                 heading=${msg(str`No devices yet`)}
-                message=${msg(str`Create your first IR / RF device — pick a category, name it, and choose the emitter entity.`)}
+                message=${msg(
+                  str`Create your first IR / RF device — pick a category, name it, and choose the emitter entity.`,
+                )}
               >
                 <rune-button slot="action" variant="primary" icon="plus" @click=${this._add}>
                   ${msg(str`Add device`)}

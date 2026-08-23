@@ -24,7 +24,7 @@ import { registerTranslation } from "@shoelace-style/shoelace/dist/utilities/loc
 
 import { allLocales, sourceLocale, targetLocales } from "@/generated/locale-codes.js";
 import { getLocalePref, onLocalePrefChange } from "@/state/locale-pref.js";
-import { store } from "@/state/store.js";
+import { store, subscribe } from "@/state/store.js";
 
 // ``LocaleModule`` isn't re-exported from ``@lit/localize`` but is part
 // of its public runtime-mode contract. We import it from the package's
@@ -107,8 +107,7 @@ export async function bootstrapI18n(): Promise<void> {
 
   // Register every Shoelace translation we ship up front so locale
   // switches are instant — the data is already in the bundle.
-  for (const [code, translation] of Object.entries(SHOELACE_TRANSLATIONS)) {
-    void code;
+  for (const translation of Object.values(SHOELACE_TRANSLATIONS)) {
     registerTranslation(translation as Parameters<typeof registerTranslation>[0]);
   }
 
@@ -132,17 +131,11 @@ export function installBridgeLocaleSync(): void {
   // is on ``auto`` — otherwise their preference wins and we ignore
   // HA's report.
   let lastSeen = "";
-  import("@/state/store.js")
-    .then(({ subscribe }) => {
-      subscribe(() => {
-        if (getLocalePref() !== "auto") return;
-        const current = store.locale;
-        if (!current || current === lastSeen) return;
-        lastSeen = current;
-        void applyLocale(current);
-      });
-    })
-    .catch((err) => {
-      console.warn("[rune-i18n] could not subscribe to store:", err);
-    });
+  subscribe(() => {
+    if (getLocalePref() !== "auto") return;
+    const current = store.locale;
+    if (!current || current === lastSeen) return;
+    lastSeen = current;
+    void applyLocale(current);
+  });
 }

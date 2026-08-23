@@ -111,28 +111,21 @@ export const space = {
   6: "24px",
   7: "32px",
   8: "40px",
-  9: "48px",
-  10: "64px",
 } as const;
 
 export const radius = {
-  none: "0",
   xs: "4px",
   sm: "6px",
   md: "10px",
   lg: "16px",
-  xl: "24px",
-  "2xl": "32px",
   full: "9999px",
 } as const;
 
 export const shadow = {
-  none: "none",
   1: "0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.04)",
   2: "0 2px 4px rgb(0 0 0 / 0.08), 0 4px 8px rgb(0 0 0 / 0.06)",
   3: "0 4px 6px rgb(0 0 0 / 0.10), 0 8px 16px rgb(0 0 0 / 0.08)",
   4: "0 8px 12px rgb(0 0 0 / 0.12), 0 16px 24px rgb(0 0 0 / 0.10)",
-  5: "0 16px 24px rgb(0 0 0 / 0.14), 0 24px 48px rgb(0 0 0 / 0.12)",
 } as const;
 
 export const typography = {
@@ -168,17 +161,5 @@ export const motion = {
   },
   easing: {
     standard: "cubic-bezier(0.4, 0, 0.2, 1)",
-    decelerate: "cubic-bezier(0, 0, 0.2, 1)",
-    accelerate: "cubic-bezier(0.4, 0, 1, 1)",
   },
-} as const;
-
-export const z = {
-  base: "0",
-  raised: "10",
-  sticky: "100",
-  overlay: "1000",
-  modal: "1100",
-  toast: "1200",
-  tooltip: "1300",
 } as const;

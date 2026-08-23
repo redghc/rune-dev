@@ -5,10 +5,24 @@ import { customElement, state } from "lit/decorators.js";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachDialogFocus } from "@/components/ui/dialog-focus.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import type { LearnStatus } from "@/state/store.js";
+import type { LearnResult } from "@/types.js";
+
+const STATUS_RENDER: Record<LearnStatus["kind"], (s: LearnStatus) => unknown> = {
+  idle: () => msg(str`Idle — click Start learn`),
+  capturing: () => msg(str`Capturing… press the button on your remote NOW`),
+  no_signal: () => msg(str`No signal captured`),
+  failed: (s) => (s.kind === "failed" ? msg(str`Failed: ${s.message}`) : msg(str`Failed`)),
+  captured: (s) =>
+    s.kind === "captured"
+      ? msg(str`Captured: ${s.protocol} @ ${s.carrierHz} Hz`)
+      : msg(str`Captured`),
+};
 
 @customElement("rune-learn-dialog")
 @localized()
@@ -124,40 +138,19 @@ export class RuneLearnDialog extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
+  constructor() {
+    super();
+    attachStoreController(this);
+    attachDialogFocus(this, () => {
+      if (store.learnDialog.open) store.closeLearnDialog();
+    });
+  }
+
   @state() private _busy = false;
   @state() private _saving = false;
-  private _unsub: (() => void) | null = null;
-  private _returnFocusTo: HTMLElement | null = null;
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
 
   private _cancel = (): void => {
     store.closeLearnDialog();
-  };
-
-  private _onShow = (ev: Event): void => {
-    // Only react to the dialog's own lifecycle events — composed
-    // ``sl-show`` from nested popups bubbles to this host too.
-    if (ev.target !== ev.currentTarget) return;
-    this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
-      .activeElement as HTMLElement | null;
-  };
-
-  private _onAfterHide = (ev: Event): void => {
-    if (ev.target !== ev.currentTarget) return;
-    this._returnFocusTo?.focus();
-    this._returnFocusTo = null;
-    // Sync the store if the user closed the dialog via the X button.
-    if (store.learnDialog.open) store.closeLearnDialog();
   };
 
   private async _start(): Promise<void> {
@@ -194,6 +187,21 @@ export class RuneLearnDialog extends LitElement {
     }
   }
 
+  /** Compose a new ``PulseCommand`` from the captured timings. */
+  private _buildCommand(
+    commandKey: string,
+    captured: LearnResult["captured"],
+    rawTimings: number[],
+  ): Record<string, unknown> {
+    return {
+      key: commandKey,
+      label: commandKey.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+      category: "custom",
+      signal_category: { ...captured.signal_category },
+      payload: { ...captured.payload, raw_timings: rawTimings },
+    };
+  }
+
   private async _save(): Promise<void> {
     const { deviceId, commandKey, captured, rawTimings } = store.learnDialog;
     if (!deviceId || !captured || !rawTimings) return;
@@ -201,15 +209,9 @@ export class RuneLearnDialog extends LitElement {
     try {
       const { device } = await api.getDevice(deviceId);
       const commands = {
-        ...device.commands,
-      } as unknown as Record<string, Record<string, unknown>>;
-      commands[commandKey] = {
-        key: commandKey,
-        label: commandKey.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
-        category: "custom",
-        signal_category: { ...captured.signal_category },
-        payload: { ...captured.payload, raw_timings: rawTimings },
+        ...(device.commands as unknown as Record<string, Record<string, unknown>>),
       };
+      commands[commandKey] = this._buildCommand(commandKey, captured, rawTimings);
       await api.updateDevice({ device_id: deviceId, commands });
       store.pushToast(msg(str`Learned "${commandKey}"`), "ok");
       store.closeLearnDialog();
@@ -222,23 +224,7 @@ export class RuneLearnDialog extends LitElement {
     }
   }
 
-  private _renderStatus(status: LearnStatus) {
-    switch (status.kind) {
-      case "idle":
-        return msg(str`Idle — click Start learn`);
-      case "capturing":
-        return msg(str`Capturing… press the button on your remote NOW`);
-      case "captured":
-        return msg(str`Captured: ${status.protocol} @ ${status.carrierHz} Hz`);
-      case "no_signal":
-        return msg(str`No signal captured`);
-      case "failed":
-        return msg(str`Failed: ${status.message}`);
-    }
-  }
-
   render() {
-    void this._tick;
     const ld = store.learnDialog;
     const timings = ld.rawTimings;
     const timingsText = timings
@@ -253,17 +239,14 @@ export class RuneLearnDialog extends LitElement {
     else if (ld.status.kind === "failed") dotClass = "err";
 
     return html`
-      <rune-dialog
-        ?open=${ld.open}
-        size="medium"
-        .label=${msg(str`Learn command`)}
-        @sl-show=${this._onShow}
-        @sl-after-hide=${this._onAfterHide}
-      >
+      <rune-dialog ?open=${ld.open} size="medium" .label=${msg(str`Learn command`)}>
         <div class="body">
           <div class="help">
             <i class="ti ti-info-circle"></i>
-            ${msg(html`Point your remote at the receiver and press the button you want to capture. RUNE records the raw timings and writes them into the command slot.`)}
+            ${msg(
+              html`Point your remote at the receiver and press the button you want to capture. RUNE
+              records the raw timings and writes them into the command slot.`,
+            )}
           </div>
 
           <div class="section-label">${msg(str`Command`)}</div>
@@ -276,7 +259,7 @@ export class RuneLearnDialog extends LitElement {
           <div class="section-label">${msg(str`Status`)}</div>
           <div class="status">
             <span class="status-dot ${dotClass}"></span>
-            <span>${this._renderStatus(ld.status)}</span>
+            <span>${STATUS_RENDER[ld.status.kind](ld.status)}</span>
           </div>
 
           <div class="section-label">${msg(str`Captured timings`)}</div>

@@ -7,7 +7,9 @@ import type { TemplateResult } from "lit";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachDialogFocus } from "@/components/ui/dialog-focus.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import { requiredFields, visibleFields } from "./devices/dialog-schema.js";
@@ -15,6 +17,19 @@ import { requiredFields, visibleFields } from "./devices/dialog-schema.js";
 import type { FieldDef, FormState } from "./devices/dialog-schema.js";
 import type { AsyncLoader } from "@/components/ui/select.js";
 import type { DeviceSummary, TxEntity } from "@/types.js";
+
+const CATEGORY_LABEL: Record<string, () => ReturnType<typeof msg>> = {
+  fan: () => msg(str`Fan`),
+  climate: () => msg(str`Climate`),
+  light: () => msg(str`Light`),
+  cover: () => msg(str`Cover`),
+  media_player: () => msg(str`Media player`),
+  switch: () => msg(str`Switch`),
+  remote: () => msg(str`Remote`),
+};
+
+const TRANSMITTER_KEYS = new Set(["ir_transmitter", "rf_transmitter", "transmitter"]);
+const RECEIVER_KEYS = new Set(["ir_receiver", "rf_receiver", "receiver"]);
 
 @customElement("rune-device-dialog")
 @localized()
@@ -59,23 +74,18 @@ export class RuneDeviceDialog extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
+  constructor() {
+    super();
+    attachStoreController(this);
+    attachDialogFocus(this, () => {
+      if (store.deviceDialog.open) store.closeDeviceDialog();
+    });
+  }
+
   @state() private _busy = false;
   @state() private _err = "";
   @state() private _form: FormState = { category: "fan" };
-  private _unsub: (() => void) | null = null;
   private _lastEditingId: string | null = null;
-  private _returnFocusTo: HTMLElement | null = null;
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
 
   protected willUpdate(): void {
     const editing = store.deviceDialog.editing;
@@ -106,7 +116,6 @@ export class RuneDeviceDialog extends LitElement {
 
   private _setField(key: string, value: unknown): void {
     this._form = { ...this._form, [key]: value };
-    void this._tick;
   }
 
   private _onClose = (): void => {
@@ -115,57 +124,28 @@ export class RuneDeviceDialog extends LitElement {
     store.closeDeviceDialog();
   };
 
-  private _onShow = (ev: Event): void => {
-    // Only react to the dialog's own lifecycle events. Shoelace popups
-    // (e.g. ``<sl-select>`` dropdowns) emit composed ``sl-show`` /
-    // ``sl-after-hide`` events that bubble up to this host and would
-    // otherwise steal focus or close the dialog when a select option
-    // is picked.
-    if (ev.target !== ev.currentTarget) return;
-    // When sl-dialog opens, capture the currently focused element so
-    // we can restore focus when it closes.
-    this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
-      .activeElement as HTMLElement | null;
-    queueMicrotask(() => {
-      const dlg = this.renderRoot.querySelector("rune-dialog");
-      const target = dlg?.querySelector<HTMLElement>(
-        "input, select, sl-input, sl-select, textarea, button",
-      );
-      target?.focus();
-    });
-  };
-
-  private _onAfterHide = (ev: Event): void => {
-    if (ev.target !== ev.currentTarget) return;
-    // After the close animation finishes, restore focus to the element
-    // that triggered the dialog (or null if there was none).
-    this._returnFocusTo?.focus();
-    this._returnFocusTo = null;
-    // Sync the store if the user closed the dialog via the X button.
-    if (store.deviceDialog.open) store.closeDeviceDialog();
-  };
-
-  private async _save(): Promise<void> {
-    this._err = "";
-    const visible = visibleFields(this._form);
+  /** Returns an error message if the form is invalid, or ``null`` when
+   *  validation passes. */
+  private _validate(): string | null {
     const required = requiredFields(this._form);
     for (const f of required) {
       const v = this._form[f.key];
       if (v === undefined || v === null || v === "") {
         const labelStr = typeof f.label === "function" ? String(f.label()) : f.label;
-        this._err = msg(str`Field "${labelStr}" is required`);
-        return;
+        return msg(str`Field "${labelStr}" is required`);
       }
     }
-
     const irTx = String(this._form.ir_transmitter || "").trim();
     const rfTx = String(this._form.rf_transmitter || "").trim();
     if (!irTx && !rfTx) {
-      this._err = msg(str`At least one transmitter (IR or RF) is required`);
-      return;
+      return msg(str`At least one transmitter (IR or RF) is required`);
     }
+    return null;
+  }
 
-    const editing = store.deviceDialog.editing;
+  /** Convert the form state into a flat payload accepted by the API. */
+  private _buildPayload(): Record<string, unknown> {
+    const visible = visibleFields(this._form);
     const payload: Record<string, unknown> = {};
     for (const f of visible) {
       const v = this._form[f.key];
@@ -175,7 +155,8 @@ export class RuneDeviceDialog extends LitElement {
     if (payload.category === "fan" && payload.discrete_speed_count === undefined) {
       payload.discrete_speed_count = 3;
     }
-
+    const irTx = String(this._form.ir_transmitter || "").trim();
+    const rfTx = String(this._form.rf_transmitter || "").trim();
     const irRx = String(this._form.ir_receiver || "").trim();
     const rfRx = String(this._form.rf_receiver || "").trim();
     const txList = [irTx, rfTx].filter(Boolean);
@@ -186,22 +167,37 @@ export class RuneDeviceDialog extends LitElement {
     if (rxList.length > 0) {
       payload.receiver = rxList[0];
     }
+    return payload;
+  }
 
+  private async _submit(): Promise<void> {
+    const editing = store.deviceDialog.editing;
+    const payload = this._buildPayload();
+    if (editing) {
+      await api.updateDevice({ device_id: editing.id, ...payload });
+      store.pushToast(msg(str`Updated`), "ok");
+    } else {
+      await api.createDevice(payload);
+      store.pushToast(msg(str`Created`), "ok");
+    }
+    this._lastEditingId = null;
+    store.closeDeviceDialog();
+    const { devices } = await api.list();
+    store.setDevices(devices ?? []);
+  }
+
+  private async _save(): Promise<void> {
+    const err = this._validate();
+    if (err !== null) {
+      this._err = err;
+      return;
+    }
+    this._err = "";
     this._busy = true;
     try {
-      if (editing) {
-        await api.updateDevice({ device_id: editing.id, ...payload });
-        store.pushToast(msg(str`Updated`), "ok");
-      } else {
-        await api.createDevice(payload);
-        store.pushToast(msg(str`Created`), "ok");
-      }
-      this._lastEditingId = null;
-      store.closeDeviceDialog();
-      const { devices } = await api.list();
-      store.setDevices(devices ?? []);
-    } catch (err) {
-      this._err = (err as Error).message;
+      await this._submit();
+    } catch (e) {
+      this._err = (e as Error).message;
     } finally {
       this._busy = false;
     }
@@ -242,16 +238,8 @@ export class RuneDeviceDialog extends LitElement {
 
   private _resolveOptions(field: FieldDef): AsyncLoader | undefined {
     if (field.kind !== "async-select") return undefined;
-    if (
-      field.key === "ir_transmitter" ||
-      field.key === "rf_transmitter" ||
-      field.key === "transmitter"
-    ) {
-      return this._loadTransmitters();
-    }
-    if (field.key === "ir_receiver" || field.key === "rf_receiver" || field.key === "receiver") {
-      return this._loadReceivers();
-    }
+    if (TRANSMITTER_KEYS.has(field.key)) return this._loadTransmitters();
+    if (RECEIVER_KEYS.has(field.key)) return this._loadReceivers();
     return field.loadOptions;
   }
 
@@ -325,20 +313,7 @@ export class RuneDeviceDialog extends LitElement {
 
   private _renderPreview(): TemplateResult {
     const cat = this._form.category || "fan";
-    const label =
-      cat === "fan"
-        ? msg(str`Fan`)
-        : cat === "climate"
-          ? msg(str`Climate`)
-          : cat === "light"
-            ? msg(str`Light`)
-            : cat === "cover"
-              ? msg(str`Cover`)
-              : cat === "media_player"
-                ? msg(str`Media player`)
-                : cat === "switch"
-                  ? msg(str`Switch`)
-                  : msg(str`Remote`);
+    const label = (CATEGORY_LABEL[cat] ?? CATEGORY_LABEL.fan)();
     return html`
       <div class="preview">
         ${msg(html`HA will expose a <strong>${label}</strong> entity`)}${
@@ -363,8 +338,6 @@ export class RuneDeviceDialog extends LitElement {
         ?open=${open}
         size="large"
         .label=${editing ? msg(str`Edit device`) : msg(str`Add device`)}
-        @sl-show=${this._onShow}
-        @sl-after-hide=${this._onAfterHide}
       >
         <div class="grid">
           ${visible.map((f) => this._renderField(f))}

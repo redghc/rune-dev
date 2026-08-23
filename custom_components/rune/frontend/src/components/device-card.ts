@@ -5,8 +5,10 @@ import { customElement, property, state } from "lit/decorators.js";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
+import { attachStoreController } from "@/state/store-controller.js";
 import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { pluralize } from "@/utils/format.js";
 
 import type { DeviceCategory, DeviceSummary, PulseCommand } from "@/types.js";
 
@@ -19,6 +21,8 @@ const CATEGORY_ICON: Record<DeviceCategory, string> = {
   switch: "plug",
   remote: "remote",
 };
+
+const FLASH_MS = 380;
 
 @customElement("rune-device-card")
 @localized()
@@ -167,19 +171,24 @@ export class RuneDeviceCard extends LitElement {
     `,
   ];
 
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
+
   @property({ attribute: false }) device!: DeviceSummary;
 
-  @state() private _flash: string | null = null;
+  @state() private _confirmingDelete = false;
 
   private _onEdit(): void {
     store.openDeviceDialog(this.device);
   }
 
-  private async _onDelete(): Promise<void> {
-    if (!confirm(`Delete device "${this.device.name}"?`)) return;
+  private async _confirmDelete(): Promise<void> {
+    this._confirmingDelete = false;
     try {
       await api.deleteDevice(this.device.id);
-      store.pushToast("Deleted", "ok");
+      store.pushToast(msg(str`Deleted`), "ok");
       const { devices } = await api.list();
       store.setDevices(devices ?? []);
     } catch (err) {
@@ -191,17 +200,20 @@ export class RuneDeviceCard extends LitElement {
     try {
       await api.sendCommand(this.device.id, cmd.key);
       btn.classList.add("flash");
-      setTimeout(() => btn.classList.remove("flash"), 380);
-      store.pushToast(`Sent ${cmd.label ?? cmd.key}`, "ok");
+      setTimeout(() => btn.classList.remove("flash"), FLASH_MS);
+      store.pushToast(msg(str`Sent ${cmd.label ?? cmd.key}`), "ok");
     } catch (err) {
       store.pushToast((err as Error).message, "err");
     }
   }
 
+  /** Kick off the learn flow. Uses ``window.prompt`` for now — a
+   *  custom dialog with live validation is a v0.4 follow-up. */
   private _learn(): void {
-    const key = prompt(
-      `Learn which command on "${this.device.name}"?\n\n` +
-        `Enter a command key (e.g. "off", "speed_2", "power_on"):`,
+    const key = window.prompt(
+      msg(
+        str`Learn which command on "${this.device.name}"?\n\nEnter a command key (e.g. "off", "speed_2", "power_on"):`,
+      ),
       "off",
     );
     if (!key) return;
@@ -213,7 +225,6 @@ export class RuneDeviceCard extends LitElement {
     const tx = (d.transmitter_entity_ids ?? []).join(", ") || "—";
     const rx = (d.receiver_entity_ids ?? []).join(", ");
     const icon = CATEGORY_ICON[d.category] ?? "remote";
-    void this._flash;
     return html`
       <div class="card">
         <div class="head">
@@ -224,8 +235,7 @@ export class RuneDeviceCard extends LitElement {
               <div class="meta">
                 <rune-chip variant="primary" icon=${icon}>${d.category}</rune-chip>
                 <span class="meta-item">
-                  <i class="ti ti-bolt"></i
-                  >${msg(str`${d.command_count} command${d.command_count === 1 ? "" : "s"}`)}
+                  <i class="ti ti-bolt"></i>${msg(str`${pluralize(d.command_count, "command")}`)}
                 </span>
                 <span class="meta-item" title="Transmitters">
                   <i class="ti ti-antenna-bars-5"></i>${tx}
@@ -260,7 +270,7 @@ export class RuneDeviceCard extends LitElement {
               <rune-button
                 variant="ghost"
                 icon="trash"
-                @click=${this._onDelete}
+                @click=${() => (this._confirmingDelete = true)}
                 aria-label="Delete device"
               ></rune-button>
             </rune-tooltip>
@@ -285,6 +295,34 @@ export class RuneDeviceCard extends LitElement {
           </button>
         </div>
       </div>
+
+      ${
+        this._confirmingDelete
+          ? html`<rune-dialog
+              ?open=${true}
+              size="small"
+              .label=${msg(str`Delete device`)}
+              @sl-after-hide=${() => (this._confirmingDelete = false)}
+            >
+              <p>${msg(str`Delete device "${d.name}"? This cannot be undone.`)}</p>
+              <div
+                slot="footer"
+                style="display:flex;gap:var(--rune-space-2);justify-content:flex-end"
+              >
+                <rune-button
+                  variant="secondary"
+                  icon="x"
+                  @click=${() => (this._confirmingDelete = false)}
+                >
+                  ${msg(str`Cancel`)}
+                </rune-button>
+                <rune-button variant="danger" icon="trash" @click=${this._confirmDelete}>
+                  ${msg(str`Delete`)}
+                </rune-button>
+              </div>
+            </rune-dialog>`
+          : null
+      }
     `;
   }
 }

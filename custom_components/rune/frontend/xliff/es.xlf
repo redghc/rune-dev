@@ -18,10 +18,6 @@
   <source>Actions</source>
     <target>Acciones</target>
   </trans-unit>
-<trans-unit id="sf538066dd56bd6e6">
-  <source><x id="0" equiv-text="${actions.length}"/> binding<x id="1" equiv-text="${actions.length === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
-    <target><x id="0" equiv-text="${actions.length}"/> enlace<x id="1" equiv-text="${actions.length === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
-  </trans-unit>
 <trans-unit id="sdaf3cc7acb678d84">
   <source>Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).</source>
     <target>Las acciones vinculan una señal capturada a un efecto secundario: disparar un pulso en un dispositivo, llamar a un servicio, activar una escena, ejecutar un script o disparar un evento. Las vinculaciones se gestionan mediante la API (estable; un editor visual llegará en v0.4).</target>
@@ -41,10 +37,6 @@
 <trans-unit id="s82a4e28ab5b56670">
   <source>Connected</source>
     <target>Conectado</target>
-  </trans-unit>
-<trans-unit id="s5a112be88c24dada">
-  <source><x id="0" equiv-text="${d.command_count}"/> command<x id="1" equiv-text="${d.command_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
-    <target><x id="0" equiv-text="${d.command_count}"/> comando<x id="1" equiv-text="${d.command_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
   </trans-unit>
 <trans-unit id="sb5d97f1c860c58ec">
   <source>Learn command</source>
@@ -228,7 +220,7 @@
     <target>Capturando… pulsa el botón del mando AHORA</target>
   </trans-unit>
 <trans-unit id="sb0a3ab9fec778bb7">
-  <source>Captured: <x id="0" equiv-text="${status.protocol}"/> @ <x id="1" equiv-text="${status.carrierHz}"/> Hz</source>
+  <source>Captured: <x id="0" equiv-text="${s.protocol}"/> @ <x id="1" equiv-text="${s.carrierHz}"/> Hz</source>
     <target>Capturado: <x id="0" equiv-text="${status.protocol}"/> @ <x id="1" equiv-text="${status.carrierHz}"/> Hz</target>
   </trans-unit>
 <trans-unit id="s5b224298bf2add8c">
@@ -236,12 +228,8 @@
     <target>No se capturó ninguna señal</target>
   </trans-unit>
 <trans-unit id="s9a44f95f7acf28e0">
-  <source>Failed: <x id="0" equiv-text="${status.message}"/></source>
+  <source>Failed: <x id="0" equiv-text="${s.message}"/></source>
     <target>Error: <x id="0" equiv-text="${status.message}"/></target>
-  </trans-unit>
-<trans-unit id="hef26ee9d6c0a1943">
-  <source>Point your remote at the receiver and press the button you want to capture. RUNE records the raw timings and writes them into the command slot.</source>
-    <target>Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra los tiempos en crudo y los escribe en la ranura del comando.</target>
   </trans-unit>
 <trans-unit id="s8bea2885ff2d1272">
   <source>Command</source>
@@ -323,21 +311,9 @@
   <source>Load sniffer: <x id="0" equiv-text="${(err as Error).message}"/></source>
     <target>Error al cargar sniffer: <x id="0" equiv-text="${(err as Error).message}"/></target>
   </trans-unit>
-<trans-unit id="s893185e1b567e215">
-  <source><x id="0" equiv-text="${s.hit_count}"/> hits</source>
-    <target><x id="0" equiv-text="${s.hit_count}"/> capturas</target>
-  </trans-unit>
 <trans-unit id="sd6f81935eece3b94">
   <source>Sniffer</source>
     <target>Sniffer</target>
-  </trans-unit>
-<trans-unit id="s2ffa65c6918a1790">
-  <source><x id="0" equiv-text="${visible.length}"/> remote<x id="1" equiv-text="${visible.length === 1 ? &quot;&quot; : &quot;s&quot;}"/> · <x id="2" equiv-text="${totalSignals}"/> signal<x id="3" equiv-text="${totalSignals === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
-    <target><x id="0" equiv-text="${visible.length}"/> mando<x id="1" equiv-text="${visible.length === 1 ? &quot;&quot; : &quot;s&quot;}"/> · <x id="2" equiv-text="${totalSignals}"/> señal<x id="3" equiv-text="${totalSignals === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
-  </trans-unit>
-<trans-unit id="hf1f6e8798e7e33a8">
-  <source>Live signals captured from every receiver you've configured. The sniffer listens on each receiver entity automatically once you add a device. Assign a signal to a device command via the <x id="0" equiv-text="&lt;strong&gt;"/>Actions<x id="1" equiv-text="&lt;/strong&gt;"/> tab, or dismiss the whole remote here.</source>
-    <target>Señales en vivo capturadas de cada receptor que hayas configurado. El sniffer escucha en cada entidad receptora automáticamente al añadir un dispositivo. Asigna una señal a un comando de dispositivo desde la pestaña <x id="0" equiv-text="&lt;strong&gt;"/>Acciones<x id="1" equiv-text="&lt;/strong&gt;"/>, o descarta todo el mando aquí.</target>
   </trans-unit>
 <trans-unit id="sb3a8dc87930f19ab">
   <source>No captured signals yet</source>
@@ -350,10 +326,6 @@
 <trans-unit id="s498865c7bd1f3959">
   <source>unknown</source>
     <target>desconocido</target>
-  </trans-unit>
-<trans-unit id="s55eaa18a9834d457">
-  <source><x id="0" equiv-text="${r.signal_count}"/> signal<x id="1" equiv-text="${r.signal_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
-    <target><x id="0" equiv-text="${r.signal_count}"/> señal<x id="1" equiv-text="${r.signal_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
   </trans-unit>
 <trans-unit id="s640907ad61220bd2">
   <source>Re-activate</source>
@@ -435,6 +407,50 @@
   <source>Optional — receiver for RF signals &amp; learn</source>
     <target>Opcional — receptor para señales y aprendizaje RF</target>
   </trans-unit>
+<trans-unit id="s44a9ac9dd7567f4a">
+  <source>Deleted</source>
+</trans-unit>
+<trans-unit id="se5a67e2c6557ee09">
+  <source>Sent <x id="0" equiv-text="${cmd.label ?? cmd.key}"/></source>
+</trans-unit>
+<trans-unit id="s274d0241c4139713">
+  <source>Learn which command on "<x id="0" equiv-text="${this.device.name}"/>"?
+
+Enter a command key (e.g. "off", "speed_2", "power_on"):</source>
+</trans-unit>
+<trans-unit id="saf63d34c8601dd41">
+  <source><x id="0" equiv-text="${pluralize(d.command_count, &quot;command&quot;)}"/></source>
+</trans-unit>
+<trans-unit id="sb62fb7b2161bc5c0">
+  <source>Delete device</source>
+</trans-unit>
+<trans-unit id="s9821339d307c474a">
+  <source>Delete device "<x id="0" equiv-text="${d.name}"/>"? This cannot be undone.</source>
+</trans-unit>
+<trans-unit id="sdc673e73b5c13aea">
+  <source>Delete</source>
+</trans-unit>
+<trans-unit id="sbf9c5c5a8e5efad4">
+  <source>Failed</source>
+</trans-unit>
+<trans-unit id="s4c2e50f73ff9175f">
+  <source>Captured</source>
+</trans-unit>
+<trans-unit id="h1fb4a999c505bec9">
+  <source>Point your remote at the receiver and press the button you want to capture. RUNE
+              records the raw timings and writes them into the command slot.</source>
+</trans-unit>
+<trans-unit id="s8931e8e1b5688a4e">
+  <source><x id="0" equiv-text="${s.hit_count}"/> hit<x id="1" equiv-text="${s.hit_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+</trans-unit>
+<trans-unit id="s393057888fc2f40e">
+  <source><x id="0" equiv-text="${pluralize(visible.length, &quot;remote&quot;)}"/> · <x id="1" equiv-text="${pluralize(totalSignals, &quot;signal&quot;)}"/></source>
+</trans-unit>
+<trans-unit id="h7ca7e5a17ba26a94">
+  <source>Live signals captured from every receiver you've configured. The sniffer listens on
+            each receiver entity automatically once you add a device. Assign a signal to a device
+            command via the <x id="0" equiv-text="&lt;strong&gt;"/>Actions<x id="1" equiv-text="&lt;/strong&gt;"/> tab, or dismiss the whole remote here.</source>
+</trans-unit>
 </body>
 </file>
 </xliff>

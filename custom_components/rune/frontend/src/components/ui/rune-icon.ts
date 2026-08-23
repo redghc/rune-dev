@@ -42,7 +42,7 @@ export class RuneIcon extends LitElement {
     const sizeStyle = `font-size:${SIZE_MAP[this.size]}`;
     const colorStyle = this.color ? `color:${this.color}` : "";
     return html`<i
-      class="ti ${tablerClass(this.name).replace("ti ", "")}"
+      class="ti ${tablerClass(this.name)}"
       style="${sizeStyle};${colorStyle}"
       aria-hidden="true"
     ></i>`;

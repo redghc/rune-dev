@@ -206,7 +206,6 @@ export const sharedStyles = css`
     --rune-radius-sm: ${unsafeCSS(radius.sm)};
     --rune-radius-md: ${unsafeCSS(radius.md)};
     --rune-radius-lg: ${unsafeCSS(radius.lg)};
-    --rune-radius-xl: ${unsafeCSS(radius.xl)};
     --rune-radius-full: ${unsafeCSS(radius.full)};
 
     --rune-shadow-1: ${unsafeCSS(shadow[1])};

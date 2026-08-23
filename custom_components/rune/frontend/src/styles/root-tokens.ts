@@ -7,15 +7,11 @@
 // Shoelace ships the same trick via its own ``rune-shoelace-theme`` style
 // tag — this one is the ``--rune-*`` counterpart.
 
+import { injectStyle } from "./inject-style.js";
 import { rootTokens } from "./shared.js";
 
 const STYLE_ID = "rune-root-tokens";
 
 export function injectRootTokens(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = rootTokens;
-  document.head.appendChild(style);
+  injectStyle(STYLE_ID, rootTokens);
 }

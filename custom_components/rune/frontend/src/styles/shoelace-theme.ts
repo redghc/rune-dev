@@ -7,6 +7,7 @@
 // force a theme by adding ``sl-theme-light`` or ``sl-theme-dark`` to
 // ``<html>``.
 
+import { injectStyle } from "./inject-style.js";
 import { palette, radius, shadow, space, typography } from "./tokens.js";
 
 const lightPrimary = palette.primary[600];
@@ -129,12 +130,4 @@ export const shoelaceThemeCss = `
 }
 `;
 
-if (typeof document !== "undefined") {
-  const id = "rune-shoelace-theme";
-  if (!document.getElementById(id)) {
-    const style = document.createElement("style");
-    style.id = id;
-    style.textContent = shoelaceThemeCss;
-    document.head.appendChild(style);
-  }
-}
+injectStyle("rune-shoelace-theme", shoelaceThemeCss);

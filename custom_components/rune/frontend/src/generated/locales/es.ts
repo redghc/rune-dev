@@ -11,8 +11,6 @@
     export const templates = {
       'hc74c45668e7ba599': html`HA expondrá una entidad de tipo <strong>${0}</strong>`,
 'hd8adfdda18c24d3f': html`Dispositivos IR / RF que RUNE controla en Home Assistant. Pulsa <strong>+ Añadir dispositivo</strong> para crear uno, o usa el flujo de configuración.`,
-'hef26ee9d6c0a1943': html`Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra los tiempos en crudo y los escribe en la ranura del comando.`,
-'hf1f6e8798e7e33a8': html`Señales en vivo capturadas de cada receptor que hayas configurado. El sniffer escucha en cada entidad receptora automáticamente al añadir un dispositivo. Asigna una señal a un comando de dispositivo desde la pestaña <strong>Acciones</strong>, o descarta todo el mando aquí.`,
 's00f1132c0edd135d': str`RUNE`,
 's01ffd62761f12537': str`Seguir el idioma de Home Assistant`,
 's03970aa76a09982d': str`Integración`,
@@ -31,7 +29,6 @@
 's289128a4d2f964c1': str`Señales del sniffer`,
 's2ceb11be2290bb1b': str`Cancelar`,
 's2f34a7485bf6391a': str`nivel(es) de velocidad`,
-'s2ffa65c6918a1790': str`${0} mando${1} · ${2} señal${3}`,
 's33f85f24c0f5f008': str`Guardar`,
 's380f188d5f77d6cd': str`Iniciar aprendizaje`,
 's382a2aa3984474dd': str`Crear`,
@@ -44,9 +41,7 @@
 's4cb9ebef9edf03fd': str`Salud de la integración y entidades descubiertas.`,
 's5062cd8f7a7fd349': str`señal`,
 's55dcb71fc2faeb11': str`Opcional — receptor para señales y aprendizaje IR`,
-'s55eaa18a9834d457': str`${0} señal${1}`,
 's593d9c27e95706a7': str`Entidad emisora IR que envía comandos`,
-'s5a112be88c24dada': str`${0} comando${1}`,
 's5b224298bf2add8c': str`No se capturó ninguna señal`,
 's5b55db76417c9d56': str`Capturando… pulsa el botón del mando AHORA`,
 's5d6470bf9c092be4': str`Cómo aparece el dispositivo en Home Assistant`,
@@ -71,7 +66,6 @@
 's82a4e28ab5b56670': str`Conectado`,
 's87a77041823eefca': str`min_hits: ${0}`,
 's87c879d8ca016bf8': str` llamada `,
-'s893185e1b567e215': str`${0} capturas`,
 's8af61807443f32a4': str`Acciones`,
 's8bea2885ff2d1272': str`Comando`,
 's8c36545f724b9460': str`(ninguno)`,
@@ -115,7 +109,24 @@
 'sf1c6be1ae4098f62': str`Error al cargar sniffer: ${0}`,
 'sf2c294199c98fed2': str`Ventilador`,
 'sf3ba82f4ac082dc3': str`Niveles de velocidad`,
-'sf538066dd56bd6e6': str`${0} enlace${1}`,
 'sf8824fc70d91da9e': str`Español`,
+'s44a9ac9dd7567f4a': str`Deleted`,
+'se5a67e2c6557ee09': str`Sent ${0}`,
+'s274d0241c4139713': str`Learn which command on "${0}"?
+
+Enter a command key (e.g. "off", "speed_2", "power_on"):`,
+'saf63d34c8601dd41': str`${0}`,
+'sb62fb7b2161bc5c0': str`Delete device`,
+'s9821339d307c474a': str`Delete device "${0}"? This cannot be undone.`,
+'sdc673e73b5c13aea': str`Delete`,
+'s8931e8e1b5688a4e': str`${0} hit${1}`,
+'s393057888fc2f40e': str`${0} · ${1}`,
+'h7ca7e5a17ba26a94': html`Live signals captured from every receiver you've configured. The sniffer listens on
+            each receiver entity automatically once you add a device. Assign a signal to a device
+            command via the <strong>Actions</strong> tab, or dismiss the whole remote here.`,
+'sbf9c5c5a8e5efad4': str`Failed`,
+'s4c2e50f73ff9175f': str`Captured`,
+'h1fb4a999c505bec9': html`Point your remote at the receiver and press the button you want to capture. RUNE
+              records the raw timings and writes them into the command slot.`,
     };
   

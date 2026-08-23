@@ -11,6 +11,14 @@ import { tablerClass } from "./icon.js";
 export type RuneButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
 export type RuneButtonSize = "small" | "medium" | "large";
 
+const SL_VARIANT: Record<RuneButtonVariant, string> = {
+  primary: "primary",
+  secondary: "default",
+  ghost: "text",
+  danger: "danger",
+  success: "success",
+};
+
 @customElement("rune-button")
 export class RuneButton extends LitElement {
   static styles = [
@@ -55,37 +63,15 @@ export class RuneButton extends LitElement {
   @property({ type: Boolean }) pill = false;
   @property({ type: String }) type: "button" | "submit" | "reset" = "button";
 
-  private _slVariant(): string {
-    switch (this.variant) {
-      case "secondary":
-        return "default";
-      case "ghost":
-        return "text";
-      case "danger":
-        return "danger";
-      case "success":
-        return "success";
-      case "primary":
-      default:
-        return "primary";
-    }
-  }
-
-  private _slSize(): "small" | "medium" | "large" {
-    return this.size;
-  }
-
   protected render() {
-    const iconHtml = this.icon
-      ? html`<i class="ti ${tablerClass(this.icon).replace("ti ", "")} icon"></i>`
-      : nothing;
+    const iconHtml = this.icon ? html`<i class="ti ${tablerClass(this.icon)} icon"></i>` : nothing;
     const iconEndHtml = this.iconEnd
-      ? html`<i class="ti ${tablerClass(this.iconEnd).replace("ti ", "")} icon" slot="suffix"></i>`
+      ? html`<i class="ti ${tablerClass(this.iconEnd)} icon" slot="suffix"></i>`
       : nothing;
     return html`
       <sl-button
-        variant=${this._slVariant()}
-        size=${this._slSize()}
+        variant=${SL_VARIANT[this.variant]}
+        size=${this.size}
         ?disabled=${this.disabled || this.loading}
         type=${this.type}
         ?pill=${this.pill}

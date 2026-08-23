@@ -1,18 +1,27 @@
 import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { entityCardStyles, toolbarStyles } from "@/styles/views.js";
+
+import type { TxEntity } from "@/types.js";
+import type { TemplateResult } from "lit";
+
+const OFF_STATES = new Set(["off", "unavailable"]);
 
 @customElement("rune-settings-view")
 @localized()
 export class RuneSettingsView extends LitElement {
   static styles = [
     sharedStyles,
+    toolbarStyles,
+    entityCardStyles,
     css`
       .head {
         margin-bottom: var(--rune-space-5);
@@ -99,70 +108,25 @@ export class RuneSettingsView extends LitElement {
         color: var(--rune-text-strong);
         letter-spacing: -0.01em;
       }
-      .stat-value.small {
-        font-size: var(--rune-fs-md);
-        font-family: var(--rune-font-mono);
-      }
       .stat-meta {
         font-size: var(--rune-fs-xs);
         color: var(--rune-text-muted);
         margin-top: 2px;
       }
-      .entities {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: var(--rune-space-2);
-      }
-      .entity {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: var(--rune-space-3) var(--rune-space-4);
-        background: var(--rune-surface);
-        border: 1px solid var(--rune-border);
-        border-radius: var(--rune-radius-sm);
-        font-family: var(--rune-font-mono);
-        font-size: var(--rune-fs-xs);
-      }
-      .entity-id {
-        color: var(--rune-text-strong);
-        font-weight: var(--rune-fw-medium);
-      }
-      .entity-state {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        color: var(--rune-text-muted);
-      }
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: var(--rune-radius-full);
-        background: var(--rune-success);
-        box-shadow: 0 0 0 3px var(--rune-success-soft);
-      }
-      .dot.off {
-        background: var(--rune-text-subtle);
-        box-shadow: 0 0 0 3px var(--rune-surface-alt);
-      }
     `,
   ];
 
-  @state() private _tick = 0;
-  private _unsub: (() => void) | null = null;
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-    void this.refresh();
+    void this._refresh();
   }
 
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
-
-  private async refresh(): Promise<void> {
+  private async _refresh(): Promise<void> {
     try {
       const [{ transmitters }, { receivers }, { devices }] = await Promise.all([
         api.transmitters(),
@@ -177,8 +141,53 @@ export class RuneSettingsView extends LitElement {
     }
   }
 
+  private _renderEntity(e: TxEntity): TemplateResult {
+    const off = OFF_STATES.has(e.state);
+    return html`
+      <div class="entity">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-weight:var(--rune-fw-medium)">${e.name || e.entity_id}</span>
+          ${
+            e.name && e.name !== e.entity_id
+              ? html`<span class="entity-id" style="font-size:11px;color:var(--rune-text-muted)"
+                  >${e.entity_id}</span
+                >`
+              : null
+          }
+        </div>
+        <span class="entity-state">
+          <span class="dot ${off ? "off" : ""}"></span>
+          ${e.state}
+        </span>
+      </div>
+    `;
+  }
+
+  private _renderEntitySection(
+    title: unknown,
+    icon: string,
+    entities: TxEntity[],
+    empty: { heading: unknown; message: unknown },
+  ): TemplateResult {
+    return html`
+      <div class="section-title">
+        <i class="ti ti-${icon}"></i>
+        ${title}
+        <rune-chip variant="neutral">${entities.length}</rune-chip>
+      </div>
+      ${
+        entities.length === 0
+          ? html`<rune-empty-state
+              icon=${icon}
+              heading=${empty.heading}
+              message=${empty.message}
+            ></rune-empty-state>`
+          : html`<div class="entities">${entities.map((e) => this._renderEntity(e))}</div>`
+      }
+    `;
+  }
+
   render() {
-    void this._tick;
     const signalTotal = store.remotes.reduce((acc, r) => acc + r.signals.length, 0);
     return html`
       <div class="head">
@@ -218,93 +227,23 @@ export class RuneSettingsView extends LitElement {
         </div>
       </div>
 
-      <div class="section-title">
-        <i class="ti ti-antenna-bars-5"></i>
-        ${msg(str`Available transmitters`)}
-        <rune-chip variant="neutral">${store.transmitters.length}</rune-chip>
-      </div>
-      ${
-        store.transmitters.length === 0
-          ? html`<rune-empty-state
-              icon="antenna-bars-5"
-              heading=${msg(str`No IR/RF emitters found`)}
-              message=${msg(str`Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first.`)}
-            ></rune-empty-state>`
-          : html`
-              <div class="entities">
-                ${store.transmitters.map(
-                  (t) => html`
-                    <div class="entity">
-                      <div style="display:flex;flex-direction:column;gap:2px">
-                        <span style="font-weight:var(--rune-fw-medium)"
-                          >${t.name || t.entity_id}</span
-                        >
-                        ${
-                          t.name && t.name !== t.entity_id
-                            ? html`<span
-                                class="entity-id"
-                                style="font-size:11px;color:var(--rune-text-muted)"
-                                >${t.entity_id}</span
-                              >`
-                            : null
-                        }
-                      </div>
-                      <span class="entity-state">
-                        <span
-                          class="dot ${t.state === "off" || t.state === "unavailable" ? "off" : ""}"
-                        ></span>
-                        ${t.state}
-                      </span>
-                    </div>
-                  `,
-                )}
-              </div>
-            `
-      }
-
-      <div class="section-title">
-        <i class="ti ti-antenna"></i>
-        ${msg(str`Available receivers`)}
-        <rune-chip variant="neutral">${store.receivers.length}</rune-chip>
-      </div>
-      ${
-        store.receivers.length === 0
-          ? html`<rune-empty-state
-              icon="antenna"
-              heading=${msg(str`No IR/RF receivers found`)}
-              message=${msg(str`Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows.`)}
-            ></rune-empty-state>`
-          : html`
-              <div class="entities">
-                ${store.receivers.map(
-                  (r) => html`
-                    <div class="entity">
-                      <div style="display:flex;flex-direction:column;gap:2px">
-                        <span style="font-weight:var(--rune-fw-medium)"
-                          >${r.name || r.entity_id}</span
-                        >
-                        ${
-                          r.name && r.name !== r.entity_id
-                            ? html`<span
-                                class="entity-id"
-                                style="font-size:11px;color:var(--rune-text-muted)"
-                                >${r.entity_id}</span
-                              >`
-                            : null
-                        }
-                      </div>
-                      <span class="entity-state">
-                        <span
-                          class="dot ${r.state === "off" || r.state === "unavailable" ? "off" : ""}"
-                        ></span>
-                        ${r.state}
-                      </span>
-                    </div>
-                  `,
-                )}
-              </div>
-            `
-      }
+      ${this._renderEntitySection(
+        msg(str`Available transmitters`),
+        "antenna-bars-5",
+        store.transmitters,
+        {
+          heading: msg(str`No IR/RF emitters found`),
+          message: msg(
+            str`Add a Broadlink / ESPHome / MQTT emitter entity to Home Assistant first.`,
+          ),
+        },
+      )}
+      ${this._renderEntitySection(msg(str`Available receivers`), "antenna", store.receivers, {
+        heading: msg(str`No IR/RF receivers found`),
+        message: msg(
+          str`Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows.`,
+        ),
+      })}
     `;
   }
 }

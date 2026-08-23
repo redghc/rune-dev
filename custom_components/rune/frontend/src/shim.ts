@@ -68,16 +68,28 @@ class RunePanel extends HTMLElement {
     if (this._iframe) return;
     const root = this.attachShadow({ mode: "open" });
 
+    const iframe = this._createIframe(root);
+    this._installErrorDisplay(root);
+    this._installMessageHandler(iframe);
+    this._iframe = iframe;
+  }
+
+  disconnectedCallback(): void {
+    for (const fn of this._listeners) window.removeEventListener("message", fn);
+    this._listeners = [];
+  }
+
+  /** Build the iframe element, wire up its error/load events, append
+   *  it to the shadow root and post the rune-init handshake on load. */
+  private _createIframe(root: ShadowRoot): HTMLIFrameElement {
+    const style = document.createElement("style");
     // ``:host { display: block }`` so the panel stretches to fill the
     // slot HA gives us. Without it the host collapses to ``inline``
     // and the iframe's ``height: 100%`` has nothing to fill against.
-    const style = document.createElement("style");
     style.textContent = `:host{display:block;width:100%;height:100%;}:host>iframe{display:block;width:100%;height:100%;min-height:100vh;border:0;}`;
     root.appendChild(style);
 
     const errorEl = document.createElement("div");
-    errorEl.style.cssText =
-      "padding:16px;font:14px/1.4 system-ui;color:#b71c1c;background:#ffebee;display:none;white-space:pre-wrap;";
     errorEl.id = "rune-panel-error";
     root.appendChild(errorEl);
 
@@ -110,19 +122,32 @@ class RunePanel extends HTMLElement {
       );
     });
     root.appendChild(iframe);
-    this._iframe = iframe;
+    return iframe;
+  }
 
+  /** Drop the error-overlay div into the shadow root. Stays hidden
+   *  unless the iframe fails to load. */
+  private _installErrorDisplay(root: ShadowRoot): void {
+    const errorEl = root.getElementById("rune-panel-error");
+    if (!errorEl) return;
+    errorEl.style.cssText =
+      "padding:16px;font:14px/1.4 system-ui;color:#b71c1c;background:#ffebee;display:none;white-space:pre-wrap;";
+  }
+
+  /** Subscribe to window.postMessage and route ``rune-bridge`` requests
+   *  to ``callWS`` / ``callService``. Replies go back via postMessage
+   *  on the iframe's contentWindow. */
+  private _installMessageHandler(iframe: HTMLIFrameElement): void {
     const onMsg = (event: MessageEvent): void => {
       const data = (event.data ?? {}) as Partial<BridgeRequest>;
       if (typeof data !== "object" || data === null) return;
       if (data.type !== "rune-bridge") return;
       if (typeof data.id !== "number") return;
 
-      const id = data.id;
       const reply = (payload: Record<string, unknown>): void => {
         const win = iframe.contentWindow;
         if (win) {
-          win.postMessage({ type: "rune-bridge-result", id, ...payload }, "*");
+          win.postMessage({ type: "rune-bridge-result", id: data.id, ...payload }, "*");
         }
       };
 
@@ -132,49 +157,62 @@ class RunePanel extends HTMLElement {
       }
 
       if (data.kind === "ws" && data.message) {
-        console.debug(`[rune-shim] ws -> ${JSON.stringify(data.message)}`);
-        this._hass
-          .callWS(data.message)
-          .then((result) => {
-            console.debug(`[rune-shim] ws <- ok ${JSON.stringify(data.message)}`);
-            reply({ result: result === undefined ? null : result });
-          })
-          .catch((err) => {
-            const raw = String((err as Error)?.message ?? err);
-            console.warn(
-              `[rune-shim] ws <- err ${JSON.stringify(data.message)} code=${(err as { code?: string })?.code ?? "?"} msg=${raw}`,
-            );
-            // HA returns ``"Unknown command"`` (or
-            // ``"Unknown command: rune/..."`` on newer builds) when the
-            // ``rune/*`` WebSocket handlers aren't registered yet —
-            // usually because HA wasn't restarted after the
-            // integration was installed or updated.
-            const hint = /unknown command/i.test(raw)
-              ? `${raw} — reload the RUNE integration (Developer Tools → YAML → Reload) or restart Home Assistant.`
-              : raw;
-            reply({ error: hint });
-          });
-      } else if (
+        this._handleWsCall(data.message, reply);
+        return;
+      }
+      if (
         data.kind === "service" &&
         typeof data.domain === "string" &&
         typeof data.service === "string"
       ) {
-        this._hass
-          .callService(data.domain, data.service, data.service_data ?? {})
-          .then(() => reply({ result: true }))
-          .catch((err) => reply({ error: String((err as Error)?.message ?? err) }));
-      } else {
-        reply({ error: `unknown bridge kind: ${data.kind}` });
+        this._handleServiceCall(data.domain, data.service, data.service_data ?? {}, reply);
+        return;
       }
+      reply({ error: `unknown bridge kind: ${data.kind}` });
     };
 
     window.addEventListener("message", onMsg);
     this._listeners.push(onMsg);
   }
 
-  disconnectedCallback(): void {
-    for (const fn of this._listeners) window.removeEventListener("message", fn);
-    this._listeners = [];
+  private _handleWsCall(
+    message: Record<string, unknown>,
+    reply: (payload: Record<string, unknown>) => void,
+  ): void {
+    console.debug(`[rune-shim] ws -> ${JSON.stringify(message)}`);
+    this._hass
+      ?.callWS(message)
+      .then((result) => {
+        console.debug(`[rune-shim] ws <- ok ${JSON.stringify(message)}`);
+        reply({ result: result === undefined ? null : result });
+      })
+      .catch((err) => {
+        const raw = String((err as Error)?.message ?? err);
+        console.warn(
+          `[rune-shim] ws <- err ${JSON.stringify(message)} code=${(err as { code?: string })?.code ?? "?"} msg=${raw}`,
+        );
+        // HA returns ``"Unknown command"`` (or
+        // ``"Unknown command: rune/..."`` on newer builds) when the
+        // ``rune/*`` WebSocket handlers aren't registered yet —
+        // usually because HA wasn't restarted after the
+        // integration was installed or updated.
+        const hint = /unknown command/i.test(raw)
+          ? `${raw} — reload the RUNE integration (Developer Tools → YAML → Reload) or restart Home Assistant.`
+          : raw;
+        reply({ error: hint });
+      });
+  }
+
+  private _handleServiceCall(
+    domain: string,
+    service: string,
+    serviceData: Record<string, unknown>,
+    reply: (payload: Record<string, unknown>) => void,
+  ): void {
+    this._hass
+      ?.callService(domain, service, serviceData)
+      .then(() => reply({ result: true }))
+      .catch((err) => reply({ error: String((err as Error)?.message ?? err) }));
   }
 }
 

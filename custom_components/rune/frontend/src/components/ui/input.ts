@@ -128,10 +128,7 @@ export class RuneInput extends LitElement {
         }
         ${
           this.icon
-            ? html`<i
-                slot="prefix"
-                class="ti ${tablerClass(this.icon).replace("ti ", "")} leading"
-              ></i>`
+            ? html`<i slot="prefix" class="ti ${tablerClass(this.icon)} leading"></i>`
             : nothing
         }
         <slot name="suffix" slot="suffix"></slot>

@@ -228,7 +228,7 @@ export class RuneSelect extends LitElement {
     return html`
       <sl-option value=${o.value} ?disabled=${o.disabled ?? false}>
         <div class="row">
-          ${o.icon ? html`<i class="ti ${tablerClass(o.icon).replace("ti ", "")}"></i>` : nothing}
+          ${o.icon ? html`<i class="ti ${tablerClass(o.icon)}"></i>` : nothing}
           <div class="opt-label">
             <span class="opt-title">${labelNode}</span>
             ${descNode ? html`<span class="opt-desc">${descNode}</span>` : nothing}
@@ -280,7 +280,7 @@ export class RuneSelect extends LitElement {
           this.icon
             ? html`<i
                 slot="prefix"
-                class="ti ${tablerClass(this.icon).replace("ti ", "")}"
+                class="ti ${tablerClass(this.icon)}"
                 style="color:var(--rune-text-subtle);font-size:1.05em"
               ></i>`
             : nothing

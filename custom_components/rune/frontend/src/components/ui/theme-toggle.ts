@@ -27,16 +27,11 @@ const TITLE_LABELS: Record<RuneTheme, string> = {
   dark: "Dark",
 };
 
-function optionLabel(v: RuneTheme) {
-  switch (v) {
-    case "auto":
-      return msg(str`Auto`);
-    case "light":
-      return msg(str`Light`);
-    case "dark":
-      return msg(str`Dark`);
-  }
-}
+const OPTION_LABEL: Record<RuneTheme, () => ReturnType<typeof msg>> = {
+  auto: () => msg(str`Auto`),
+  light: () => msg(str`Light`),
+  dark: () => msg(str`Dark`),
+};
 
 @customElement("rune-theme-toggle")
 @localized()
@@ -139,7 +134,7 @@ export class RuneThemeToggle extends LitElement {
               @click=${() => this._pick(o.value)}
             >
               <i class="ti ti-${o.icon}" aria-hidden="true"></i>
-              <span>${optionLabel(o.value)}</span>
+              <span>${OPTION_LABEL[o.value]()}</span>
             </button>
           `,
         )}

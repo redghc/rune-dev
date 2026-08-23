@@ -9,54 +9,22 @@
 // the preference is the sticky user choice. The i18n module consults
 // the preference first.
 
+import { createPref } from "./pref.js";
+
 export type LocalePref = "auto" | "en" | "es";
 
-const STORAGE_KEY = "rune-locale";
 const VALID: readonly LocalePref[] = ["auto", "en", "es"];
 
-function readStored(): LocalePref {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw && (VALID as readonly string[]).includes(raw)) {
-      return raw as LocalePref;
-    }
-  } catch {
-    /* localStorage may be unavailable (private mode, sandboxed iframe) */
-  }
-  return "auto";
-}
+const pref = createPref<LocalePref>({
+  key: "rune-locale",
+  initial: "auto",
+  valid: VALID,
+});
 
-let current: LocalePref = "auto";
-const listeners = new Set<(p: LocalePref) => void>();
-
-export function getLocalePref(): LocalePref {
-  return current;
-}
-
-export function setLocalePref(pref: LocalePref): void {
-  if (!VALID.includes(pref)) return;
-  if (pref === current) return;
-  current = pref;
-  try {
-    if (pref === "auto") {
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      localStorage.setItem(STORAGE_KEY, pref);
-    }
-  } catch {
-    /* ignore */
-  }
-  for (const fn of listeners) fn(pref);
-}
-
-export function onLocalePrefChange(fn: (p: LocalePref) => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
+export const getLocalePref = pref.get;
+export const setLocalePref = pref.set;
+export const onLocalePrefChange = pref.subscribe;
 
 /** Read the stored preference. Called once at app bootstrap so the
  *  rest of the UI can read ``getLocalePref`` synchronously. */
-export function initLocalePref(): LocalePref {
-  current = readStored();
-  return current;
-}
+export const initLocalePref = pref.init;

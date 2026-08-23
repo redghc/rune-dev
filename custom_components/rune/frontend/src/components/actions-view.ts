@@ -5,8 +5,11 @@ import { customElement, state } from "lit/decorators.js";
 import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { toolbarStyles } from "@/styles/views.js";
+import { pluralize } from "@/utils/format.js";
 
 import type { ActionBinding } from "@/types.js";
 
@@ -15,23 +18,8 @@ import type { ActionBinding } from "@/types.js";
 export class RuneActionsView extends LitElement {
   static styles = [
     sharedStyles,
+    toolbarStyles,
     css`
-      .toolbar {
-        display: flex;
-        gap: var(--rune-space-3);
-        align-items: center;
-        margin-bottom: var(--rune-space-5);
-      }
-      .toolbar h2 {
-        margin: 0;
-        font-size: var(--rune-fs-2xl);
-        font-weight: var(--rune-fw-semibold);
-        letter-spacing: -0.02em;
-        color: var(--rune-text-strong);
-      }
-      .grow {
-        flex: 1;
-      }
       .actions {
         display: flex;
         flex-direction: column;
@@ -86,22 +74,19 @@ export class RuneActionsView extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
+
   @state() private _loading = false;
-  private _unsub: (() => void) | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
-    void this.refresh();
+    void this._refresh();
   }
 
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._unsub?.();
-  }
-
-  private async refresh(): Promise<void> {
+  private async _refresh(): Promise<void> {
     this._loading = true;
     try {
       const { actions } = await api.listActions();
@@ -136,13 +121,12 @@ export class RuneActionsView extends LitElement {
   }
 
   render() {
-    void this._tick;
     const actions = store.actions;
     return html`
       <div class="toolbar">
         <h2>${msg(str`Actions`)}</h2>
         <rune-chip variant="neutral" icon="wand"
-          >${msg(str`${actions.length} binding${actions.length === 1 ? "" : "s"}`)}</rune-chip
+          >${msg(str`${pluralize(actions.length, "binding")}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -150,7 +134,7 @@ export class RuneActionsView extends LitElement {
             variant="secondary"
             icon="refresh"
             ?loading=${this._loading}
-            @click=${this.refresh}
+            @click=${this._refresh}
           >
             ${msg(str`Refresh`)}
           </rune-button>
@@ -158,7 +142,9 @@ export class RuneActionsView extends LitElement {
       </div>
       <div class="help">
         <i class="ti ti-info-circle"></i>
-        ${msg(str`Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).`)}
+        ${msg(
+          str`Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).`,
+        )}
       </div>
       ${
         actions.length === 0
@@ -169,7 +155,7 @@ export class RuneActionsView extends LitElement {
                 message=${msg(str`Create bindings from the API or wait for the v0.4 editor.`)}
               ></rune-empty-state>
             `
-          : html` <div class="actions">${actions.map((a) => this._renderAction(a))}</div> `
+          : html`<div class="actions">${actions.map((a) => this._renderAction(a))}</div>`
       }
     `;
   }

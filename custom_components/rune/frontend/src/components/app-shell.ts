@@ -1,10 +1,11 @@
 import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
 
-import { store, subscribe } from "@/state/store.js";
+import { attachStoreController } from "@/state/store-controller.js";
+import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import type { Section } from "@/state/store.js";
@@ -30,18 +31,12 @@ const NAV: NavItem[] = [
   { id: "settings", icon: "settings", shortcut: ["g", "x"] },
 ];
 
-function sectionLabel(id: Section) {
-  switch (id) {
-    case "devices":
-      return msg(str`Devices`);
-    case "sniffer":
-      return msg(str`Sniffer`);
-    case "actions":
-      return msg(str`Actions`);
-    case "settings":
-      return msg(str`Settings`);
-  }
-}
+const SECTION_LABELS: Record<Section, () => ReturnType<typeof msg>> = {
+  devices: () => msg(str`Devices`),
+  sniffer: () => msg(str`Sniffer`),
+  actions: () => msg(str`Actions`),
+  settings: () => msg(str`Settings`),
+};
 
 const SHORTCUT_MAP: Record<string, Section> = {
   d: "devices",
@@ -49,6 +44,8 @@ const SHORTCUT_MAP: Record<string, Section> = {
   a: "actions",
   x: "settings",
 };
+
+const SHORTCUT_TIMEOUT_MS = 1200;
 
 @customElement("rune-app")
 @localized()
@@ -310,54 +307,23 @@ export class RuneApp extends LitElement {
     `,
   ];
 
-  @state() private _tick = 0;
-  private _unsub: (() => void) | null = null;
   private _shortcutPrefix: string | null = null;
   private _shortcutTimer: ReturnType<typeof setTimeout> | null = null;
 
+  constructor() {
+    super();
+    attachStoreController(this);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
-    this._unsub = subscribe(() => this._tick++);
     document.addEventListener("keydown", this._onKeydown);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    this._unsub?.();
     document.removeEventListener("keydown", this._onKeydown);
     if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
-  }
-
-  private _onKeydown = (ev: KeyboardEvent): void => {
-    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-    const target = ev.target as HTMLElement | null;
-    const inField =
-      target?.tagName === "INPUT" ||
-      target?.tagName === "TEXTAREA" ||
-      target?.tagName === "SELECT" ||
-      target?.isContentEditable;
-    if (inField) return;
-    if (ev.key === "g") {
-      this._shortcutPrefix = "g";
-      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
-      this._shortcutTimer = setTimeout(() => {
-        this._shortcutPrefix = null;
-      }, 1200);
-      return;
-    }
-    if (this._shortcutPrefix === "g") {
-      const section = SHORTCUT_MAP[ev.key.toLowerCase()];
-      if (section) {
-        ev.preventDefault();
-        store.setSection(section);
-      }
-      this._shortcutPrefix = null;
-      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
-    }
-  };
-
-  private _select(s: Section): void {
-    store.setSection(s);
   }
 
   private _renderSection() {
@@ -374,8 +340,35 @@ export class RuneApp extends LitElement {
     }
   }
 
+  private _onKeydown = (ev: KeyboardEvent): void => {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const target = ev.target as HTMLElement | null;
+    const inField =
+      target?.tagName === "INPUT" ||
+      target?.tagName === "TEXTAREA" ||
+      target?.tagName === "SELECT" ||
+      target?.isContentEditable;
+    if (inField) return;
+    if (ev.key === "g") {
+      this._shortcutPrefix = "g";
+      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+      this._shortcutTimer = setTimeout(() => {
+        this._shortcutPrefix = null;
+      }, SHORTCUT_TIMEOUT_MS);
+      return;
+    }
+    if (this._shortcutPrefix === "g") {
+      const section = SHORTCUT_MAP[ev.key.toLowerCase()];
+      if (section) {
+        ev.preventDefault();
+        store.setSection(section);
+      }
+      this._shortcutPrefix = null;
+      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+    }
+  };
+
   render() {
-    void this._tick;
     return html`
       <a class="skip-link" href="#main-content">${msg(str`Skip to content`)}</a>
       <nav aria-label="Primary">
@@ -385,22 +378,23 @@ export class RuneApp extends LitElement {
           </span>
           <h1>${msg(str`RUNE`)}<span class="pill">v${store.version}</span></h1>
         </div>
-        ${NAV.map(
-          (n) => html`
+        ${NAV.map((n) => {
+          const active = store.section === n.id;
+          return html`
             <button
-              class="nav-item ${store.section === n.id ? "active" : ""}"
+              class="nav-item ${active ? "active" : ""}"
               data-section=${n.id}
-              aria-current=${store.section === n.id ? "page" : "false"}
-              @click=${() => this._select(n.id)}
+              aria-current=${active ? "page" : "false"}
+              @click=${() => store.setSection(n.id)}
             >
               <i class="ti ti-${n.icon}" aria-hidden="true"></i>
-              <span class="label">${sectionLabel(n.id)}</span>
+              <span class="label">${SECTION_LABELS[n.id]()}</span>
               <span class="kbd" aria-hidden="true">
                 <kbd>${n.shortcut[0]}</kbd><kbd>${n.shortcut[1]}</kbd>
               </span>
             </button>
-          `,
-        )}
+          `;
+        })}
         <div class="footer">
           <rune-theme-toggle compact></rune-theme-toggle>
           <rune-locale-toggle compact></rune-locale-toggle>

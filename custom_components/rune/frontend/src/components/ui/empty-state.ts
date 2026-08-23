@@ -68,7 +68,7 @@ export class RuneEmptyState extends LitElement {
     return html`
       <div class="box" role="status">
         <div class="icon-wrap">
-          <i class="ti ${tablerClass(this.icon).replace("ti ", "")}"></i>
+          <i class="ti ${tablerClass(this.icon)}"></i>
         </div>
         <h3>${this.heading}</h3>
         ${this.message ? html`<p>${this.message}</p>` : null}

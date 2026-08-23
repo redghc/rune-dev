@@ -38,10 +38,6 @@ export class RuneChip extends LitElement {
   @property({ type: Boolean }) pulse = false;
   @property({ type: Boolean }) closable = false;
 
-  private _slVariant(): "neutral" | "primary" | "success" | "warning" | "danger" {
-    return this.variant === "neutral" ? "neutral" : this.variant;
-  }
-
   private _onRemove = (ev: Event): void => {
     ev.stopPropagation();
     this.dispatchEvent(new CustomEvent("rune-chip-remove", { bubbles: true, composed: true }));
@@ -50,7 +46,7 @@ export class RuneChip extends LitElement {
   protected render() {
     return html`
       <sl-tag
-        variant=${this._slVariant()}
+        variant=${this.variant}
         size="small"
         ?pill=${true}
         ?outlined=${this.outlined}
@@ -60,7 +56,7 @@ export class RuneChip extends LitElement {
         ${
           this.icon
             ? html`<i
-                class="ti ${tablerClass(this.icon).replace("ti ", "")} icon"
+                class="ti ${tablerClass(this.icon)} icon"
                 style=${this.pulse ? "animation:rune-pulse 1.6s infinite" : ""}
               ></i>`
             : null
