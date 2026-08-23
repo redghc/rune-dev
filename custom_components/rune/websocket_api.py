@@ -620,6 +620,7 @@ async def _ws_debug_registry_check(
         )
     return {
         "registries": {
+            "code_marker": "rune-registry-debug-v2-2026-08-23",
             "entity_registry_ok": entity_err is None,
             "entity_count": len(area_by_entity) + len(device_by_entity) // 2,
             "entity_error": entity_err,
