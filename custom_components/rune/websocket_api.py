@@ -571,15 +571,15 @@ async def _ws_receiver_list(
 async def _ws_debug_registry_check(
     ctx: RuneWebSocketContext, msg: dict[str, Any]
 ) -> dict[str, Any]:
-    """Dump the raw registry view for one entity (or every entity in
-    the IR/RF/ESPHome domains when ``entity_id`` is omitted).
+    """Dump the raw registry view for every entity in the IR/RF/ESPHome
+    domains.
 
     Diagnostic helper for the emitter / receiver picker: tells us
     whether each entity is registered, whether it's linked to a
     device, and what the device's area is. Empty fields explain why
     ``area`` / ``device_name`` come back blank from ``transmitter/list``.
     """
-    target = msg.get("entity_id")
+    _ = msg  # noqa: F841 — kept for handler-signature parity
     entity_payload, entity_err = _try_entity_registry(ctx.hass)
     device_payload, device_err = _try_device_registry(ctx.hass)
     area_payload, area_err = _try_area_registry(ctx.hass)
@@ -590,8 +590,6 @@ async def _ws_debug_registry_check(
     for state in ctx.hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
         if domain not in {"infrared", "remote", "esphome"}:
-            continue
-        if target and state.entity_id != target:
             continue
         entity_area_id = area_by_entity.get(state.entity_id, "")
         entity_device_id = device_by_entity.get(state.entity_id, "")
