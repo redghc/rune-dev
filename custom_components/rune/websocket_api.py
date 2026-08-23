@@ -597,7 +597,12 @@ def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
 def _list_entities_for_domains(
     hass: Any, domains: tuple[str, ...]
 ) -> list[dict[str, str]]:
-    """Return ``[{entity_id, name, state}]`` for every state matching the domains."""
+    """Return ``[{entity_id, name, state, area}]`` for every state
+    matching the domains. ``area`` is the friendly name of the HA
+    area the entity belongs to (resolved from the entity + area
+    registries), or an empty string when unset."""
+    area_by_id = _area_index(hass)
+    area_by_entity = _entity_area_index(hass)
     entities: list[dict[str, str]] = []
     for state in hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
@@ -607,14 +612,52 @@ def _list_entities_for_domains(
                 or (getattr(state, "attributes", {}) or {}).get("friendly_name")
                 or state.entity_id
             )
+            area_id = area_by_entity.get(state.entity_id, "")
+            area_name = area_by_id.get(area_id, "") if area_id else ""
             entities.append(
                 {
                     "entity_id": state.entity_id,
                     "name": str(friendly_name),
                     "state": state.state,
+                    "area": area_name,
                 }
             )
     return entities
+
+
+def _entity_area_index(hass: Any) -> dict[str, str]:
+    """Return ``{entity_id: area_id}`` for every entity with an area.
+
+    Wraps the entity registry — falls back to an empty dict when the
+    registry isn't loaded (older HA cores, tests)."""
+    try:
+        registry = hass.helpers.entity_registry.async_get(hass)
+    except Exception:
+        return {}
+    out: dict[str, str] = {}
+    for entry in registry.entities.values():
+        area_id = getattr(entry, "area_id", None)
+        if area_id:
+            out[entry.entity_id] = area_id
+    return out
+
+
+def _area_index(hass: Any) -> dict[str, str]:
+    """Return ``{area_id: area_name}`` for every registered area.
+
+    Empty dict when the area registry isn't available. Names are
+    localized when possible (the registry exposes ``name`` as a
+    plain string in modern cores)."""
+    try:
+        registry = hass.helpers.area_registry.async_get(hass)
+    except Exception:
+        return {}
+    out: dict[str, str] = {}
+    for entry in registry.areas.values():
+        name = getattr(entry, "name", None) or getattr(entry, "id", "")
+        if name:
+            out[entry.id] = str(name)
+    return out
 
 
 __all__ = [
