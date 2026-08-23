@@ -80,11 +80,13 @@ class _FakeDeviceEntry:
         name: str | None = None,
         manufacturer: str | None = None,
         model: str | None = None,
+        area_id: str | None = None,
     ) -> None:
         self.id = device_id
         self.name = name
         self.manufacturer = manufacturer
         self.model = model
+        self.area_id = area_id
 
 
 class _FakeAreaEntry:
@@ -363,19 +365,26 @@ class TestWsEntityListers:
     async def test_transmitter_list_resolves_area_and_device_name(self) -> None:
         """Each transmitter row should carry the entity's area name
         (from the HA area registry) and the parent device's friendly
-        name (from the HA device registry). Missing links surface as
-        empty strings — never as fabricated values."""
+        name (from the HA device registry).
+
+        Area resolution mirrors the HA UI: an entity's own ``area_id``
+        wins; otherwise the entity inherits the area from the device
+        it belongs to. Missing links surface as empty strings — never
+        as fabricated values.
+        """
         from custom_components.rune.websocket_api import _ws_transmitter_list
 
         hass = FakeHassWithRegistries(
             states=[
                 ("remote.salon_tv", "idle", "Salon TV"),
                 ("remote.bedroom_tv", "idle", "Bedroom TV"),
+                ("remote.inherited", "idle", "Inherited Area"),
                 ("remote.loose", "idle", "Loose Entity"),
             ],
             entities=[
                 _FakeRegEntry("remote.salon_tv", area_id="a-salon", device_id="d-rm4"),
-                _FakeRegEntry("remote.bedroom_tv", area_id="a-bed", device_id=None),
+                _FakeRegEntry("remote.bedroom_tv", area_id=None, device_id="d-bed-tv"),
+                _FakeRegEntry("remote.inherited", area_id=None, device_id="d-rm4"),
                 _FakeRegEntry("remote.loose", area_id=None, device_id="d-loose"),
             ],
             areas=[
@@ -383,7 +392,8 @@ class TestWsEntityListers:
                 _FakeAreaEntry("a-bed", "Bedroom"),
             ],
             devices=[
-                _FakeDeviceEntry("d-rm4", name="RM4 Pro"),
+                _FakeDeviceEntry("d-rm4", name="RM4 Pro", area_id="a-salon"),
+                _FakeDeviceEntry("d-bed-tv", name="Bedroom TV", area_id="a-bed"),
                 _FakeDeviceEntry("d-loose", name="Loose Device"),
             ],
         )
@@ -395,7 +405,10 @@ class TestWsEntityListers:
         assert by_id["remote.salon_tv"]["device_name"] == "RM4 Pro"
 
         assert by_id["remote.bedroom_tv"]["area"] == "Bedroom"
-        assert by_id["remote.bedroom_tv"]["device_name"] == ""
+        assert by_id["remote.bedroom_tv"]["device_name"] == "Bedroom TV"
+
+        assert by_id["remote.inherited"]["area"] == "Salon"
+        assert by_id["remote.inherited"]["device_name"] == "RM4 Pro"
 
         assert by_id["remote.loose"]["area"] == ""
         assert by_id["remote.loose"]["device_name"] == "Loose Device"

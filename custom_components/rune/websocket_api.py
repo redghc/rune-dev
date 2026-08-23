@@ -598,13 +598,17 @@ def _list_entities_for_domains(
     hass: Any, domains: tuple[str, ...]
 ) -> list[dict[str, str]]:
     """Return ``[{entity_id, name, state, area, device_name}]`` for
-    every state matching the domains. ``area`` is the friendly name
-    of the HA area the entity belongs to and ``device_name`` is the
-    friendly name of the HA device (resolved from the entity +
-    device registries); both default to an empty string when unset."""
+    every state matching the domains.
+
+    Area resolution order: ``entity.area_id`` → ``entity.device.area_id``.
+    Device names resolve to the friendly name of the device that owns
+    the entity (via ``entity.device_id``); missing links surface as an
+    empty string so the frontend can render an honest placeholder
+    instead of fabricated data.
+    """
     area_by_id = _area_index(hass)
     area_by_entity, device_by_entity = _entity_indexes(hass)
-    device_by_id = _device_name_index(hass)
+    device_by_id = _device_index(hass)
     entities: list[dict[str, str]] = []
     for state in hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
@@ -614,10 +618,10 @@ def _list_entities_for_domains(
                 or (getattr(state, "attributes", {}) or {}).get("friendly_name")
                 or state.entity_id
             )
-            area_id = area_by_entity.get(state.entity_id, "")
-            area_name = area_by_id.get(area_id, "") if area_id else ""
-            device_id = device_by_entity.get(state.entity_id, "")
-            device_name = device_by_id.get(device_id, "") if device_id else ""
+            area_name = _resolve_area(state.entity_id, area_by_entity, device_by_entity, device_by_id, area_by_id)
+            device_name = _resolve_device_name(
+                state.entity_id, device_by_entity, device_by_id
+            )
             entities.append(
                 {
                     "entity_id": state.entity_id,
@@ -628,6 +632,40 @@ def _list_entities_for_domains(
                 }
             )
     return entities
+
+
+def _resolve_area(
+    entity_id: str,
+    area_by_entity: dict[str, str],
+    device_by_entity: dict[str, str],
+    device_by_id: dict[str, dict[str, str]],
+    area_by_id: dict[str, str],
+) -> str:
+    """Resolve the friendly area name for an entity.
+
+    Mirrors the HA UI: an entity can have its own ``area_id`` (overrides
+    everything) or inherit the area from the device it belongs to.
+    Returns ``""`` when neither link points at an area.
+    """
+    area_id = area_by_entity.get(entity_id, "") or ""
+    if not area_id:
+        device_id = device_by_entity.get(entity_id, "") or ""
+        if device_id:
+            area_id = device_by_id.get(device_id, {}).get("area_id", "") or ""
+    return area_by_id.get(area_id, "") if area_id else ""
+
+
+def _resolve_device_name(
+    entity_id: str,
+    device_by_entity: dict[str, str],
+    device_by_id: dict[str, dict[str, str]],
+) -> str:
+    """Friendly name of the device that owns ``entity_id``. Empty when
+    the entity isn't linked to any device."""
+    device_id = device_by_entity.get(entity_id, "") or ""
+    if not device_id:
+        return ""
+    return device_by_id.get(device_id, {}).get("name", "") or ""
 
 
 def _entity_indexes(hass: Any) -> tuple[dict[str, str], dict[str, str]]:
@@ -650,16 +688,16 @@ def _entity_indexes(hass: Any) -> tuple[dict[str, str], dict[str, str]]:
     return area, device
 
 
-def _device_name_index(hass: Any) -> dict[str, str]:
-    """Return ``{device_id: device_name}`` for every registered device.
-    Falls back to ``manufacturer + model`` (and finally the device id)
-    when no friendly name is set, so the row always has something to
-    show."""
+def _device_index(hass: Any) -> dict[str, dict[str, str]]:
+    """Return ``{device_id: {name, area_id}}`` for every registered
+    device. ``name`` falls back to ``manufacturer + model`` and then
+    to the device id so the row always has a non-empty label. ``area_id``
+    stays empty when the device isn't assigned to an area."""
     try:
         registry = hass.helpers.device_registry.async_get(hass)
     except Exception:
         return {}
-    out: dict[str, str] = {}
+    out: dict[str, dict[str, str]] = {}
     for entry in registry.devices.values():
         name = (
             getattr(entry, "name", None)
@@ -670,8 +708,10 @@ def _device_name_index(hass: Any) -> dict[str, str]:
             )
             or getattr(entry, "id", "")
         )
-        if name:
-            out[entry.id] = str(name)
+        out[entry.id] = {
+            "name": str(name) if name else "",
+            "area_id": str(getattr(entry, "area_id", None) or ""),
+        }
     return out
 
 
