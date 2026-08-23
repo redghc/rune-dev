@@ -15,6 +15,9 @@ export interface RuneSelectOption {
   value: string;
   label: string | (() => unknown);
   description?: string | (() => unknown);
+  /** Right-aligned tag rendered at the end of the row (e.g. ``"Radio
+   *  Frequency"``). Use a getter so it stays reactive to locale. */
+  meta?: string | (() => unknown);
   icon?: string;
   disabled?: boolean;
 }
@@ -102,7 +105,7 @@ export class RuneSelect extends LitElement {
       .row {
         display: flex;
         align-items: center;
-        gap: var(--rune-space-2);
+        gap: var(--rune-space-3);
         width: 100%;
       }
       .row i {
@@ -114,8 +117,26 @@ export class RuneSelect extends LitElement {
       .opt-label {
         display: flex;
         flex-direction: column;
-        gap: 1px;
+        gap: 2px;
         min-width: 0;
+        flex: 1 1 auto;
+      }
+      .opt-meta {
+        flex-shrink: 0;
+        margin-left: auto;
+        padding: 2px 10px;
+        font-size: var(--rune-fs-xs);
+        font-weight: var(--rune-fw-medium);
+        line-height: 1.4;
+        color: var(--rune-text-muted);
+        background: var(--rune-surface-alt);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-full);
+        white-space: nowrap;
+        transition:
+          color var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          background-color var(--rune-dur-fast) var(--rune-ease);
       }
       .opt-title {
         color: var(--rune-text);
@@ -152,6 +173,11 @@ export class RuneSelect extends LitElement {
       }
       sl-option[aria-selected="true"] .row i {
         color: var(--rune-primary);
+      }
+      sl-option[aria-selected="true"] .opt-meta {
+        color: var(--rune-primary-text);
+        border-color: var(--rune-primary);
+        background: transparent;
       }
       .spinner {
         color: var(--rune-text-subtle);
@@ -225,6 +251,7 @@ export class RuneSelect extends LitElement {
         ? o.description()
         : o.description
       : null;
+    const metaNode = o.meta ? (typeof o.meta === "function" ? o.meta() : o.meta) : null;
     return html`
       <sl-option value=${o.value} ?disabled=${o.disabled ?? false}>
         <div class="row">
@@ -233,6 +260,7 @@ export class RuneSelect extends LitElement {
             <span class="opt-title">${labelNode}</span>
             ${descNode ? html`<span class="opt-desc">${descNode}</span>` : nothing}
           </div>
+          ${metaNode ? html`<span class="opt-meta">${metaNode}</span>` : nothing}
         </div>
       </sl-option>
     `;

@@ -191,19 +191,66 @@ export function requiredFields(state: FormState): FieldDef[] {
 export interface EntityLike {
   entity_id: string;
   name?: string;
+  /** Optional area / room from the HA registry — surfaced as the
+   *  "location" segment of the row sub-line. */
+  area?: string;
+  /** Optional device model from the HA registry — surfaced as the
+   *  "type name" segment of the row sub-line. */
+  model?: string;
+}
+
+/** Domain → human label + tabler icon. Drives the right-aligned tag
+ *  in the rich row. Falls back to a generic entry for unknown
+ *  domains. */
+const DOMAIN_META: Record<string, { label: () => TemplateResult | string; icon: string }> = {
+  remote: { label: () => msg(str`Radio Frequency`), icon: "antenna-bars-5" },
+  infrared: { label: () => msg(str`Infrared`), icon: "antenna" },
+  esphome: { label: () => msg(str`ESPHome`), icon: "wifi" },
+};
+const FALLBACK_META = { label: () => msg(str`Other`), icon: "broadcast" };
+
+function domainOf(entityId: string): string {
+  const dot = entityId.indexOf(".");
+  return dot >= 0 ? entityId.slice(0, dot) : "";
+}
+
+function objectIdOf(entityId: string): string {
+  const dot = entityId.indexOf(".");
+  return dot >= 0 ? entityId.slice(dot + 1) : entityId;
 }
 
 /** Map entity rows to ``<rune-select>`` options. ``empty`` renders a
  *  single placeholder when the source list is empty (the receiver
- *  picker uses this to nudge the user to add hardware). */
+ *  picker uses this to nudge the user to add hardware).
+ *
+ *  Each row carries four slots that mirror the entity picker shown in
+ *  the design mockup:
+ *    • ``label``     → entity friendly name (top line, bold)
+ *    • ``description``→ breadcrumb sub-line ``location ▸ type-name``
+ *    • ``meta``      → right-aligned category tag (e.g. "Radio
+ *                      Frequency"), derived from the entity domain
+ *    • ``icon``      → tabler icon picked from the same domain map
+ *
+ *  ``area`` and ``model`` are optional — when the backend doesn't
+ *  expose them yet, the row falls back to ``domain ▸ object-id``
+ *  which is still informative. */
 export function entityOptions(
   entities: readonly EntityLike[],
   empty?: RuneSelectOption,
 ): RuneSelectOption[] {
   if (entities.length === 0 && empty) return [empty];
-  return entities.map((e) => ({
-    value: e.entity_id,
-    label: e.name || e.entity_id,
-    description: e.entity_id,
-  }));
+  return entities.map((e) => {
+    const domain = domainOf(e.entity_id);
+    const meta = DOMAIN_META[domain] ?? FALLBACK_META;
+    const location = e.area ?? domain;
+    const typeName = e.model ?? objectIdOf(e.entity_id);
+    const separator = " ▸ ";
+    return {
+      value: e.entity_id,
+      label: e.name || e.entity_id,
+      description: `${location}${separator}${typeName}`,
+      icon: meta.icon,
+      meta: meta.label,
+    };
+  });
 }

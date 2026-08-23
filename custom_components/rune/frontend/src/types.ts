@@ -55,12 +55,20 @@ export interface TxEntity {
   entity_id: string;
   name?: string;
   state: string;
+  /** Optional area / room from the HA registry. */
+  area?: string;
+  /** Optional device model from the HA registry. */
+  model?: string;
 }
 
 export interface RxEntity {
   entity_id: string;
   name?: string;
   state: string;
+  /** Optional area / room from the HA registry. */
+  area?: string;
+  /** Optional device model from the HA registry. */
+  model?: string;
 }
 
 export interface ListResponse {

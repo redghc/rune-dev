@@ -2,10 +2,6 @@
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
 <file target-language="es" source-language="en" original="lit-localize-inputs" datatype="plaintext">
 <body>
-<trans-unit id="s951b8802c208fb7e">
-  <source>Load actions: <x id="0" equiv-text="${(err as Error).message}"/></source>
-    <target>Error al cargar acciones: <x id="0" equiv-text="${(err as Error).message}"/></target>
-  </trans-unit>
 <trans-unit id="s5062cd8f7a7fd349">
   <source>signal</source>
     <target>señal</target>
@@ -101,10 +97,6 @@
 <trans-unit id="s382a2aa3984474dd">
   <source>Create</source>
     <target>Crear</target>
-  </trans-unit>
-<trans-unit id="s68fee534c2b180f6">
-  <source>Load devices: <x id="0" equiv-text="${(err as Error).message}"/></source>
-    <target>Error al cargar dispositivos: <x id="0" equiv-text="${(err as Error).message}"/></target>
   </trans-unit>
 <trans-unit id="scfe39d24bc958960">
   <source>Devices</source>
@@ -255,10 +247,6 @@
   <source>Save &amp; close</source>
     <target>Guardar y cerrar</target>
   </trans-unit>
-<trans-unit id="s78602c85e48547f6">
-  <source>Load settings: <x id="0" equiv-text="${(err as Error).message}"/></source>
-    <target>Error al cargar ajustes: <x id="0" equiv-text="${(err as Error).message}"/></target>
-  </trans-unit>
 <trans-unit id="s9d8b8aa2b404c2c8">
   <source>Settings</source>
     <target>Ajustes</target>
@@ -306,10 +294,6 @@
 <trans-unit id="sc65da9f5018d9fc8">
   <source>Add a Broadlink / ESPHome RF receiver to enable sniffer + learn workflows.</source>
     <target>Añade un receptor Broadlink / ESPHome RF para habilitar los flujos de sniffer y aprendizaje.</target>
-  </trans-unit>
-<trans-unit id="sf1c6be1ae4098f62">
-  <source>Load sniffer: <x id="0" equiv-text="${(err as Error).message}"/></source>
-    <target>Error al cargar sniffer: <x id="0" equiv-text="${(err as Error).message}"/></target>
   </trans-unit>
 <trans-unit id="sd6f81935eece3b94">
   <source>Sniffer</source>
@@ -450,6 +434,30 @@ Enter a command key (e.g. "off", "speed_2", "power_on"):</source>
   <source>Live signals captured from every receiver you've configured. The sniffer listens on
             each receiver entity automatically once you add a device. Assign a signal to a device
             command via the <x id="0" equiv-text="&lt;strong&gt;"/>Actions<x id="1" equiv-text="&lt;/strong&gt;"/> tab, or dismiss the whole remote here.</source>
+</trans-unit>
+<trans-unit id="sa25ffe7bc563a4ee">
+  <source>Load actions</source>
+</trans-unit>
+<trans-unit id="s7ccd5d08a0f2e4d6">
+  <source>Load devices</source>
+</trans-unit>
+<trans-unit id="sfffe12451843f40a">
+  <source>Radio Frequency</source>
+</trans-unit>
+<trans-unit id="sca5f60d9b936e804">
+  <source>Infrared</source>
+</trans-unit>
+<trans-unit id="se94b8d284f3df478">
+  <source>ESPHome</source>
+</trans-unit>
+<trans-unit id="sc9e494c8346b7cb5">
+  <source>Other</source>
+</trans-unit>
+<trans-unit id="s8beae57c2bc239d6">
+  <source>Load settings</source>
+</trans-unit>
+<trans-unit id="s08270ee8b94a3612">
+  <source>Load sniffer</source>
 </trans-unit>
 </body>
 </file>
