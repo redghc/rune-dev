@@ -446,25 +446,21 @@ export class RuneDeviceDialog extends LitElement {
       <div class="preview">
         ${msg(html`HA will expose a <strong>${label}</strong> entity`)}${
           this._form.name ? html` ${msg(str` named `)}<strong>${this._form.name}</strong>` : ""
-        }
-        ${
+        }${
           cat === "fan" && this._form.discrete_speed_count
             ? html` ${msg(str` with `)}<strong>${this._form.discrete_speed_count}</strong>
                 ${msg(str`speed step(s)`)}`
             : nothing
-        }
-        ${
+        }${
           cat === "media_player" && (this._chips.source_list ?? []).length > 0
             ? html` ${msg(str` and `)}<strong>${this._chips.source_list.length}</strong>
                 ${msg(str`source(s)`)}`
             : nothing
-        }
-        ${
+        }${
           cat === "remote" && this._form.power_sensor
             ? html` ${msg(str` driven by `)}<strong>${this._form.power_sensor}</strong>`
             : nothing
-        }
-        .
+        }.
       </div>
     `;
   }

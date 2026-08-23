@@ -9,7 +9,7 @@
     /* eslint-disable @typescript-eslint/no-explicit-any */
 
     export const templates = {
-      'hc74c45668e7ba599': html`HA expondrá una <strong>${0}</strong> entidad`,
+      'hc74c45668e7ba599': html`HA expondrá una entidad de tipo <strong>${0}</strong>`,
 'hd8adfdda18c24d3f': html`Dispositivos IR / RF que RUNE controla en Home Assistant. Pulsa <strong>+ Añadir dispositivo</strong> para crear uno, o usa el flujo de configuración.`,
 'hef26ee9d6c0a1943': html`Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra los tiempos en crudo y los escribe en la ranura del comando.`,
 'hf1f6e8798e7e33a8': html`Señales en vivo capturadas de cada receptor que hayas configurado. El sniffer escucha en cada entidad receptora automáticamente al añadir un dispositivo. Asigna una señal a un comando de dispositivo desde la pestaña <strong>Acciones</strong>, o descarta todo el mando aquí.`,
@@ -40,7 +40,7 @@
 's380f188d5f77d6cd': str`Iniciar aprendizaje`,
 's382a2aa3984474dd': str`Crear`,
 's3b0ab4b52326316f': str`Claro`,
-'s3c0a015edb522c38': str`y`,
+'s3c0a015edb522c38': str` y `,
 's40f8447beb72d313': str`Matriz HVAC completa`,
 's424dd51313286bed': str`(sin receptores)`,
 's480319bdb5b281d9': str`Elige un emisor…`,
@@ -82,7 +82,7 @@
 's7dee57c3bd388350': str`Genera cada combinación (modo × ventilador) × (on/off)`,
 's82a4e28ab5b56670': str`Conectado`,
 's87a77041823eefca': str`min_hits: ${0}`,
-'s87c879d8ca016bf8': str`llamada`,
+'s87c879d8ca016bf8': str` llamada `,
 's893185e1b567e215': str`${0} capturas`,
 's8a3770ba1998d4fb': str`El modo híbrido envía comandos de nivel + porcentaje`,
 's8af61807443f32a4': str`Acciones`,
@@ -128,13 +128,13 @@
 'sdcbcf60376a56045': str`Cuántos niveles de velocidad discretos expone este ventilador`,
 'se89ef05b905c26ef': str`Añade un receptor (IR o RF) y RUNE empezará a escuchar. Las señales capturadas aparecen aquí en tiempo real.`,
 'sea47f4110bb2b0b3': str`Mando`,
-'seb4678c45dbbdec5': str`con`,
+'seb4678c45dbbdec5': str` con `,
 'sef49aec68fd1dc66': str`Nombre`,
 'sf1c6be1ae4098f62': str`Error al cargar sniffer: ${0}`,
 'sf2c294199c98fed2': str`Ventilador`,
 'sf3ba82f4ac082dc3': str`Niveles de velocidad`,
 'sf538066dd56bd6e6': str`${0} enlace${1}`,
-'sf797076f9a1cdffa': str`controlada por`,
+'sf797076f9a1cdffa': str` controlada por `,
 'sf8824fc70d91da9e': str`Español`,
     };
   
