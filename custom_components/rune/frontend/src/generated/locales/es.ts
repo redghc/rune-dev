@@ -14,6 +14,7 @@
 'hef26ee9d6c0a1943': html`Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra los tiempos en crudo y los escribe en la ranura del comando.`,
 'hf1f6e8798e7e33a8': html`Señales en vivo capturadas de cada receptor que hayas configurado. El sniffer escucha en cada entidad receptora automáticamente al añadir un dispositivo. Asigna una señal a un comando de dispositivo desde la pestaña <strong>Acciones</strong>, o descarta todo el mando aquí.`,
 's00f1132c0edd135d': str`RUNE`,
+'s01ffd62761f12537': str`Seguir el idioma de Home Assistant`,
 's03970aa76a09982d': str`Integración`,
 's057ec3af47dfdbd3': str`Sensor W — usado para detectar el estado real de encendido/apagado`,
 's064a4f8afa514ca2': str`Aprendido "${0}"`,
@@ -46,6 +47,7 @@
 's489d4c9535923e35': str`Determina qué entidades expone HA`,
 's494e1353612d405f': str`Opcional — necesario para flujos de cubierta / aprendizaje`,
 's498865c7bd1f3959': str`desconocido`,
+'s4caed5b7a7e5d89b': str`Inglés`,
 's4cb9ebef9edf03fd': str`Salud de la integración y entidades descubiertas.`,
 's5062cd8f7a7fd349': str`señal`,
 's51b1067adcc7af14': str`Sensor de potencia`,
@@ -133,5 +135,6 @@
 'sf3ba82f4ac082dc3': str`Niveles de velocidad`,
 'sf538066dd56bd6e6': str`${0} enlace${1}`,
 'sf797076f9a1cdffa': str`controlada por`,
+'sf8824fc70d91da9e': str`Español`,
     };
   

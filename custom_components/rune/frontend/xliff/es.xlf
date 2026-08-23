@@ -499,6 +499,18 @@
   <source>Dark</source>
     <target>Oscuro</target>
   </trans-unit>
+<trans-unit id="s01ffd62761f12537">
+  <source>Follow Home Assistant locale</source>
+    <target>Seguir el idioma de Home Assistant</target>
+  </trans-unit>
+<trans-unit id="s4caed5b7a7e5d89b">
+  <source>English</source>
+    <target>Inglés</target>
+  </trans-unit>
+<trans-unit id="sf8824fc70d91da9e">
+  <source>Español</source>
+    <target>Español</target>
+  </trans-unit>
 </body>
 </file>
 </xliff>

@@ -403,6 +403,7 @@ export class RuneApp extends LitElement {
         )}
         <div class="footer">
           <rune-theme-toggle compact></rune-theme-toggle>
+          <rune-locale-toggle compact></rune-locale-toggle>
           <div class="status-row" role="status" aria-live="polite">
             <span class="dot"></span>
             <span>${msg(str`Connected`)}</span>

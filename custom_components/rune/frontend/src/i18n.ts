@@ -2,14 +2,19 @@
 //
 // Wires @lit/localize's runtime mode so each translation lives in its
 // own ES module that we only fetch when the user actually switches to
-// that locale. The locale is sourced from Home Assistant via the
-// ``rune-init`` bridge handshake (see ``src/api/bridge.ts``); if HA
-// hasn't sent it yet (e.g. cold start) we render in English and swap
-// locales the moment the bridge replies.
+// that locale. Locale resolution priority:
 //
-// Shoelace components are localized in lockstep — ``setLocale()`` here
-// also calls Shoelace's ``registerTranslation`` so dropdowns, dialogs,
-// and tooltips render in the same language as the rest of the UI.
+//   1. User's manual preference (localStorage ``rune-locale``) — wins
+//      whenever it's set to a specific language (``en`` / ``es``).
+//   2. Home Assistant's ``hass.config.language`` — used when the user
+//      chose ``auto`` (the default).
+//   3. Source locale (``en``) — last-resort fallback if HA hasn't
+//      replied yet and the pref is ``auto``.
+//
+// Shoelace components are localized in lockstep — every time we
+// change the locale we also call ``registerTranslation`` so dropdowns,
+// dialogs, and tooltips render in the same language as the rest of
+// the UI.
 
 import { configureLocalization } from "@lit/localize";
 import { update as shoelaceUpdate } from "@shoelace-style/localize";
@@ -18,6 +23,7 @@ import esShoelace from "@shoelace-style/shoelace/dist/translations/es.js";
 import { registerTranslation } from "@shoelace-style/shoelace/dist/utilities/localize.js";
 
 import { allLocales, sourceLocale, targetLocales } from "@/generated/locale-codes.js";
+import { getLocalePref, onLocalePrefChange } from "@/state/locale-pref.js";
 import { store } from "@/state/store.js";
 
 // ``LocaleModule`` isn't re-exported from ``@lit/localize`` but is part
@@ -72,6 +78,27 @@ function normalizeLocale(locale: string): string {
   return sourceLocale;
 }
 
+/** Resolve which locale we should *actually* use right now, given the
+ *  user's stored preference and whatever HA has reported via the
+ *  bridge. Returns a normalized locale code, never empty. */
+export function resolveActiveLocale(): string {
+  const pref = getLocalePref();
+  if (pref !== "auto") return normalizeLocale(pref);
+  if (store.locale) return normalizeLocale(store.locale);
+  return sourceLocale;
+}
+
+async function applyLocale(locale: string): Promise<void> {
+  const target = normalizeLocale(locale);
+  syncShoelaceLocale(target);
+  if (target === getLocale()) return;
+  try {
+    await setLocale(target);
+  } catch (err) {
+    console.warn(`[rune-i18n] failed to switch to ${target}:`, err);
+  }
+}
+
 let bootstrapped = false;
 
 export async function bootstrapI18n(): Promise<void> {
@@ -85,20 +112,7 @@ export async function bootstrapI18n(): Promise<void> {
     registerTranslation(translation as Parameters<typeof registerTranslation>[0]);
   }
 
-  // If the bridge has already pushed a locale (warm SPA reload, fast
-  // machines), honour it. Otherwise stay on the source locale until the
-  // bridge replies.
-  if (store.locale) {
-    const target = normalizeLocale(store.locale);
-    syncShoelaceLocale(target);
-    if (target !== sourceLocale) {
-      try {
-        await setLocale(target);
-      } catch (err) {
-        console.warn(`[rune-i18n] failed to switch to ${target}:`, err);
-      }
-    }
-  }
+  await applyLocale(resolveActiveLocale());
 }
 
 let bridgeListenerInstalled = false;
@@ -107,29 +121,25 @@ export function installBridgeLocaleSync(): void {
   if (bridgeListenerInstalled) return;
   bridgeListenerInstalled = true;
 
-  // The bridge listener in ``api/bridge.ts`` mutates ``store.locale``
-  // directly when ``rune-init`` arrives. We react to that here by
-  // swapping the locale once and only once per change.
-  let lastSeen = "";
-  const tick = async (): Promise<void> => {
-    const current = store.locale;
-    if (!current || current === lastSeen) return;
-    lastSeen = current;
-    const target = normalizeLocale(current);
-    syncShoelaceLocale(target);
-    try {
-      await setLocale(target);
-    } catch (err) {
-      console.warn(`[rune-i18n] failed to switch to ${target}:`, err);
-    }
-  };
+  // When the user flips the locale toggle we honour it immediately,
+  // overriding whatever HA might report next.
+  onLocalePrefChange(() => {
+    void applyLocale(resolveActiveLocale());
+  });
 
-  // Subscribe to store updates via the same channel the AppShell uses.
-  // Avoids a second listener registry just for locale changes.
+  // The bridge listener in ``api/bridge.ts`` mutates ``store.locale``
+  // directly when ``rune-init`` arrives. We only react when the user
+  // is on ``auto`` — otherwise their preference wins and we ignore
+  // HA's report.
+  let lastSeen = "";
   import("@/state/store.js")
     .then(({ subscribe }) => {
       subscribe(() => {
-        void tick();
+        if (getLocalePref() !== "auto") return;
+        const current = store.locale;
+        if (!current || current === lastSeen) return;
+        lastSeen = current;
+        void applyLocale(current);
       });
     })
     .catch((err) => {
