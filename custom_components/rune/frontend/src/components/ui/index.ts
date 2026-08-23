@@ -5,6 +5,7 @@
 //   // brings in button, input, select, dialog, chip, tooltip, skeleton,
 //   // empty-state, icon helpers, floating util.
 
+import "./icon.js";
 import "./button.js";
 import "./input.js";
 import "./select.js";

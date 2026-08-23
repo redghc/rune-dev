@@ -16,8 +16,8 @@ import { nonEmpty } from "@/utils/format.js";
 import {
   entityOptions,
   IR_DOMAINS,
-  RF_DOMAINS,
   requiredFields,
+  RF_DOMAINS,
   visibleFields,
 } from "./devices/dialog-schema.js";
 
