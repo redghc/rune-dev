@@ -805,10 +805,16 @@ def _resolve_device_name(
 
 def _entity_indexes(hass: Any) -> tuple[dict[str, str], dict[str, str]]:
     """Return ``({entity_id: area_id}, {entity_id: device_id})`` for
-    every registered entity. Empty dicts when the registry isn't
-    loaded."""
+    every registered entity.
+
+    Imports the registry module directly because ``hass.helpers`` is
+    not always populated on every HA core version. Empty dicts when
+    the registry isn't loaded.
+    """
     try:
-        registry = hass.helpers.entity_registry.async_get(hass)
+        from homeassistant.helpers import entity_registry as er
+
+        registry = er.async_get(hass)
     except Exception:
         return {}, {}
     area: dict[str, str] = {}
@@ -827,9 +833,15 @@ def _device_index(hass: Any) -> dict[str, dict[str, str]]:
     """Return ``{device_id: {name, area_id}}`` for every registered
     device. ``name`` falls back to ``manufacturer + model`` and then
     to the device id so the row always has a non-empty label. ``area_id``
-    stays empty when the device isn't assigned to an area."""
+    stays empty when the device isn't assigned to an area.
+
+    Imports the registry module directly because ``hass.helpers`` is
+    not always populated on every HA core version.
+    """
     try:
-        registry = hass.helpers.device_registry.async_get(hass)
+        from homeassistant.helpers import device_registry as dr
+
+        registry = dr.async_get(hass)
     except Exception:
         return {}
     out: dict[str, dict[str, str]] = {}
@@ -855,9 +867,14 @@ def _area_index(hass: Any) -> dict[str, str]:
 
     Empty dict when the area registry isn't available. Names are
     localized when possible (the registry exposes ``name`` as a
-    plain string in modern cores)."""
+    plain string in modern cores). Imports the registry module
+    directly because ``hass.helpers`` is not always populated on
+    every HA core version.
+    """
     try:
-        registry = hass.helpers.area_registry.async_get(hass)
+        from homeassistant.helpers import area_registry as ar
+
+        registry = ar.async_get(hass)
     except Exception:
         return {}
     out: dict[str, str] = {}

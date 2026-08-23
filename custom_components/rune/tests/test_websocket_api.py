@@ -122,6 +122,34 @@ class FakeHassWithRegistries(FakeHass):
                 async_get=lambda _h, m=device_map: _types.SimpleNamespace(devices=m)
             ),
         )
+        # Production code imports the registry modules directly (not via
+        # hass.helpers). Mirror that by also exposing a callable on the
+        # module path that ``from homeassistant.helpers import X as x``
+        # resolves against.
+        self._inject_ha_modules(entity_map, area_map, device_map)
+
+    @staticmethod
+    def _inject_ha_modules(
+        entity_map: dict, area_map: dict, device_map: dict
+    ) -> None:
+        import sys
+        import types as _types
+
+        if "homeassistant" not in sys.modules:
+            sys.modules["homeassistant"] = _types.ModuleType("homeassistant")
+        if "homeassistant.helpers" not in sys.modules:
+            sys.modules["homeassistant.helpers"] = _types.ModuleType(
+                "homeassistant.helpers"
+            )
+        er = _types.ModuleType("homeassistant.helpers.entity_registry")
+        ar = _types.ModuleType("homeassistant.helpers.area_registry")
+        dr = _types.ModuleType("homeassistant.helpers.device_registry")
+        er.async_get = lambda _h, m=entity_map: _types.SimpleNamespace(entities=m)
+        ar.async_get = lambda _h, m=area_map: _types.SimpleNamespace(areas=m)
+        dr.async_get = lambda _h, m=device_map: _types.SimpleNamespace(devices=m)
+        sys.modules["homeassistant.helpers.entity_registry"] = er
+        sys.modules["homeassistant.helpers.area_registry"] = ar
+        sys.modules["homeassistant.helpers.device_registry"] = dr
 
 
 def _ctx(states: list[tuple[str, str]] | None = None) -> RuneWebSocketContext:
