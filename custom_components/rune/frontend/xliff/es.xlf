@@ -393,71 +393,97 @@
   </trans-unit>
 <trans-unit id="s44a9ac9dd7567f4a">
   <source>Deleted</source>
+  <target>Eliminado</target>
 </trans-unit>
 <trans-unit id="se5a67e2c6557ee09">
   <source>Sent <x id="0" equiv-text="${cmd.label ?? cmd.key}"/></source>
+  <target>Enviado <x id="0" equiv-text="${cmd.label ?? cmd.key}"/></target>
 </trans-unit>
 <trans-unit id="s274d0241c4139713">
   <source>Learn which command on "<x id="0" equiv-text="${this.device.name}"/>"?
 
 Enter a command key (e.g. "off", "speed_2", "power_on"):</source>
+  <target>¿Qué comando aprender en "<x id="0" equiv-text="${this.device.name}"/>"?
+
+Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
 </trans-unit>
 <trans-unit id="saf63d34c8601dd41">
   <source><x id="0" equiv-text="${pluralize(d.command_count, &quot;command&quot;)}"/></source>
+  <target><x id="0" equiv-text="${pluralize(d.command_count, &quot;comando&quot;)}"/></target>
 </trans-unit>
 <trans-unit id="sb62fb7b2161bc5c0">
   <source>Delete device</source>
+  <target>Eliminar dispositivo</target>
 </trans-unit>
 <trans-unit id="s9821339d307c474a">
   <source>Delete device "<x id="0" equiv-text="${d.name}"/>"? This cannot be undone.</source>
+  <target>¿Eliminar el dispositivo "<x id="0" equiv-text="${d.name}"/>"? Esta acción no se puede deshacer.</target>
 </trans-unit>
 <trans-unit id="sdc673e73b5c13aea">
   <source>Delete</source>
+  <target>Eliminar</target>
 </trans-unit>
 <trans-unit id="sbf9c5c5a8e5efad4">
   <source>Failed</source>
+  <target>Falló</target>
 </trans-unit>
 <trans-unit id="s4c2e50f73ff9175f">
   <source>Captured</source>
+  <target>Capturado</target>
 </trans-unit>
 <trans-unit id="h1fb4a999c505bec9">
   <source>Point your remote at the receiver and press the button you want to capture. RUNE
               records the raw timings and writes them into the command slot.</source>
+  <target>Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra
+              los tiempos en crudo y los escribe en el espacio del comando.</target>
 </trans-unit>
 <trans-unit id="s8931e8e1b5688a4e">
   <source><x id="0" equiv-text="${s.hit_count}"/> hit<x id="1" equiv-text="${s.hit_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
+  <target><x id="0" equiv-text="${s.hit_count}"/> captura<x id="1" equiv-text="${s.hit_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></target>
 </trans-unit>
 <trans-unit id="s393057888fc2f40e">
   <source><x id="0" equiv-text="${pluralize(visible.length, &quot;remote&quot;)}"/> · <x id="1" equiv-text="${pluralize(totalSignals, &quot;signal&quot;)}"/></source>
+  <target><x id="0" equiv-text="${pluralize(visible.length, &quot;mando&quot;)}"/> · <x id="1" equiv-text="${pluralize(totalSignals, &quot;señal&quot;)}"/></target>
 </trans-unit>
 <trans-unit id="h7ca7e5a17ba26a94">
   <source>Live signals captured from every receiver you've configured. The sniffer listens on
             each receiver entity automatically once you add a device. Assign a signal to a device
             command via the <x id="0" equiv-text="&lt;strong&gt;"/>Actions<x id="1" equiv-text="&lt;/strong&gt;"/> tab, or dismiss the whole remote here.</source>
+  <target>Señales en vivo capturadas desde cada receptor que hayas configurado. El sniffer escucha
+            automáticamente en cada entidad receptora en cuanto añades un dispositivo. Asigna
+            una señal a un comando del dispositivo desde la pestaña <x id="0" equiv-text="&lt;strong&gt;"/>Acciones<x id="1" equiv-text="&lt;/strong&gt;"/> o descarta el mando entero aquí.</target>
 </trans-unit>
 <trans-unit id="sa25ffe7bc563a4ee">
   <source>Load actions</source>
+  <target>Cargar acciones</target>
 </trans-unit>
 <trans-unit id="s7ccd5d08a0f2e4d6">
   <source>Load devices</source>
+  <target>Cargar dispositivos</target>
 </trans-unit>
 <trans-unit id="sfffe12451843f40a">
   <source>Radio Frequency</source>
+  <target>Radiofrecuencia</target>
 </trans-unit>
 <trans-unit id="sca5f60d9b936e804">
   <source>Infrared</source>
+  <target>Infrarrojo</target>
 </trans-unit>
 <trans-unit id="se94b8d284f3df478">
   <source>ESPHome</source>
+  <target>ESPHome</target>
 </trans-unit>
 <trans-unit id="sc9e494c8346b7cb5">
   <source>Other</source>
+  <target>Otro</target>
 </trans-unit>
 <trans-unit id="s8beae57c2bc239d6">
   <source>Load settings</source>
+  <target>Cargar ajustes</target>
 </trans-unit>
 <trans-unit id="s08270ee8b94a3612">
   <source>Load sniffer</source>
+  <target>Cargar sniffer</target>
 </trans-unit>
 </body>
 </file>
