@@ -13,7 +13,13 @@ import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { nonEmpty } from "@/utils/format.js";
 
-import { entityOptions, requiredFields, visibleFields } from "./devices/dialog-schema.js";
+import {
+  entityOptions,
+  IR_DOMAINS,
+  RF_DOMAINS,
+  requiredFields,
+  visibleFields,
+} from "./devices/dialog-schema.js";
 
 import type { FieldDef, FormState } from "./devices/dialog-schema.js";
 import type { AsyncLoader } from "@/components/ui/select.js";
@@ -201,26 +207,42 @@ export class RuneDeviceDialog extends LitElement {
     }
   }
 
-  private _loadTransmitters(): AsyncLoader {
+  private _loadTransmitters(acceptDomains?: ReadonlySet<string>): AsyncLoader {
     return async () => {
       const { transmitters } = await api.transmitters();
-      return entityOptions(transmitters ?? []);
+      return entityOptions(transmitters ?? [], undefined, acceptDomains);
     };
   }
 
-  private _loadReceivers(): AsyncLoader {
+  private _loadReceivers(acceptDomains?: ReadonlySet<string>): AsyncLoader {
     return async () => {
       const { receivers } = await api.receivers();
-      return entityOptions(receivers ?? [], {
-        value: "",
-        label: msg(str`(no receivers)`),
-        description: msg(str`Add an IR or RF receiver first`),
-      });
+      return entityOptions(
+        receivers ?? [],
+        {
+          value: "",
+          label: msg(str`(no receivers)`),
+          description: msg(str`Add an IR or RF receiver first`),
+        },
+        acceptDomains,
+      );
     };
   }
 
   private _resolveOptions(field: FieldDef): AsyncLoader | undefined {
     if (field.kind !== "async-select") return undefined;
+    if (field.key === "ir_transmitter" || field.key === "ir_receiver") {
+      const loader = TRANSMITTER_KEYS.has(field.key)
+        ? this._loadTransmitters(IR_DOMAINS)
+        : this._loadReceivers(IR_DOMAINS);
+      return loader;
+    }
+    if (field.key === "rf_transmitter" || field.key === "rf_receiver") {
+      const loader = TRANSMITTER_KEYS.has(field.key)
+        ? this._loadTransmitters(RF_DOMAINS)
+        : this._loadReceivers(RF_DOMAINS);
+      return loader;
+    }
     if (TRANSMITTER_KEYS.has(field.key)) return this._loadTransmitters();
     if (RECEIVER_KEYS.has(field.key)) return this._loadReceivers();
     return field.loadOptions;

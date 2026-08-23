@@ -238,9 +238,13 @@ function domainOf(entityId: string): string {
 export function entityOptions(
   entities: readonly EntityLike[],
   empty?: RuneSelectOption,
+  acceptDomains?: ReadonlySet<string>,
 ): RuneSelectOption[] {
-  if (entities.length === 0 && empty) return [empty];
-  return entities.map((e) => {
+  const filtered = acceptDomains
+    ? entities.filter((e) => acceptDomains.has(domainOf(e.entity_id)))
+    : entities;
+  if (filtered.length === 0 && empty) return [empty];
+  return filtered.map((e) => {
     const domain = domainOf(e.entity_id);
     const meta = DOMAIN_META[domain] ?? FALLBACK_META;
     const location = (e.area ?? "").trim();
@@ -257,3 +261,14 @@ export function entityOptions(
     };
   });
 }
+
+/** Domain whitelist for the IR picker. ``infrared`` are IR-only
+ *  helpers; ``remote`` (Broadlink + others) can transmit IR. ESPHome
+ *  IR blasters are surfaced via ``infrared`` in modern HA so they're
+ *  not listed here. */
+export const IR_DOMAINS: ReadonlySet<string> = new Set(["infrared", "remote"]);
+
+/** Domain whitelist for the RF picker. ``remote`` covers Broadlink +
+ *  other generic RF bridges; ``esphome`` exposes many RF transmitters
+ *  directly. ``infrared`` is IR-only so it stays out. */
+export const RF_DOMAINS: ReadonlySet<string> = new Set(["remote", "esphome"]);
