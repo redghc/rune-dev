@@ -68,22 +68,58 @@ export class RuneDialog extends LitElement {
   @property({ type: Boolean }) noHeader = false;
   @property({ type: Boolean }) closable = true;
 
-  private _onRequestClose = (ev: CustomEvent): void => {
-    const source = (ev.detail as { source?: string } | undefined)?.source;
-    // If the user clicked the overlay while a hoisted ``<sl-select>``
-    // dropdown is open, both the dialog and the select see the same
-    // click. Block the dialog close, then hide the select so a
-    // subsequent outside click behaves normally.
-    if (source === "overlay") {
-      const openSelect = document.querySelector("sl-select[open]");
-      if (openSelect) {
-        ev.preventDefault();
-        queueMicrotask(() => {
-          (openSelect as HTMLElement & { hide?: () => void }).hide?.();
-        });
+  private _overlayClickSwallowed = false;
+
+  private _findOpenSelect(root: ParentNode): HTMLElement | null {
+    const direct = root.querySelector("sl-select[open]");
+    if (direct) {
+      return direct as HTMLElement;
+    }
+    for (const el of Array.from(root.querySelectorAll("*"))) {
+      const sr = (el as HTMLElement).shadowRoot;
+      if (sr) {
+        const found = this._findOpenSelect(sr);
+        if (found) {
+          return found;
+        }
       }
     }
+    return null;
+  }
+
+  private _onDocMouseDown = (ev: MouseEvent): void => {
+    this._overlayClickSwallowed = false;
+    if (!this.open) {
+      return;
+    }
+    // Capture phase: runs before Shoelace's own document mousedown
+    // handler hides the open ``<sl-select>``, so ``[open]`` is still
+    // present. The select consumes this interaction when the press
+    // happens outside of it, so the dialog must ignore the overlay
+    // click that follows.
+    const openSelect = this._findOpenSelect(this);
+    if (openSelect && !ev.composedPath().includes(openSelect)) {
+      this._overlayClickSwallowed = true;
+    }
   };
+
+  private _onRequestClose = (ev: CustomEvent): void => {
+    const source = (ev.detail as { source?: string } | undefined)?.source;
+    if (source === "overlay" && this._overlayClickSwallowed) {
+      this._overlayClickSwallowed = false;
+      ev.preventDefault();
+    }
+  };
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener("mousedown", this._onDocMouseDown, true);
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener("mousedown", this._onDocMouseDown, true);
+    super.disconnectedCallback();
+  }
 
   protected render() {
     return html`

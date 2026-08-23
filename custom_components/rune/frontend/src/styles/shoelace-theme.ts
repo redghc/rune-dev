@@ -7,7 +7,7 @@
 // force a theme by adding ``sl-theme-light`` or ``sl-theme-dark`` to
 // ``<html>``.
 
-import { palette, radius, shadow, typography } from "./tokens.js";
+import { palette, radius, shadow, space, typography } from "./tokens.js";
 
 const lightPrimary = palette.primary[600];
 const lightPrimaryHover = palette.primary[700];
@@ -62,6 +62,10 @@ export const shoelaceThemeCss = `
   --sl-shadow-small: ${shadow[1]};
   --sl-shadow-medium: ${shadow[2]};
   --sl-shadow-large: ${shadow[3]};
+
+  --sl-input-spacing-small: ${space[2]};
+  --sl-input-spacing-medium: ${space[2]};
+  --sl-input-spacing-large: ${space[3]};
 }
 
 :root, .sl-theme-light {
