@@ -1,113 +1,177 @@
 import { css, unsafeCSS } from "lit";
 
-import { motion, palette, radius, shadow, space, typography } from "./tokens.js";
+import { motion, radius, shadow, space, typography } from "./tokens.js";
 
-// Emits CSS custom properties on ``:host`` for both light + dark
-// schemes. Light is the default; dark activates via
-// ``prefers-color-scheme``. Users can force a theme by adding the
-// ``sl-theme-dark`` or ``sl-theme-light`` class to ``documentElement``
-// — mirrors Shoelace's selector strategy.
+// Color tokens are defined once on ``:root`` (see ``rootTokens`` at the
+// bottom of this file) and injected into ``document.head`` at boot. They
+// cascade naturally into every Lit shadow root via custom property
+// inheritance — no ``:host`` defaults, no ``:host-context()`` acrobatics.
+//
+// The root-level rules use ``:root`` + ``:root.sl-theme-dark`` + an
+// ``@media (prefers-color-scheme: dark)`` fallback for auto mode. ``state/theme.ts``
+// toggles the class on ``documentElement`` when the user picks
+// Light / Dark; Auto leaves the class off so the OS media query takes
+// over. Shoelace's own palette rides the same ``sl-theme-*`` classes so
+// the two systems stay in lockstep.
 
-const hostLight = `
-  --rune-bg:           ${palette.neutral[50]};
-  --rune-bg-elevated:  ${palette.neutral[0]};
-  --rune-surface:      ${palette.neutral[0]};
-  --rune-surface-alt:  ${palette.neutral[100]};
-  --rune-border:       ${palette.neutral[200]};
-  --rune-border-strong:${palette.neutral[300]};
+export const rootTokens = `
+  :root {
+    --rune-bg:           #f8fafc;
+    --rune-bg-elevated:  #ffffff;
+    --rune-surface:      #ffffff;
+    --rune-surface-alt:  #f1f5f9;
+    --rune-border:       #e2e8f0;
+    --rune-border-strong:#cbd5e1;
 
-  --rune-text:         ${palette.neutral[900]};
-  --rune-text-strong:  ${palette.neutral[1000]};
-  --rune-text-muted:   ${palette.neutral[600]};
-  --rune-text-subtle:  ${palette.neutral[500]};
-  --rune-text-inverse: ${palette.neutral[0]};
+    --rune-text:         #0f172a;
+    --rune-text-strong:  #000000;
+    --rune-text-muted:   #475569;
+    --rune-text-subtle:  #64748b;
+    --rune-text-inverse: #ffffff;
 
-  --rune-primary:        ${palette.primary[600]};
-  --rune-primary-hover:  ${palette.primary[700]};
-  --rune-primary-active: ${palette.primary[800]};
-  --rune-primary-soft:   ${palette.primary[50]};
-  --rune-primary-text:   ${palette.primary[700]};
-  --rune-on-primary:     ${palette.neutral[0]};
+    --rune-primary:        #0061d1;
+    --rune-primary-hover:  #004ba8;
+    --rune-primary-active: #003a82;
+    --rune-primary-soft:   #e7f3ff;
+    --rune-primary-text:   #004ba8;
+    --rune-on-primary:     #ffffff;
 
-  --rune-success:        ${palette.success[600]};
-  --rune-success-soft:   ${palette.success[50]};
-  --rune-success-text:   ${palette.success[700]};
+    --rune-success:        #059669;
+    --rune-success-soft:   #ecfdf5;
+    --rune-success-text:   #047857;
 
-  --rune-warning:        ${palette.warning[600]};
-  --rune-warning-soft:   ${palette.warning[50]};
-  --rune-warning-text:   ${palette.warning[700]};
+    --rune-warning:        #d97706;
+    --rune-warning-soft:   #fffbeb;
+    --rune-warning-text:   #b45309;
 
-  --rune-danger:         ${palette.danger[600]};
-  --rune-danger-soft:    ${palette.danger[50]};
-  --rune-danger-text:    ${palette.danger[700]};
+    --rune-danger:         #dc2626;
+    --rune-danger-soft:    #fef2f2;
+    --rune-danger-text:    #b91c1c;
 
-  --rune-focus-ring: 0 0 0 3px ${palette.primary[200]};
+    --rune-focus-ring: 0 0 0 3px #90c8ff;
 
-  /* Legacy aliases — kept until existing components migrate to --rune-*. */
-  --primary:    ${palette.primary[600]};
-  --bg:         ${palette.neutral[50]};
-  --bg-2:       ${palette.neutral[100]};
-  --card:       ${palette.neutral[0]};
-  --text:       ${palette.neutral[900]};
-  --muted:      ${palette.neutral[600]};
-  --border:     ${palette.neutral[200]};
-  --danger:     ${palette.danger[600]};
-  --ok:         ${palette.success[600]};
-  --warn:       ${palette.warning[600]};
+    /* Legacy aliases — kept until existing components migrate to --rune-*. */
+    --primary:    #0061d1;
+    --bg:         #f8fafc;
+    --bg-2:       #f1f5f9;
+    --card:       #ffffff;
+    --text:       #0f172a;
+    --muted:      #475569;
+    --border:     #e2e8f0;
+    --danger:     #dc2626;
+    --ok:         #059669;
+    --warn:       #d97706;
+
+    color-scheme: light;
+  }
+
+  :root.sl-theme-dark {
+    --rune-bg:           #020617;
+    --rune-bg-elevated:  #0f172a;
+    --rune-surface:      #0f172a;
+    --rune-surface-alt:  #1e293b;
+    --rune-border:       #1e293b;
+    --rune-border-strong:#334155;
+
+    --rune-text:         #f1f5f9;
+    --rune-text-strong:  #ffffff;
+    --rune-text-muted:   #94a3b8;
+    --rune-text-subtle:  #64748b;
+    --rune-text-inverse: #0f172a;
+
+    --rune-primary:        #2e95ff;
+    --rune-primary-hover:  #5aafff;
+    --rune-primary-active: #90c8ff;
+    --rune-primary-soft:   #001a3d;
+    --rune-primary-text:   #5aafff;
+    --rune-on-primary:     #020617;
+
+    --rune-success:        #10b981;
+    --rune-success-soft:   #022c22;
+    --rune-success-text:   #34d399;
+
+    --rune-warning:        #f59e0b;
+    --rune-warning-soft:   #451a03;
+    --rune-warning-text:   #fbbf24;
+
+    --rune-danger:         #ef4444;
+    --rune-danger-soft:    #450a0a;
+    --rune-danger-text:    #f87171;
+
+    --rune-focus-ring: 0 0 0 3px #003a82;
+
+    --primary:    #2e95ff;
+    --bg:         #020617;
+    --bg-2:       #0f172a;
+    --card:       #0f172a;
+    --text:       #f1f5f9;
+    --muted:      #94a3b8;
+    --border:     #1e293b;
+    --danger:     #ef4444;
+    --ok:         #10b981;
+    --warn:       #f59e0b;
+
+    color-scheme: dark;
+  }
+
+  /* Auto-mode dark: OS prefers dark AND user hasn't forced light. */
+  @media (prefers-color-scheme: dark) {
+    :root:not(.sl-theme-light) {
+      --rune-bg:           #020617;
+      --rune-bg-elevated:  #0f172a;
+      --rune-surface:      #0f172a;
+      --rune-surface-alt:  #1e293b;
+      --rune-border:       #1e293b;
+      --rune-border-strong:#334155;
+
+      --rune-text:         #f1f5f9;
+      --rune-text-strong:  #ffffff;
+      --rune-text-muted:   #94a3b8;
+      --rune-text-subtle:  #64748b;
+      --rune-text-inverse: #0f172a;
+
+      --rune-primary:        #2e95ff;
+      --rune-primary-hover:  #5aafff;
+      --rune-primary-active: #90c8ff;
+      --rune-primary-soft:   #001a3d;
+      --rune-primary-text:   #5aafff;
+      --rune-on-primary:     #020617;
+
+      --rune-success:        #10b981;
+      --rune-success-soft:   #022c22;
+      --rune-success-text:   #34d399;
+
+      --rune-warning:        #f59e0b;
+      --rune-warning-soft:   #451a03;
+      --rune-warning-text:   #fbbf24;
+
+      --rune-danger:         #ef4444;
+      --rune-danger-soft:    #450a0a;
+      --rune-danger-text:    #f87171;
+
+      --rune-focus-ring: 0 0 0 3px #003a82;
+
+      --primary:    #2e95ff;
+      --bg:         #020617;
+      --bg-2:       #0f172a;
+      --card:       #0f172a;
+      --text:       #f1f5f9;
+      --muted:      #94a3b8;
+      --border:     #1e293b;
+      --danger:     #ef4444;
+      --ok:         #10b981;
+      --warn:       #f59e0b;
+
+      color-scheme: dark;
+    }
+  }
 `;
 
-const hostDark = `
-  --rune-bg:           ${palette.neutral[950]};
-  --rune-bg-elevated:  ${palette.neutral[900]};
-  --rune-surface:      ${palette.neutral[900]};
-  --rune-surface-alt:  ${palette.neutral[800]};
-  --rune-border:       ${palette.neutral[800]};
-  --rune-border-strong:${palette.neutral[700]};
-
-  --rune-text:         ${palette.neutral[100]};
-  --rune-text-strong:  ${palette.neutral[0]};
-  --rune-text-muted:   ${palette.neutral[400]};
-  --rune-text-subtle:  ${palette.neutral[500]};
-  --rune-text-inverse: ${palette.neutral[900]};
-
-  --rune-primary:        ${palette.primary[400]};
-  --rune-primary-hover:  ${palette.primary[300]};
-  --rune-primary-active: ${palette.primary[200]};
-  --rune-primary-soft:   ${palette.primary[950]};
-  --rune-primary-text:   ${palette.primary[300]};
-  --rune-on-primary:     ${palette.neutral[950]};
-
-  --rune-success:        ${palette.success[400]};
-  --rune-success-soft:   ${palette.success[950]};
-  --rune-success-text:   ${palette.success[300]};
-
-  --rune-warning:        ${palette.warning[400]};
-  --rune-warning-soft:   ${palette.warning[950]};
-  --rune-warning-text:   ${palette.warning[300]};
-
-  --rune-danger:         ${palette.danger[400]};
-  --rune-danger-soft:    ${palette.danger[950]};
-  --rune-danger-text:    ${palette.danger[300]};
-
-  --rune-focus-ring: 0 0 0 3px ${palette.primary[800]};
-
-  /* Legacy aliases — kept until existing components migrate to --rune-*. */
-  --primary:    ${palette.primary[400]};
-  --bg:         ${palette.neutral[950]};
-  --bg-2:       ${palette.neutral[900]};
-  --card:       ${palette.neutral[900]};
-  --text:       ${palette.neutral[100]};
-  --muted:      ${palette.neutral[400]};
-  --border:     ${palette.neutral[800]};
-  --danger:     ${palette.danger[400]};
-  --ok:         ${palette.success[400]};
-  --warn:       ${palette.warning[400]};
-`;
-
+// Per-component layout / typography / spacing tokens. These don't change
+// with the theme so they live in the shared stylesheet that every Lit
+// component pulls in via ``static styles = [sharedStyles, ...]``.
 export const sharedStyles = css`
   :host {
-    ${unsafeCSS(hostLight)}
-
     --rune-font: ${unsafeCSS(typography.family)};
     --rune-font-mono: ${unsafeCSS(typography.mono)};
 
@@ -162,34 +226,6 @@ export const sharedStyles = css`
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Theme propagation into shadow roots.
-   *
-   * state/theme.ts puts sl-theme-light / sl-theme-dark on
-   * document.documentElement. Plain :host(.sl-theme-dark) only checks
-   * the shadow host element itself, which never has the class — so
-   * the override was silently ignored inside Lit shadow roots and the
-   * page stuck on whatever the OS reported. :host-context matches
-   * when any ancestor of the host carries the selector, which is
-   * what we actually want.
-   *
-   * Cascade order: the explicit-context rules come AFTER the
-   * prefers-color-scheme block so a forced light class beats an
-   * OS-prefers-dark default.
-   */
-  @media (prefers-color-scheme: dark) {
-    :host {
-      ${unsafeCSS(hostDark)}
-    }
-  }
-
-  :host-context(.sl-theme-dark) {
-    ${unsafeCSS(hostDark)}
-  }
-
-  :host-context(.sl-theme-light) {
-    ${unsafeCSS(hostLight)}
-  }
-
   *,
   *::before,
   *::after {
@@ -212,10 +248,3 @@ export const sharedStyles = css`
     }
   }
 `;
-
-// Global :root tokens (used by index.html + shim.ts) for the document
-// level so bare elements (body, native dialogs, scrollbars) inherit.
-export const rootTokensLight = `:root{${hostLight}}`;
-export const rootTokensDark = `:root{${hostDark}}`;
-
-export const rootMediaDark = `@media (prefers-color-scheme: dark){:root{${hostDark}}}`;

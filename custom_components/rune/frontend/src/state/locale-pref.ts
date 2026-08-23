@@ -14,8 +14,6 @@ export type LocalePref = "auto" | "en" | "es";
 const STORAGE_KEY = "rune-locale";
 const VALID: readonly LocalePref[] = ["auto", "en", "es"];
 
-export const SUPPORTED_LOCALES: readonly Exclude<LocalePref, "auto">[] = ["en", "es"];
-
 function readStored(): LocalePref {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

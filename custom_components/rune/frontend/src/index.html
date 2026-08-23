@@ -5,13 +5,16 @@
     <title>RUNE</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
+      /* Base reset + typography cascade. The colour palette lives on
+         :root via styles/root-tokens.ts so every Lit shadow root
+         inherits it without needing :host/:host-context tricks. */
       html,
       body {
         margin: 0;
         padding: 0;
         height: 100%;
-        background: var(--rune-bg, #f8fafc);
-        color: var(--rune-text, #0f172a);
+        background: var(--rune-bg);
+        color: var(--rune-text);
         font-family:
           Inter,
           "SF Pro Text",
@@ -22,13 +25,6 @@
           sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-      }
-      @media (prefers-color-scheme: dark) {
-        html,
-        body {
-          background: var(--rune-bg, #020617);
-          color: var(--rune-text, #f1f5f9);
-        }
       }
     </style>
   </head>
