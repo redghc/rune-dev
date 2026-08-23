@@ -263,10 +263,9 @@ export function entityOptions(
 }
 
 /** Domain whitelist for the IR picker. ``infrared`` are IR-only
- *  helpers; ``remote`` (Broadlink + others) can transmit IR. ESPHome
- *  IR blasters are surfaced via ``infrared`` in modern HA so they're
- *  not listed here. */
-export const IR_DOMAINS: ReadonlySet<string> = new Set(["infrared", "remote"]);
+ *  helpers; ``remote`` (Broadlink + others) is treated as RF-only
+ *  here so it doesn't pollute the IR dropdown. */
+export const IR_DOMAINS: ReadonlySet<string> = new Set(["infrared"]);
 
 /** Domain whitelist for the RF picker. ``remote`` covers Broadlink +
  *  other generic RF bridges; ``esphome`` exposes many RF transmitters
