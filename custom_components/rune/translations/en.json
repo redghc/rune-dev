@@ -9,12 +9,24 @@
                     "category": "Category"
                 }
             },
-            "transmitter": {
+            "add_device_name": {
+                "title": "Name the device",
+                "description": "Pick a display name and a category for the new RUNE device.",
+                "data": {
+                    "name": "Device name",
+                    "category": "Category"
+                }
+            },
+            "add_device_transmitter": {
                 "title": "Pick a transmitter",
                 "description": "Select the IR or RF emitter entity that RUNE should use to send commands.",
                 "data": {
                     "transmitter": "Transmitter"
                 }
+            },
+            "manage_devices": {
+                "title": "Manage devices",
+                "description": "Devices currently configured in this RUNE integration."
             }
         },
         "error": {

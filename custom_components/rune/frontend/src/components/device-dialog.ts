@@ -322,10 +322,10 @@ export class RuneDeviceDialog extends LitElement {
     return html`
       <div class="preview">
         ${msg(html`HA will expose a <strong>${label}</strong> entity`)}${
-          this._form.name ? html` ${msg(str` named `)}<strong>${this._form.name}</strong>` : ""
+          this._form.name ? html` ${msg(str` with name `)}<strong>${this._form.name}</strong>` : ""
         }${
           cat === "fan" && this._form.discrete_speed_count
-            ? html` ${msg(str` with `)}<strong>${this._form.discrete_speed_count}</strong>
+            ? html` ${msg(str` and `)}<strong>${this._form.discrete_speed_count}</strong>
                 ${msg(str`speed step(s)`)}`
             : nothing
         }.

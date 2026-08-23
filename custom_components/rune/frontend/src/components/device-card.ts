@@ -8,7 +8,6 @@ import { api, refreshDevices } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
 import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
-import { pluralize } from "@/utils/format.js";
 
 import type { DeviceCategory, DeviceSummary, PulseCommand } from "@/types.js";
 
@@ -234,7 +233,8 @@ export class RuneDeviceCard extends LitElement {
               <div class="meta">
                 <rune-chip variant="primary" icon=${icon}>${d.category}</rune-chip>
                 <span class="meta-item">
-                  <i class="ti ti-bolt"></i>${msg(str`${pluralize(d.command_count, "command")}`)}
+                  <i class="ti ti-bolt"></i
+                  >${msg(str`${d.command_count} ${d.command_count === 1 ? msg(str`command`) : msg(str`commands`)}`)}
                 </span>
                 <span class="meta-item" title="Transmitters">
                   <i class="ti ti-antenna-bars-5"></i>${tx}

@@ -9,7 +9,6 @@ import { attachStoreController } from "@/state/store-controller.js";
 import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { toolbarStyles } from "@/styles/views.js";
-import { pluralize } from "@/utils/format.js";
 
 import type { ActionBinding } from "@/types.js";
 
@@ -126,7 +125,7 @@ export class RuneActionsView extends LitElement {
       <div class="toolbar">
         <h2>${msg(str`Actions`)}</h2>
         <rune-chip variant="neutral" icon="wand"
-          >${msg(str`${pluralize(actions.length, "binding")}`)}</rune-chip
+          >${msg(str`${actions.length} ${actions.length === 1 ? msg(str`binding`) : msg(str`bindings`)}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">

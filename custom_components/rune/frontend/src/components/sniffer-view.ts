@@ -9,7 +9,6 @@ import { attachStoreController } from "@/state/store-controller.js";
 import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { toolbarStyles } from "@/styles/views.js";
-import { pluralize } from "@/utils/format.js";
 
 import type { Remote, RemoteSignal } from "@/types.js";
 
@@ -191,7 +190,7 @@ export class RuneSnifferView extends LitElement {
       <div class="toolbar">
         <h2>${msg(str`Sniffer`)}</h2>
         <rune-chip variant="neutral" icon="antenna"
-          >${msg(str`${pluralize(visible.length, "remote")} · ${pluralize(totalSignals, "signal")}`)}</rune-chip
+          >${msg(str`${visible.length} ${visible.length === 1 ? msg(str`remote`) : msg(str`remotes`)} · ${totalSignals} ${totalSignals === 1 ? msg(str`signal`) : msg(str`signals`)}`)}</rune-chip
         >
         <span class="grow"></span>
         <rune-tooltip content="Reload from backend">
@@ -241,7 +240,9 @@ export class RuneSnifferView extends LitElement {
                                     >${msg(str`unknown`)}</rune-chip
                                   >`
                             }
-                            <span>${msg(str`${pluralize(r.signal_count, "signal")}`)}</span>
+                            <span
+                              >${msg(str`${r.signal_count} ${r.signal_count === 1 ? msg(str`signal`) : msg(str`signals`)}`)}</span
+                            >
                           </div>
                         </div>
                         <rune-tooltip
