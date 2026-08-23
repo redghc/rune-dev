@@ -24934,7 +24934,16 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
               <div class="entities">
                 ${w.transmitters.map(e=>D`
                     <div class="entity">
-                      <span class="entity-id">${e.entity_id}</span>
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font-weight:var(--rune-fw-medium)"
+                          >${e.name||e.entity_id}</span
+                        >
+                        ${e.name&&e.name!==e.entity_id?D`<span
+                                class="entity-id"
+                                style="font-size:11px;color:var(--rune-text-muted)"
+                                >${e.entity_id}</span
+                              >`:null}
+                      </div>
                       <span class="entity-state">
                         <span
                           class="dot ${e.state===`off`||e.state===`unavailable`?`off`:``}"
@@ -24959,7 +24968,16 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
               <div class="entities">
                 ${w.receivers.map(e=>D`
                     <div class="entity">
-                      <span class="entity-id">${e.entity_id}</span>
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font-weight:var(--rune-fw-medium)"
+                          >${e.name||e.entity_id}</span
+                        >
+                        ${e.name&&e.name!==e.entity_id?D`<span
+                                class="entity-id"
+                                style="font-size:11px;color:var(--rune-text-muted)"
+                                >${e.entity_id}</span
+                              >`:null}
+                      </div>
                       <span class="entity-state">
                         <span
                           class="dot ${e.state===`off`||e.state===`unavailable`?`off`:``}"
@@ -25040,7 +25058,7 @@ ${yi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         font-size: var(--rune-fs-xs);
         margin-top: var(--rune-space-2);
       }
-    `]}connectedCallback(){super.connectedCallback(),this._unsub=xt(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}willUpdate(){let e=w.deviceDialog.editing,t=e?.id??null;t!==this._lastEditingId&&(this._lastEditingId=t,this._form=this._formFromEditing(e),this._chips=this._chipsFromEditing(e))}_formFromEditing(e){if(!e)return{category:`fan`};let t=e,n=e.transmitter_entity_ids??[],r=e.receiver_entity_ids??[];return{category:e.category,name:e.name,manufacturer:e.manufacturer??``,model:e.model??``,ir_transmitter:n[0]??``,rf_transmitter:n[1]??``,ir_receiver:r[0]??``,rf_receiver:r[1]??``,discrete_speed_count:t.discrete_speed_count??3}}_chipsFromEditing(e){return{}}_setField(e,t){this._form={...this._form,[e]:t},this._tick}async _save(){this._err=``;let e=zs(this._form),t=Bs(this._form);for(let e of t){let t=this._form[e.key];if(t==null||t===``){let t=typeof e.label==`function`?String(e.label()):e.label;this._err=m(o`Field "${t}" is required`);return}}let n=String(this._form.ir_transmitter||``).trim(),r=String(this._form.rf_transmitter||``).trim();if(!n&&!r){this._err=m(o`At least one transmitter (IR or RF) is required`);return}let i=w.deviceDialog.editing,a={};for(let t of e){let e=this._form[t.key];e!==void 0&&e!==``&&e!==null&&(a[t.key]=e)}for(let[e,t]of Object.entries(this._chips))t.length>0&&(a[e]=t);a.category===`fan`&&a.discrete_speed_count===void 0&&(a.discrete_speed_count=3);let s=String(this._form.ir_receiver||``).trim(),c=String(this._form.rf_receiver||``).trim(),l=[n,r].filter(Boolean),u=[s,c].filter(Boolean);a.transmitter_entity_ids=l,a.receiver_entity_ids=u,a.transmitter=l[0],u.length>0&&(a.receiver=u[0]),this._busy=!0;try{i?(await $.updateDevice({device_id:i.id,...a}),w.pushToast(m(o`Updated`),`ok`)):(await $.createDevice(a),w.pushToast(m(o`Created`),`ok`)),this._lastEditingId=null,w.closeDeviceDialog();let{devices:e}=await $.list();w.setDevices(e??[])}catch(e){this._err=e.message}finally{this._busy=!1}}_loadTransmitters(){return async()=>((await $.transmitters()).transmitters??[]).map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}_loadReceivers(){return async()=>{let e=(await $.receivers()).receivers??[];return e.length===0?[{value:``,label:m(o`(no receivers)`),description:m(o`Add an IR or RF receiver first`)}]:e.map(e=>({value:e.entity_id,label:e.entity_id,description:e.state}))}}_loadSensors(){return async()=>[]}_resolveOptions(e){if(e.kind===`async-select`)return e.key===`ir_transmitter`||e.key===`rf_transmitter`||e.key===`transmitter`?this._loadTransmitters():e.key===`ir_receiver`||e.key===`rf_receiver`||e.key===`receiver`?this._loadReceivers():e.key===`temperature_sensor`||e.key===`humidity_sensor`||e.key===`power_sensor`?this._loadSensors():e.loadOptions}_renderField(e){let t=this._form[e.key]??``,n=e.required?D`${e.label()} <span aria-hidden="true">*</span>`:e.label(),r=e.helper?e.helper():``,i=e.placeholder?e.placeholder():``;switch(e.kind){case`text`:return D`
+    `]}connectedCallback(){super.connectedCallback(),this._unsub=xt(()=>this._tick++)}disconnectedCallback(){super.disconnectedCallback(),this._unsub?.()}willUpdate(){let e=w.deviceDialog.editing,t=e?.id??null;t!==this._lastEditingId&&(this._lastEditingId=t,this._form=this._formFromEditing(e),this._chips=this._chipsFromEditing(e))}_formFromEditing(e){if(!e)return{category:`fan`};let t=e,n=e.transmitter_entity_ids??[],r=e.receiver_entity_ids??[];return{category:e.category,name:e.name,manufacturer:e.manufacturer??``,model:e.model??``,ir_transmitter:n[0]??``,rf_transmitter:n[1]??``,ir_receiver:r[0]??``,rf_receiver:r[1]??``,discrete_speed_count:t.discrete_speed_count??3}}_chipsFromEditing(e){return{}}_setField(e,t){this._form={...this._form,[e]:t},this._tick}async _save(){this._err=``;let e=zs(this._form),t=Bs(this._form);for(let e of t){let t=this._form[e.key];if(t==null||t===``){let t=typeof e.label==`function`?String(e.label()):e.label;this._err=m(o`Field "${t}" is required`);return}}let n=String(this._form.ir_transmitter||``).trim(),r=String(this._form.rf_transmitter||``).trim();if(!n&&!r){this._err=m(o`At least one transmitter (IR or RF) is required`);return}let i=w.deviceDialog.editing,a={};for(let t of e){let e=this._form[t.key];e!==void 0&&e!==``&&e!==null&&(a[t.key]=e)}for(let[e,t]of Object.entries(this._chips))t.length>0&&(a[e]=t);a.category===`fan`&&a.discrete_speed_count===void 0&&(a.discrete_speed_count=3);let s=String(this._form.ir_receiver||``).trim(),c=String(this._form.rf_receiver||``).trim(),l=[n,r].filter(Boolean),u=[s,c].filter(Boolean);a.transmitter_entity_ids=l,a.receiver_entity_ids=u,a.transmitter=l[0],u.length>0&&(a.receiver=u[0]),this._busy=!0;try{i?(await $.updateDevice({device_id:i.id,...a}),w.pushToast(m(o`Updated`),`ok`)):(await $.createDevice(a),w.pushToast(m(o`Created`),`ok`)),this._lastEditingId=null,w.closeDeviceDialog();let{devices:e}=await $.list();w.setDevices(e??[])}catch(e){this._err=e.message}finally{this._busy=!1}}_loadTransmitters(){return async()=>((await $.transmitters()).transmitters??[]).map(e=>({value:e.entity_id,label:e.name||e.entity_id,description:e.entity_id}))}_loadReceivers(){return async()=>{let e=(await $.receivers()).receivers??[];return e.length===0?[{value:``,label:m(o`(no receivers)`),description:m(o`Add an IR or RF receiver first`)}]:e.map(e=>({value:e.entity_id,label:e.name||e.entity_id,description:e.entity_id}))}}_loadSensors(){return async()=>[]}_resolveOptions(e){if(e.kind===`async-select`)return e.key===`ir_transmitter`||e.key===`rf_transmitter`||e.key===`transmitter`?this._loadTransmitters():e.key===`ir_receiver`||e.key===`rf_receiver`||e.key===`receiver`?this._loadReceivers():e.key===`temperature_sensor`||e.key===`humidity_sensor`||e.key===`power_sensor`?this._loadSensors():e.loadOptions}_renderField(e){let t=this._form[e.key]??``,n=e.required?D`${e.label()} <span aria-hidden="true">*</span>`:e.label(),r=e.helper?e.helper():``,i=e.placeholder?e.placeholder():``;switch(e.kind){case`text`:return D`
           <rune-input
             .label=${n}
             icon=${e.icon??``}

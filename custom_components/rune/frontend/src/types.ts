@@ -53,11 +53,13 @@ export interface ActionBinding {
 
 export interface TxEntity {
   entity_id: string;
+  name?: string;
   state: string;
 }
 
 export interface RxEntity {
   entity_id: string;
+  name?: string;
   state: string;
 }
 

@@ -30,7 +30,10 @@ from custom_components.rune.websocket_api import RuneWebSocketContext
 class FakeHass:
     """Stand-in hass with a state registry."""
 
-    def __init__(self, states: list[tuple[str, str]] | None = None) -> None:
+    def __init__(
+        self,
+        states: list[tuple[str, str] | tuple[str, str, str]] | None = None,
+    ) -> None:
         self._states = states or []
 
         class _States:
@@ -38,17 +41,24 @@ class FakeHass:
                 self._outer = outer
 
             def async_all(self):
-                return [
-                    _FakeState(eid, st) for (eid, st) in self._outer._states
-                ]
+                res = []
+                for item in self._outer._states:
+                    if len(item) == 3:
+                        res.append(_FakeState(item[0], item[1], item[2]))  # type: ignore[arg-type]
+                    else:
+                        res.append(_FakeState(item[0], item[1]))
+                return res
 
         self.states = _States(self)
 
 
 class _FakeState:
-    def __init__(self, entity_id: str, state: str) -> None:
+    def __init__(
+        self, entity_id: str, state: str, name: str | None = None
+    ) -> None:
         self.entity_id = entity_id
         self.state = state
+        self.name = name or entity_id
 
 
 def _ctx(states: list[tuple[str, str]] | None = None) -> RuneWebSocketContext:
@@ -256,16 +266,18 @@ class TestWsEntityListers:
 
         hass = FakeHass(
             states=[
-                ("infrared.bedroom", "idle"),
-                ("remote.broadlink", "idle"),
-                ("light.kitchen", "on"),  # not an emitter
-                ("esphome.living_room", "off"),
+                ("infrared.bedroom", "idle", "Bedroom IR Blaster"),
+                ("remote.broadlink", "idle", "Broadlink RM4 Pro"),
+                ("light.kitchen", "on", "Kitchen Light"),  # not an emitter
+                ("esphome.living_room", "off", "Living Room Node"),
             ]
         )
         ctx = RuneWebSocketContext(hass=hass, connection_id=None)
         result = await _ws_transmitter_list(ctx, {})
         ids = {entry["entity_id"] for entry in result["transmitters"]}
+        names = {entry["name"] for entry in result["transmitters"]}
         assert ids == {"infrared.bedroom", "remote.broadlink", "esphome.living_room"}
+        assert names == {"Bedroom IR Blaster", "Broadlink RM4 Pro", "Living Room Node"}
 
     @pytest.mark.asyncio
     async def test_receiver_list_filters_domains(self) -> None:
@@ -273,16 +285,18 @@ class TestWsEntityListers:
 
         hass = FakeHass(
             states=[
-                ("infrared.bedroom_rx", "idle"),
-                ("remote.broadlink_rf_rx", "idle"),
-                ("light.kitchen", "on"),
-                ("esphome.living_room_rx", "off"),
+                ("infrared.bedroom_rx", "idle", "Bedroom IR Receiver"),
+                ("remote.broadlink_rf_rx", "idle", "Broadlink RF Receiver"),
+                ("light.kitchen", "on", "Kitchen Light"),
+                ("esphome.living_room_rx", "off", "Living Room RX"),
             ]
         )
         ctx = RuneWebSocketContext(hass=hass, connection_id=None)
         result = await _ws_receiver_list(ctx, {})
         ids = {entry["entity_id"] for entry in result["receivers"]}
+        names = {entry["name"] for entry in result["receivers"]}
         assert ids == {"infrared.bedroom_rx", "remote.broadlink_rf_rx", "esphome.living_room_rx"}
+        assert names == {"Bedroom IR Receiver", "Broadlink RF Receiver", "Living Room RX"}
 
 
 class TestDeviceSummary:

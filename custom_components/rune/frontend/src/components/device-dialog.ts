@@ -259,8 +259,8 @@ export class RuneDeviceDialog extends LitElement {
       const txs = (r.transmitters ?? []) as TxEntity[];
       return txs.map((t) => ({
         value: t.entity_id,
-        label: t.entity_id,
-        description: t.state,
+        label: t.name || t.entity_id,
+        description: t.entity_id,
       }));
     };
   }
@@ -280,8 +280,8 @@ export class RuneDeviceDialog extends LitElement {
       }
       return rxs.map((t) => ({
         value: t.entity_id,
-        label: t.entity_id,
-        description: t.state,
+        label: t.name || t.entity_id,
+        description: t.entity_id,
       }));
     };
   }

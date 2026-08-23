@@ -235,7 +235,20 @@ export class RuneSettingsView extends LitElement {
                 ${store.transmitters.map(
                   (t) => html`
                     <div class="entity">
-                      <span class="entity-id">${t.entity_id}</span>
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font-weight:var(--rune-fw-medium)"
+                          >${t.name || t.entity_id}</span
+                        >
+                        ${
+                          t.name && t.name !== t.entity_id
+                            ? html`<span
+                                class="entity-id"
+                                style="font-size:11px;color:var(--rune-text-muted)"
+                                >${t.entity_id}</span
+                              >`
+                            : null
+                        }
+                      </div>
                       <span class="entity-state">
                         <span
                           class="dot ${t.state === "off" || t.state === "unavailable" ? "off" : ""}"
@@ -266,7 +279,20 @@ export class RuneSettingsView extends LitElement {
                 ${store.receivers.map(
                   (r) => html`
                     <div class="entity">
-                      <span class="entity-id">${r.entity_id}</span>
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font-weight:var(--rune-fw-medium)"
+                          >${r.name || r.entity_id}</span
+                        >
+                        ${
+                          r.name && r.name !== r.entity_id
+                            ? html`<span
+                                class="entity-id"
+                                style="font-size:11px;color:var(--rune-text-muted)"
+                                >${r.entity_id}</span
+                              >`
+                            : null
+                        }
+                      </div>
                       <span class="entity-state">
                         <span
                           class="dot ${r.state === "off" || r.state === "unavailable" ? "off" : ""}"

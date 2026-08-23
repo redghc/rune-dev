@@ -597,14 +597,20 @@ def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
 def _list_entities_for_domains(
     hass: Any, domains: tuple[str, ...]
 ) -> list[dict[str, str]]:
-    """Return ``[{entity_id, state}]`` for every state matching the domains."""
+    """Return ``[{entity_id, name, state}]`` for every state matching the domains."""
     entities: list[dict[str, str]] = []
     for state in hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
         if domain in domains:
+            friendly_name = (
+                getattr(state, "name", None)
+                or (getattr(state, "attributes", {}) or {}).get("friendly_name")
+                or state.entity_id
+            )
             entities.append(
                 {
                     "entity_id": state.entity_id,
+                    "name": str(friendly_name),
                     "state": state.state,
                 }
             )
