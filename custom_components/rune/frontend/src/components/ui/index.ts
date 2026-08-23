@@ -14,6 +14,7 @@ import "./tooltip.js";
 import "./skeleton.js";
 import "./empty-state.js";
 import "./rune-icon.js";
+import "./theme-toggle.js";
 
 export { attachFloating } from "./floating.js";
 export type { FloatingOptions } from "./floating.js";
@@ -33,3 +34,4 @@ export { RuneTooltip } from "./tooltip.js";
 export { RuneSkeleton, type RuneSkeletonVariant } from "./skeleton.js";
 export { RuneEmptyState } from "./empty-state.js";
 export { RuneIcon, type RuneIconSize } from "./rune-icon.js";
+export { RuneThemeToggle } from "./theme-toggle.js";

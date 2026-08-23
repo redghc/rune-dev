@@ -30,7 +30,7 @@ export class RuneSelect extends LitElement {
     css`
       :host {
         display: block;
-        margin-bottom: var(--rune-space-3);
+        margin-bottom: var(--rune-space-2);
       }
       sl-select::part(combobox) {
         border-radius: var(--rune-radius-sm);
@@ -54,17 +54,17 @@ export class RuneSelect extends LitElement {
         box-shadow: var(--rune-focus-ring);
       }
       sl-select::part(form-control-label) {
-        font-size: var(--rune-fs-xs);
-        font-weight: var(--rune-fw-medium);
+        font-size: 10px;
+        font-weight: var(--rune-fw-semibold);
         color: var(--rune-text-muted);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: var(--rune-space-1);
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
       }
       sl-select::part(help-text) {
-        font-size: var(--rune-fs-xs);
+        font-size: 11px;
         color: var(--rune-text-muted);
-        margin-top: var(--rune-space-1);
+        margin-top: 2px;
       }
       sl-option::part(base):hover {
         background: var(--rune-primary-soft);

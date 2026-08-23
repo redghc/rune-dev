@@ -35,9 +35,7 @@ test.describe("RUNE sidebar panel", () => {
 
   test("sniffer view shows the captured signal mock", async ({ page }) => {
     const frame = page.frameLocator("iframe#panel");
-    await frame
-      .getByRole("button", { name: /Sniffer/ })
-      .click();
+    await frame.getByRole("button", { name: /Sniffer/ }).click();
     await expect(frame.getByText("AC remote")).toBeVisible({ timeout: 10_000 });
     await expect(frame.getByText("power").first()).toBeVisible();
   });
@@ -62,30 +60,28 @@ test.describe("RUNE sidebar panel", () => {
       frame.locator("rune-settings-view").getByText("Devices", { exact: true }),
     ).toBeVisible();
     await expect(
-      frame
-        .locator("rune-settings-view")
-        .getByText("Available transmitters", { exact: false }),
+      frame.locator("rune-settings-view").getByText("Available transmitters", { exact: false }),
     ).toBeVisible();
     await expect(
-      frame
-        .locator("rune-settings-view")
-        .getByText("remote.broadlink_rm4_pro")
-        .first(),
+      frame.locator("rune-settings-view").getByText("remote.broadlink_rm4_pro").first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test("add-device dialog opens and closes", async ({ page }) => {
     const frame = page.frameLocator("iframe#panel");
-    await frame.getByRole("button", { name: /Add device/ }).first().click();
+    await frame
+      .getByRole("button", { name: /Add device/ })
+      .first()
+      .click();
     // Wait for the first form field to render inside the dialog body.
     await expect(frame.locator("rune-input").first()).toBeVisible({
       timeout: 5_000,
     });
     // Close via Cancel — verify the dialog's ``open`` attribute clears.
     await frame.getByRole("button", { name: /Cancel/ }).click();
-    await expect(
-      frame.locator("rune-device-dialog").locator("sl-dialog[open]"),
-    ).toHaveCount(0, { timeout: 5_000 });
+    await expect(frame.locator("rune-device-dialog").locator("sl-dialog[open]")).toHaveCount(0, {
+      timeout: 5_000,
+    });
   });
 
   test("skip-to-content link is keyboard reachable", async ({ page }) => {
@@ -106,5 +102,28 @@ test.describe("RUNE sidebar panel", () => {
     // Allow microtask queue to settle.
     await page.waitForTimeout(250);
     expect(errors).toEqual([]);
+  });
+
+  test("theme toggle switches light/dark and persists", async ({ page }) => {
+    const frame = page.frameLocator("iframe#panel");
+    const toggle = frame.locator("rune-theme-toggle");
+    await expect(toggle).toBeVisible();
+    // Theme classes land on the iframe document element, not the host.
+    const readIframeClass = async () =>
+      await page.evaluate(() => {
+        const iframe = document.getElementById("panel") as HTMLIFrameElement | null;
+        return iframe?.contentDocument?.documentElement?.className ?? "";
+      });
+    // Light
+    await toggle.getByRole("radio", { name: /Light/i }).click();
+    expect(await readIframeClass()).toContain("sl-theme-light");
+    // Dark
+    await toggle.getByRole("radio", { name: /Dark/i }).click();
+    expect(await readIframeClass()).toContain("sl-theme-dark");
+    // Auto
+    await toggle.getByRole("radio", { name: /Auto/i }).click();
+    const autoClass = await readIframeClass();
+    expect(autoClass).not.toContain("sl-theme-light");
+    expect(autoClass).not.toContain("sl-theme-dark");
   });
 });

@@ -26,7 +26,8 @@ export class RuneDeviceDialog extends LitElement {
       .grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0 var(--rune-space-4);
+        gap: 0 var(--rune-space-3);
+        row-gap: 0;
       }
       .grid > .full {
         grid-column: 1 / -1;
@@ -39,7 +40,7 @@ export class RuneDeviceDialog extends LitElement {
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-sm);
         background: var(--rune-surface);
-        min-height: 38px;
+        min-height: 34px;
         align-items: center;
         transition:
           box-shadow var(--rune-dur-fast) var(--rune-ease),
@@ -65,15 +66,6 @@ export class RuneDeviceDialog extends LitElement {
         font: inherit;
         font-size: var(--rune-fs-sm);
         padding: 2px 4px;
-      }
-      .section-head {
-        grid-column: 1 / -1;
-        margin: var(--rune-space-3) 0 var(--rune-space-1);
-        font-size: var(--rune-fs-xs);
-        font-weight: var(--rune-fw-semibold);
-        color: var(--rune-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
       }
       .preview {
         grid-column: 1 / -1;
@@ -161,8 +153,8 @@ export class RuneDeviceDialog extends LitElement {
   private _onShow = (): void => {
     // When sl-dialog opens, capture the currently focused element so
     // we can restore focus when it closes.
-    this._returnFocusTo =
-      (this.getRootNode() as Document | ShadowRoot).activeElement as HTMLElement | null;
+    this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
+      .activeElement as HTMLElement | null;
     queueMicrotask(() => {
       const dlg = this.renderRoot.querySelector("rune-dialog");
       const target = dlg?.querySelector<HTMLElement>(
@@ -377,11 +369,11 @@ export class RuneDeviceDialog extends LitElement {
     return html`
       <div class="full">
         <label
-          style="font-size:var(--rune-fs-xs);font-weight:var(--rune-fw-medium);color:var(--rune-text-muted);text-transform:uppercase;letter-spacing:0.04em"
+          style="display:block;font-size:10px;font-weight:var(--rune-fw-semibold);color:var(--rune-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px"
         >
           ${f.label}${f.required ? " *" : ""}
         </label>
-        <div class="chips" style="margin-top:var(--rune-space-1)">
+        <div class="chips">
           ${values.map(
             (v, i) => html`
               <rune-chip

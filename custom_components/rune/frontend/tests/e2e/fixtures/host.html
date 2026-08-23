@@ -59,9 +59,7 @@
         { entity_id: "remote.broadlink_rm4_pro", state: "idle" },
         { entity_id: "remote.rm_mini_3", state: "idle" },
       ];
-      const MOCK_RECEIVERS = [
-        { entity_id: "remote.rf_receiver_1", state: "idle" },
-      ];
+      const MOCK_RECEIVERS = [{ entity_id: "remote.rf_receiver_1", state: "idle" }];
       const MOCK_REMOTES = [
         {
           id: "remote-1",
@@ -89,15 +87,13 @@
         if (!d || d.type !== "rune-bridge") return;
         const id = d.id;
         const reply = (payload) => {
-          event.source.postMessage(
-            { type: "rune-bridge-result", id, ...payload },
-            "*",
-          );
+          event.source.postMessage({ type: "rune-bridge-result", id, ...payload }, "*");
         };
         if (d.kind === "ws" && d.message) {
           const t = d.message.type;
           if (t === "rune/list") reply({ result: { devices: MOCK_DEVICES } });
-          else if (t === "rune/transmitter/list") reply({ result: { transmitters: MOCK_TRANSMITTERS } });
+          else if (t === "rune/transmitter/list")
+            reply({ result: { transmitters: MOCK_TRANSMITTERS } });
           else if (t === "rune/receiver/list") reply({ result: { receivers: MOCK_RECEIVERS } });
           else if (t === "rune/sniffer/list") reply({ result: { remotes: MOCK_REMOTES } });
           else if (t === "rune/action/list") reply({ result: { actions: MOCK_ACTIONS } });

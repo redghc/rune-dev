@@ -110,12 +110,12 @@ export class RuneLearnDialog extends LitElement {
         margin: 0;
       }
       .section-label {
-        font-size: var(--rune-fs-xs);
+        font-size: 10px;
         color: var(--rune-text-muted);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        font-weight: var(--rune-fw-medium);
-        margin-bottom: var(--rune-space-1);
+        letter-spacing: 0.05em;
+        font-weight: var(--rune-fw-semibold);
+        margin-bottom: 2px;
       }
     `,
   ];
@@ -141,8 +141,8 @@ export class RuneLearnDialog extends LitElement {
   };
 
   private _onShow = (): void => {
-    this._returnFocusTo =
-      (this.getRootNode() as Document | ShadowRoot).activeElement as HTMLElement | null;
+    this._returnFocusTo = (this.getRootNode() as Document | ShadowRoot)
+      .activeElement as HTMLElement | null;
   };
 
   private _onAfterHide = (): void => {

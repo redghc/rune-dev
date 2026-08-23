@@ -68,6 +68,23 @@ export class RuneDialog extends LitElement {
   @property({ type: Boolean }) noHeader = false;
   @property({ type: Boolean }) closable = true;
 
+  private _onRequestClose = (ev: CustomEvent): void => {
+    const source = (ev.detail as { source?: string } | undefined)?.source;
+    // If the user clicked the overlay while a hoisted ``<sl-select>``
+    // dropdown is open, both the dialog and the select see the same
+    // click. Block the dialog close, then hide the select so a
+    // subsequent outside click behaves normally.
+    if (source === "overlay") {
+      const openSelect = document.querySelector("sl-select[open]");
+      if (openSelect) {
+        ev.preventDefault();
+        queueMicrotask(() => {
+          (openSelect as HTMLElement & { hide?: () => void }).hide?.();
+        });
+      }
+    }
+  };
+
   protected render() {
     return html`
       <sl-dialog
@@ -76,6 +93,7 @@ export class RuneDialog extends LitElement {
         size=${this.size}
         ?no-header=${this.noHeader}
         ?closable=${this.closable}
+        @sl-request-close=${this._onRequestClose}
       >
         <slot></slot>
         <slot name="footer" slot="footer"></slot>

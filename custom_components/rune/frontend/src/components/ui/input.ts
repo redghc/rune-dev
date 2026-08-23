@@ -17,7 +17,7 @@ export class RuneInput extends LitElement {
     css`
       :host {
         display: block;
-        margin-bottom: var(--rune-space-3);
+        margin-bottom: var(--rune-space-2);
       }
       sl-input::part(base) {
         border-radius: var(--rune-radius-sm);
@@ -34,17 +34,17 @@ export class RuneInput extends LitElement {
         border-color: var(--rune-primary);
       }
       sl-input::part(form-control-label) {
-        font-size: var(--rune-fs-xs);
-        font-weight: var(--rune-fw-medium);
+        font-size: 10px;
+        font-weight: var(--rune-fw-semibold);
         color: var(--rune-text-muted);
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: var(--rune-space-1);
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
       }
       sl-input::part(help-text) {
-        font-size: var(--rune-fs-xs);
+        font-size: 11px;
         color: var(--rune-text-muted);
-        margin-top: var(--rune-space-1);
+        margin-top: 2px;
       }
       .leading {
         color: var(--rune-text-subtle);

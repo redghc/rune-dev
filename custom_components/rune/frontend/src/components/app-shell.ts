@@ -20,14 +20,14 @@ interface NavItem {
   id: Section;
   label: string;
   icon: string;
-  shortcut: string;
+  shortcut: [string, string];
 }
 
 const NAV: NavItem[] = [
-  { id: "devices", label: "Devices", icon: "devices", shortcut: "g d" },
-  { id: "sniffer", label: "Sniffer", icon: "antenna", shortcut: "g s" },
-  { id: "actions", label: "Actions", icon: "wand", shortcut: "g a" },
-  { id: "settings", label: "Settings", icon: "settings", shortcut: "g x" },
+  { id: "devices", label: "Devices", icon: "devices", shortcut: ["g", "d"] },
+  { id: "sniffer", label: "Sniffer", icon: "antenna", shortcut: ["g", "s"] },
+  { id: "actions", label: "Actions", icon: "wand", shortcut: ["g", "a"] },
+  { id: "settings", label: "Settings", icon: "settings", shortcut: ["g", "x"] },
 ];
 
 const SHORTCUT_MAP: Record<string, Section> = {
@@ -87,6 +87,7 @@ export class RuneApp extends LitElement {
         display: flex;
         align-items: center;
         gap: var(--rune-space-2);
+        flex-shrink: 0;
       }
       .brand-mark {
         width: 32px;
@@ -103,6 +104,7 @@ export class RuneApp extends LitElement {
         color: var(--rune-on-primary);
         font-size: 18px;
         box-shadow: var(--rune-shadow-1);
+        flex-shrink: 0;
       }
       .brand h1 {
         margin: 0;
@@ -110,6 +112,9 @@ export class RuneApp extends LitElement {
         font-weight: var(--rune-fw-semibold);
         letter-spacing: -0.02em;
         color: var(--rune-text-strong);
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
       }
       .pill {
         display: inline-block;
@@ -119,7 +124,7 @@ export class RuneApp extends LitElement {
         color: var(--rune-text-muted);
         font-size: var(--rune-fs-xs);
         font-weight: var(--rune-fw-medium);
-        margin-left: auto;
+        flex-shrink: 0;
       }
       .nav-item {
         display: flex;
@@ -140,6 +145,7 @@ export class RuneApp extends LitElement {
         transition:
           background-color var(--rune-dur-fast) var(--rune-ease),
           color var(--rune-dur-fast) var(--rune-ease);
+        flex-shrink: 0;
       }
       .nav-item:hover {
         background: var(--rune-surface-alt);
@@ -156,17 +162,37 @@ export class RuneApp extends LitElement {
         width: 18px;
         flex-shrink: 0;
       }
-      .nav-item .kbd {
-        margin-left: auto;
+      .nav-item .label {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .kbd {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+      .kbd kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: var(--rune-radius-xs);
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        border-bottom-width: 2px;
+        color: var(--rune-text-muted);
         font-family: var(--rune-font-mono);
         font-size: 10px;
-        color: var(--rune-text-subtle);
-        padding: 1px 5px;
-        border-radius: var(--rune-radius-xs);
-        background: var(--rune-surface-alt);
-        border: 1px solid var(--rune-border);
+        font-weight: var(--rune-fw-semibold);
+        line-height: 1;
       }
-      .nav-item.active .kbd {
+      .nav-item.active .kbd kbd {
         background: var(--rune-surface);
         border-color: var(--rune-primary);
         color: var(--rune-primary);
@@ -178,15 +204,22 @@ export class RuneApp extends LitElement {
         color: var(--rune-text-subtle);
         border-top: 1px solid var(--rune-border);
         display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-2);
+        flex-shrink: 0;
+      }
+      .status-row {
+        display: flex;
         align-items: center;
         gap: var(--rune-space-2);
       }
-      .footer .dot {
+      .status-row .dot {
         width: 8px;
         height: 8px;
         border-radius: var(--rune-radius-full);
         background: var(--rune-success);
         box-shadow: 0 0 0 3px var(--rune-success-soft);
+        flex-shrink: 0;
       }
       main {
         padding: var(--rune-space-6);
@@ -209,6 +242,55 @@ export class RuneApp extends LitElement {
       @media (prefers-reduced-motion: reduce) {
         main {
           animation: none;
+        }
+      }
+
+      /* ---- Compact viewport (≤ 760px) ---- */
+      @media (max-width: 760px) {
+        :host {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr;
+          height: auto;
+          min-height: 100vh;
+        }
+        nav {
+          height: auto;
+          border-right: none;
+          border-bottom: 1px solid var(--rune-border);
+          padding: var(--rune-space-3);
+          flex-direction: row;
+          overflow-x: auto;
+          overflow-y: hidden;
+          gap: var(--rune-space-1);
+        }
+        .brand {
+          border-bottom: none;
+          padding: 0;
+          margin-bottom: 0;
+          margin-right: var(--rune-space-3);
+          flex-shrink: 0;
+        }
+        .brand h1 {
+          font-size: var(--rune-fs-md);
+        }
+        .nav-item {
+          flex: 0 0 auto;
+          width: auto;
+          padding: var(--rune-space-2) var(--rune-space-3);
+          font-size: var(--rune-fs-xs);
+        }
+        .nav-item .label {
+          max-width: 80px;
+        }
+        .kbd {
+          display: none;
+        }
+        .footer {
+          display: none;
+        }
+        main {
+          padding: var(--rune-space-4);
+          max-height: none;
         }
       }
     `,
@@ -298,14 +380,19 @@ export class RuneApp extends LitElement {
               @click=${() => this._select(n.id)}
             >
               <i class="ti ti-${n.icon}" aria-hidden="true"></i>
-              <span>${n.label}</span>
-              <span class="kbd" aria-hidden="true">${n.shortcut}</span>
+              <span class="label">${n.label}</span>
+              <span class="kbd" aria-hidden="true">
+                <kbd>${n.shortcut[0]}</kbd><kbd>${n.shortcut[1]}</kbd>
+              </span>
             </button>
           `,
         )}
-        <div class="footer" role="status" aria-live="polite">
-          <span class="dot"></span>
-          <span>Connected</span>
+        <div class="footer">
+          <rune-theme-toggle compact></rune-theme-toggle>
+          <div class="status-row" role="status" aria-live="polite">
+            <span class="dot"></span>
+            <span>Connected</span>
+          </div>
         </div>
       </nav>
       <main id="main-content" tabindex="-1">${this._renderSection()}</main>
