@@ -567,6 +567,56 @@ async def _ws_receiver_list(
     return {"receivers": _list_receiver_entities(ctx.hass)}
 
 
+@_register("debug/registry-check")
+async def _ws_debug_registry_check(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Dump the raw registry view for one entity (or every entity in
+    the IR/RF/ESPHome domains when ``entity_id`` is omitted).
+
+    Diagnostic helper for the emitter / receiver picker: tells us
+    whether each entity is registered, whether it's linked to a
+    device, and what the device's area is. Empty fields explain why
+    ``area`` / ``device_name`` come back blank from ``transmitter/list``.
+    """
+    target = msg.get("entity_id")
+    area_by_entity, device_by_entity = _entity_indexes(ctx.hass)
+    device_by_id = _device_index(ctx.hass)
+    area_by_id = _area_index(ctx.hass)
+    rows: list[dict[str, Any]] = []
+    for state in ctx.hass.states.async_all():
+        domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
+        if domain not in {"infrared", "remote", "esphome"}:
+            continue
+        if target and state.entity_id != target:
+            continue
+        entity_area_id = area_by_entity.get(state.entity_id, "")
+        entity_device_id = device_by_entity.get(state.entity_id, "")
+        device = device_by_id.get(entity_device_id, {}) if entity_device_id else {}
+        device_area_id = device.get("area_id", "")
+        resolved_area_id = entity_area_id or device_area_id
+        rows.append(
+            {
+                "entity_id": state.entity_id,
+                "friendly_name": state.name,
+                "in_entity_registry": state.entity_id in area_by_entity
+                or state.entity_id in device_by_entity,
+                "entity_area_id": entity_area_id or None,
+                "entity_device_id": entity_device_id or None,
+                "device_name": device.get("name", "") or None,
+                "device_area_id": device_area_id or None,
+                "resolved_area_id": resolved_area_id or None,
+                "resolved_area_name": area_by_id.get(resolved_area_id, "") or None,
+                "device_area_name": area_by_id.get(device_area_id, "") or None,
+                "entity_area_name": area_by_id.get(entity_area_id, "") or None,
+                "state_attributes_area": getattr(state, "attributes", {}).get(
+                    "area_id"
+                ),
+            }
+        )
+    return {"rows": rows}
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

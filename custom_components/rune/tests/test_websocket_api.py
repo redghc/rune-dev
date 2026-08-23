@@ -447,5 +447,6 @@ class TestRegistryShape:
             "action/list",
             "transmitter/list",
             "receiver/list",
+            "debug/registry-check",
         }
         assert set(_HANDLERS.keys()) == expected
