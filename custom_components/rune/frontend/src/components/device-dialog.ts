@@ -126,12 +126,17 @@ export class RuneDeviceDialog extends LitElement {
   private _formFromEditing(editing: DeviceSummary | null): FormState {
     if (!editing) return { category: "fan" };
     const dev = editing as DeviceSummary & Record<string, unknown>;
+    const txs = editing.transmitter_entity_ids ?? [];
+    const rxs = editing.receiver_entity_ids ?? [];
     return {
       category: editing.category,
       name: editing.name,
       manufacturer: editing.manufacturer ?? "",
       model: editing.model ?? "",
-      transmitter: editing.transmitter_entity_ids?.[0] ?? "",
+      ir_transmitter: txs[0] ?? "",
+      rf_transmitter: txs[1] ?? "",
+      ir_receiver: rxs[0] ?? "",
+      rf_receiver: rxs[1] ?? "",
       discrete_speed_count: dev["discrete_speed_count"] ?? 3,
     };
   }
@@ -194,6 +199,14 @@ export class RuneDeviceDialog extends LitElement {
         return;
       }
     }
+
+    const irTx = String(this._form.ir_transmitter || "").trim();
+    const rfTx = String(this._form.rf_transmitter || "").trim();
+    if (!irTx && !rfTx) {
+      this._err = msg(str`At least one transmitter (IR or RF) is required`);
+      return;
+    }
+
     const editing = store.deviceDialog.editing;
     const payload: Record<string, unknown> = {};
     for (const f of visible) {
@@ -208,6 +221,18 @@ export class RuneDeviceDialog extends LitElement {
     if (payload.category === "fan" && payload.discrete_speed_count === undefined) {
       payload.discrete_speed_count = 3;
     }
+
+    const irRx = String(this._form.ir_receiver || "").trim();
+    const rfRx = String(this._form.rf_receiver || "").trim();
+    const txList = [irTx, rfTx].filter(Boolean);
+    const rxList = [irRx, rfRx].filter(Boolean);
+    payload.transmitter_entity_ids = txList;
+    payload.receiver_entity_ids = rxList;
+    payload.transmitter = txList[0];
+    if (rxList.length > 0) {
+      payload.receiver = rxList[0];
+    }
+
     this._busy = true;
     try {
       if (editing) {
@@ -249,7 +274,7 @@ export class RuneDeviceDialog extends LitElement {
           {
             value: "",
             label: msg(str`(no receivers)`),
-            description: msg(str`Add an RF receiver first`),
+            description: msg(str`Add an IR or RF receiver first`),
           },
         ];
       }
@@ -270,8 +295,16 @@ export class RuneDeviceDialog extends LitElement {
 
   private _resolveOptions(field: FieldDef): AsyncLoader | undefined {
     if (field.kind !== "async-select") return undefined;
-    if (field.key === "transmitter") return this._loadTransmitters();
-    if (field.key === "receiver") return this._loadReceivers();
+    if (
+      field.key === "ir_transmitter" ||
+      field.key === "rf_transmitter" ||
+      field.key === "transmitter"
+    ) {
+      return this._loadTransmitters();
+    }
+    if (field.key === "ir_receiver" || field.key === "rf_receiver" || field.key === "receiver") {
+      return this._loadReceivers();
+    }
     if (
       field.key === "temperature_sensor" ||
       field.key === "humidity_sensor" ||

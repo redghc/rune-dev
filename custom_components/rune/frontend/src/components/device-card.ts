@@ -211,6 +211,7 @@ export class RuneDeviceCard extends LitElement {
   render() {
     const d = this.device;
     const tx = (d.transmitter_entity_ids ?? []).join(", ") || "—";
+    const rx = (d.receiver_entity_ids ?? []).join(", ");
     const icon = CATEGORY_ICON[d.category] ?? "remote";
     void this._flash;
     return html`
@@ -226,7 +227,16 @@ export class RuneDeviceCard extends LitElement {
                   <i class="ti ti-bolt"></i
                   >${msg(str`${d.command_count} command${d.command_count === 1 ? "" : "s"}`)}
                 </span>
-                <span class="meta-item"> <i class="ti ti-antenna-bars-5"></i>${tx} </span>
+                <span class="meta-item" title="Transmitters">
+                  <i class="ti ti-antenna-bars-5"></i>${tx}
+                </span>
+                ${
+                  rx
+                    ? html`<span class="meta-item" title="Receivers">
+                        <i class="ti ti-antenna"></i>${rx}
+                      </span>`
+                    : null
+                }
                 ${
                   d.manufacturer
                     ? html`<span class="meta-item">

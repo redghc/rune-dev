@@ -21,6 +21,7 @@ export interface DeviceSummary {
   model?: string;
   command_count: number;
   transmitter_entity_ids: string[];
+  receiver_entity_ids?: string[];
   commands: PulseCommand[];
 }
 

@@ -207,9 +207,25 @@ async def _ws_device_create(
     name = msg.get("name")
     category_value = msg.get("category")
     transmitter = msg.get("transmitter")
+    ir_transmitter = msg.get("ir_transmitter")
+    rf_transmitter = msg.get("rf_transmitter")
+    tx_list_raw = msg.get("transmitter_entity_ids")
+    if tx_list_raw and isinstance(tx_list_raw, list):
+        tx_list = [str(t) for t in tx_list_raw if t]
+    else:
+        tx_list = [str(t) for t in (ir_transmitter, rf_transmitter, transmitter) if t]
 
-    if not name or not category_value or not transmitter:
-        raise ActionError("name, category, and transmitter are required")
+    if not name or not category_value or not tx_list:
+        raise ActionError("name, category, and at least one transmitter are required")
+
+    receiver = msg.get("receiver")
+    ir_receiver = msg.get("ir_receiver")
+    rf_receiver = msg.get("rf_receiver")
+    rx_list_raw = msg.get("receiver_entity_ids")
+    if rx_list_raw and isinstance(rx_list_raw, list):
+        rx_list = [str(r) for r in rx_list_raw if r]
+    else:
+        rx_list = [str(r) for r in (ir_receiver, rf_receiver, receiver) if r]
 
     try:
         category = EntityCategory(category_value)
@@ -232,8 +248,8 @@ async def _ws_device_create(
         category=category,
         manufacturer=msg.get("manufacturer"),
         model=msg.get("model"),
-        transmitter_entity_ids=[transmitter],
-        receiver_entity_ids=[msg.get("receiver")] if msg.get("receiver") else [],
+        transmitter_entity_ids=tx_list,
+        receiver_entity_ids=rx_list,
         discrete_speed_count=int(msg.get("discrete_speed_count", 3)),
         commands=commands,
     )
@@ -283,18 +299,34 @@ async def _ws_device_update(
     if device is None:
         raise CommandNotLearnedError(f"Device {device_id!r} not found")
 
+    tx_list = msg.get("transmitter_entity_ids")
+    if tx_list is None:
+        ir_tx = msg.get("ir_transmitter")
+        rf_tx = msg.get("rf_transmitter")
+        legacy_tx = msg.get("transmitter")
+        if ir_tx is not None or rf_tx is not None or legacy_tx is not None:
+            tx_list = [str(t) for t in (ir_tx, rf_tx, legacy_tx) if t]
+        else:
+            tx_list = device.transmitter_entity_ids
+
+    rx_list = msg.get("receiver_entity_ids")
+    if rx_list is None:
+        ir_rx = msg.get("ir_receiver")
+        rf_rx = msg.get("rf_receiver")
+        legacy_rx = msg.get("receiver")
+        if ir_rx is not None or rf_rx is not None or legacy_rx is not None:
+            rx_list = [str(r) for r in (ir_rx, rf_rx, legacy_rx) if r]
+        else:
+            rx_list = device.receiver_entity_ids
+
     updated = RuneDevice(
         id=device.id,
         name=msg.get("name", device.name),
         category=device.category,
         manufacturer=msg.get("manufacturer", device.manufacturer),
         model=msg.get("model", device.model),
-        transmitter_entity_ids=msg.get(
-            "transmitter_entity_ids", device.transmitter_entity_ids
-        ),
-        receiver_entity_ids=msg.get(
-            "receiver_entity_ids", device.receiver_entity_ids
-        ),
+        transmitter_entity_ids=tx_list,
+        receiver_entity_ids=rx_list,
         speed_mode=device.speed_mode,
         discrete_speed_count=int(
             msg.get("discrete_speed_count", device.discrete_speed_count)
@@ -559,7 +591,7 @@ def _list_transmitter_entities(hass: Any) -> list[dict[str, str]]:
 
 def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
     """Return entity_id + state for every known receiver domain."""
-    return _list_entities_for_domains(hass, ("infrared", "esphome"))
+    return _list_entities_for_domains(hass, ("infrared", "esphome", "remote"))
 
 
 def _list_entities_for_domains(

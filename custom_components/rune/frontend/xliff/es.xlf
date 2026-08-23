@@ -66,10 +66,6 @@
   <source>(no receivers)</source>
     <target>(sin receptores)</target>
   </trans-unit>
-<trans-unit id="s97c9b4e57b70fc8c">
-  <source>Add an RF receiver first</source>
-    <target>Añade primero un receptor RF</target>
-  </trans-unit>
 <trans-unit id="s69d88ef4b2618980">
   <source>Cover</source>
     <target>Cubierta</target>
@@ -202,26 +198,6 @@
 <trans-unit id="sd36c2c0b43bce5dc">
   <source>Generic remote</source>
     <target>Mando genérico</target>
-  </trans-unit>
-<trans-unit id="s1c0dbd44908000bc">
-  <source>Transmitter</source>
-    <target>Emisor</target>
-  </trans-unit>
-<trans-unit id="s26784aabe4790712">
-  <source>IR / RF emitter entity that sends commands</source>
-    <target>Entidad emisora IR / RF que envía los comandos</target>
-  </trans-unit>
-<trans-unit id="s480319bdb5b281d9">
-  <source>Pick an emitter…</source>
-    <target>Elige un emisor…</target>
-  </trans-unit>
-<trans-unit id="s752f979ba5e52e70">
-  <source>Receiver</source>
-    <target>Receptor</target>
-  </trans-unit>
-<trans-unit id="s494e1353612d405f">
-  <source>Optional — needed for cover / learn workflows</source>
-    <target>Opcional — necesario para flujos de cubierta / aprendizaje</target>
   </trans-unit>
 <trans-unit id="s8c36545f724b9460">
   <source>(none)</source>
@@ -510,6 +486,54 @@
 <trans-unit id="sf8824fc70d91da9e">
   <source>Español</source>
     <target>Español</target>
+  </trans-unit>
+<trans-unit id="s215a724d0016ad60">
+  <source>At least one transmitter (IR or RF) is required</source>
+    <target>Se requiere al menos un emisor (IR o RF)</target>
+  </trans-unit>
+<trans-unit id="s7e75e90f54842950">
+  <source>Add an IR or RF receiver first</source>
+    <target>Añade primero un receptor IR o RF</target>
+  </trans-unit>
+<trans-unit id="sc72fb248097bba25">
+  <source>IR Transmitter</source>
+    <target>Emisor IR</target>
+  </trans-unit>
+<trans-unit id="s593d9c27e95706a7">
+  <source>IR emitter entity that sends commands</source>
+    <target>Entidad emisora IR que envía comandos</target>
+  </trans-unit>
+<trans-unit id="s9d39714b2cb9b3ce">
+  <source>Pick an IR emitter…</source>
+    <target>Elige un emisor IR…</target>
+  </trans-unit>
+<trans-unit id="s8c7083a307281ce6">
+  <source>RF Transmitter</source>
+    <target>Emisor RF</target>
+  </trans-unit>
+<trans-unit id="s6b2b5bea3901009e">
+  <source>RF emitter entity that sends commands</source>
+    <target>Entidad emisora RF que envía comandos</target>
+  </trans-unit>
+<trans-unit id="s13f21b1fc0c0aa9f">
+  <source>Pick an RF emitter…</source>
+    <target>Elige un emisor RF…</target>
+  </trans-unit>
+<trans-unit id="s3a99b3c9a703d7d3">
+  <source>IR Receiver</source>
+    <target>Receptor IR</target>
+  </trans-unit>
+<trans-unit id="s55dcb71fc2faeb11">
+  <source>Optional — receiver for IR signals &amp; learn</source>
+    <target>Opcional — receptor para señales y aprendizaje IR</target>
+  </trans-unit>
+<trans-unit id="s68848df501eff2fe">
+  <source>RF Receiver</source>
+    <target>Receptor RF</target>
+  </trans-unit>
+<trans-unit id="sade691dfaef83db6">
+  <source>Optional — receiver for RF signals &amp; learn</source>
+    <target>Opcional — receptor para señales y aprendizaje RF</target>
   </trans-unit>
 </body>
 </file>

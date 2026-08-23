@@ -70,4 +70,45 @@ test.describe("select inside dialog", () => {
     await overlay.click({ position: { x: 10, y: 10 } });
     await expect(frame.locator("rune-dialog sl-dialog[open]")).toHaveCount(0, { timeout: 3_000 });
   });
+
+  test("device dialog exposes both IR and RF transmitter/receiver fields and validates at least one transmitter", async ({
+    page,
+  }) => {
+    const frame = await openFrame(page);
+    await frame
+      .getByRole("button", { name: /Add device/ })
+      .first()
+      .click();
+    await expect(frame.locator("rune-input").first()).toBeVisible({ timeout: 5_000 });
+
+    // Verify IR & RF transmitter fields are visible
+    const selects = frame.locator("rune-select sl-select");
+    const irTx = selects.nth(1);
+    const rfTx = selects.nth(2);
+    const irRx = selects.nth(3);
+    const rfRx = selects.nth(4);
+
+    await expect(irTx).toBeVisible();
+    await expect(rfTx).toBeVisible();
+    await expect(irRx).toBeVisible();
+    await expect(rfRx).toBeVisible();
+
+    // Fill device name
+    const nameInput = frame.locator("rune-input").first().locator("input");
+    await nameInput.fill("Test Dual IR-RF Fan");
+
+    // Click Create without transmitters -> shows error
+    await frame.getByRole("button", { name: /Create/ }).click();
+    await expect(
+      frame.locator(".err", { hasText: /At least one transmitter|Se requiere al menos un emisor/ }),
+    ).toBeVisible({ timeout: 3_000 });
+
+    // Pick IR transmitter
+    await irTx.locator('[part="combobox"]').click();
+    await irTx.locator("sl-option").first().click();
+
+    // Create device should now submit without the transmitter error
+    await frame.getByRole("button", { name: /Create/ }).click();
+    await expect(frame.locator(".err")).toHaveCount(0, { timeout: 3_000 });
+  });
 });

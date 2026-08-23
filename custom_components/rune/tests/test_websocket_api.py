@@ -212,6 +212,36 @@ class TestWsDeviceCreate:
         assert len(devices) == 1
         assert devices[0].transmitter_entity_ids == ["infrared.bedroom"]
 
+    async def test_creates_device_with_ir_and_rf_transmitters_and_receivers(self) -> None:
+        from custom_components.rune.websocket_api import _ws_device_create
+
+        repo = InMemoryDeviceRepository()
+
+        async def _list_repo(self) -> InMemoryDeviceRepository:  # type: ignore[no-untyped-def]
+            return repo
+
+        original = RuneWebSocketContext.device_repository
+        RuneWebSocketContext.device_repository = _list_repo  # type: ignore[method-assign]
+        try:
+            result = await _ws_device_create(
+                _ctx(),
+                {
+                    "name": "Combo Device",
+                    "category": "remote",
+                    "ir_transmitter": "infrared.blaster",
+                    "rf_transmitter": "remote.broadlink_rf",
+                    "ir_receiver": "infrared.receiver",
+                    "rf_receiver": "remote.broadlink_rf",
+                },
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        assert "device" in result
+        devices = await repo.load()
+        assert len(devices) == 1
+        assert devices[0].transmitter_entity_ids == ["infrared.blaster", "remote.broadlink_rf"]
+        assert devices[0].receiver_entity_ids == ["infrared.receiver", "remote.broadlink_rf"]
+
     async def test_missing_required_fields_raises(self) -> None:
         from custom_components.rune.websocket_api import _ws_device_create
 
@@ -244,6 +274,7 @@ class TestWsEntityListers:
         hass = FakeHass(
             states=[
                 ("infrared.bedroom_rx", "idle"),
+                ("remote.broadlink_rf_rx", "idle"),
                 ("light.kitchen", "on"),
                 ("esphome.living_room_rx", "off"),
             ]
@@ -251,7 +282,7 @@ class TestWsEntityListers:
         ctx = RuneWebSocketContext(hass=hass, connection_id=None)
         result = await _ws_receiver_list(ctx, {})
         ids = {entry["entity_id"] for entry in result["receivers"]}
-        assert ids == {"infrared.bedroom_rx", "esphome.living_room_rx"}
+        assert ids == {"infrared.bedroom_rx", "remote.broadlink_rf_rx", "esphome.living_room_rx"}
 
 
 class TestDeviceSummary:
