@@ -26,7 +26,7 @@
             },
             "manage_devices": {
                 "title": "Manage devices",
-                "description": "Devices currently configured in this RUNE integration."
+                "description": "{{ empty_message }}\n\n{{ device_list }}"
             }
         },
         "error": {
@@ -77,6 +77,20 @@
                     "description": "How long to wait for the remote signal before giving up."
                 }
             }
+        }
+    },
+    "selector": {
+        "menu": {
+            "options": {
+                "add_device": {"label": "Add device"},
+                "manage_devices": {"label": "Manage devices"}
+            }
+        }
+    },
+    "placeholders": {
+        "empty_message": {
+            "message": "No devices yet. Use **Add device** to create one.",
+            "placeholders": {}
         }
     }
 }

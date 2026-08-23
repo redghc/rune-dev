@@ -16,8 +16,8 @@
   </trans-unit>
 <trans-unit id="sdaf3cc7acb678d84">
   <source>Action bindings connect a captured signal to a side-effect: fire a pulse on a device, call a service, activate a scene, run a script, or fire an event. Bindings are managed programmatically (the API is stable; a UI editor lands in v0.4).</source>
-    <target>Las acciones vinculan una señal capturada a un efecto secundario: disparar un pulso en un dispositivo, llamar a un servicio, activar una escena, ejecutar un script o disparar un evento. Las vinculaciones se gestionan mediante la API (estable; un editor visual llegará en v0.4).</target>
-  </trans-unit>
+    <target>Las vinculaciones de acciones asocian una señal capturada con una consecuencia: disparar un pulso en un dispositivo, llamar a un servicio, activar una escena, ejecutar un script o disparar un evento. Se gestionan mediante la API (la API es estable; un editor visual llegará en v0.4).</target>
+</trans-unit>
 <trans-unit id="sb8e241afc5e40694">
   <source>No action bindings yet</source>
     <target>Aún no hay acciones</target>
@@ -56,8 +56,8 @@
   </trans-unit>
 <trans-unit id="s69d88ef4b2618980">
   <source>Cover</source>
-    <target>Cubierta</target>
-  </trans-unit>
+    <target>Persiana</target>
+</trans-unit>
 <trans-unit id="s8e114dd98aeedf91">
   <source>Switch</source>
     <target>Interruptor</target>
@@ -105,7 +105,7 @@
 <trans-unit id="hd8adfdda18c24d3f">
   <source>IR / RF devices RUNE controls in Home Assistant. Click
             <x id="0" equiv-text="&lt;strong&gt;"/>+ Add device<x id="1" equiv-text="&lt;/strong&gt;"/> to create one, or use the config flow.</source>
-    <target>Dispositivos IR / RF que RUNE controla en Home Assistant. Pulsa <x id="0" equiv-text="&lt;strong&gt;"/>+ Añadir dispositivo<x id="1" equiv-text="&lt;/strong&gt;"/> para crear uno, o usa el flujo de configuración.</target>
+    <target>Dispositivos IR / RF que RUNE controla en Home Assistant. Haz clic en <x id="0" equiv-text="&lt;strong&gt;"/>+ Añadir dispositivo<x id="1" equiv-text="&lt;/strong&gt;"/> para crear uno o usa el flujo de configuración.</target>
   </trans-unit>
 <trans-unit id="s69f4d544bf92eb97">
   <source>No devices yet</source>
@@ -145,12 +145,12 @@
   </trans-unit>
 <trans-unit id="s8ee873a2c3081974">
   <source>Climate</source>
-    <target>Clima</target>
-  </trans-unit>
+    <target>Climatización</target>
+</trans-unit>
 <trans-unit id="s1fd450a6b64d643b">
   <source>Cover / Blinds</source>
-    <target>Cubierta / Persianas</target>
-  </trans-unit>
+    <target>Persiana</target>
+</trans-unit>
 <trans-unit id="s73b2eed2782eeec4">
   <source>Media player</source>
     <target>Reproductor multimedia</target>
@@ -189,7 +189,7 @@
   </trans-unit>
 <trans-unit id="sdcbcf60376a56045">
   <source>How many discrete speed levels this fan exposes</source>
-    <target>Cuántos niveles de velocidad discretos expone este ventilador</target>
+    <target>¿Cuántos niveles de velocidad discretos expone este ventilador?</target>
   </trans-unit>
 <trans-unit id="s064a4f8afa514ca2">
   <source>Learned "<x id="0" equiv-text="${commandKey}"/>"</source>
@@ -197,8 +197,8 @@
   </trans-unit>
 <trans-unit id="s1ee96debc21e1e35">
   <source>Idle — click Start learn</source>
-    <target>Inactivo — pulsa Iniciar aprendizaje</target>
-  </trans-unit>
+    <target>Inactivo: pulsa en Iniciar aprendizaje</target>
+</trans-unit>
 <trans-unit id="s5b55db76417c9d56">
   <source>Capturing… press the button on your remote NOW</source>
     <target>Capturando… pulsa el botón del mando AHORA</target>
@@ -395,7 +395,7 @@
   <source>Learn which command on "<x id="0" equiv-text="${this.device.name}"/>"?
 
 Enter a command key (e.g. "off", "speed_2", "power_on"):</source>
-  <target>¿Qué comando aprender en "<x id="0" equiv-text="${this.device.name}"/>"?
+  <target>Aprende qué comando en "<x id="0" equiv-text="${this.device.name}"/>":
 
 Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
 </trans-unit>
@@ -512,6 +512,18 @@ Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
 <trans-unit id="s3c0a015edb522c38">
   <source> and </source>
     <target> y </target>
+</trans-unit>
+<trans-unit id="sdee9150a992fb250">
+  <source>Re-activate this remote</source>
+    <target>Reactivar este mando</target>
+</trans-unit>
+<trans-unit id="s5e97e8e97cfa458b">
+  <source>Hide this remote from the sniffer list</source>
+    <target>Ocultar este mando de la lista del sniffer</target>
+</trans-unit>
+<trans-unit id="sefcf950b3cc4fc3b">
+  <source>Language</source>
+    <target>Idioma</target>
 </trans-unit>
 </body>
 </file>

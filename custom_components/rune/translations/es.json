@@ -26,7 +26,7 @@
             },
             "manage_devices": {
                 "title": "Gestionar dispositivos",
-                "description": "Dispositivos configurados actualmente en esta integración de RUNE."
+                "description": "{{ empty_message }}\n\n{{ device_list }}"
             }
         },
         "error": {
@@ -77,6 +77,20 @@
                     "description": "Cuánto tiempo esperar la señal del mando antes de rendirse."
                 }
             }
+        }
+    },
+    "selector": {
+        "menu": {
+            "options": {
+                "add_device": {"label": "Añadir dispositivo"},
+                "manage_devices": {"label": "Gestionar dispositivos"}
+            }
+        }
+    },
+    "placeholders": {
+        "empty_message": {
+            "message": "Aún no hay dispositivos. Usa **Añadir dispositivo** para crear uno.",
+            "placeholders": {}
         }
     }
 }

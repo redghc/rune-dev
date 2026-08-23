@@ -102,7 +102,11 @@ export class RuneLocaleToggle extends LitElement {
 
   protected render() {
     return html`
-      <div class="seg ${this.compact ? "compact" : ""}" role="radiogroup" aria-label="Language">
+      <div
+        class="seg ${this.compact ? "compact" : ""}"
+        role="radiogroup"
+        aria-label=${msg(str`Language`)}
+      >
         ${OPTIONS.map(
           (o) => html`
             <button

@@ -248,8 +248,8 @@ export class RuneSnifferView extends LitElement {
                         <rune-tooltip
                           content=${
                             r.dismissed
-                              ? "Re-activate this remote"
-                              : "Hide this remote from the sniffer list"
+                              ? msg(str`Re-activate this remote`)
+                              : msg(str`Hide this remote from the sniffer list`)
                           }
                         >
                           <rune-button

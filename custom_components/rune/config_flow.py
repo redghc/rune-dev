@@ -131,6 +131,23 @@ class RuneOptionsFlow(OptionsFlow):
         """Pull the current device list from the entry's cache."""
         return self._devices
 
+    def _empty_state_message(self) -> str:
+        """Localized empty-state copy for the manage-devices step.
+
+        Kept inline (not in ``translations/{en,es}.json``) because the
+        description-placeholder values are not translated by HA's
+        translation machinery — only the surrounding ``description``
+        template is. The strings match ``config.step.manage_devices``
+        semantically; if you add a real translation key for them later,
+        route this through :func:`translation.async_get_translations`.
+        """
+        language = getattr(self.hass.config, "language", "en")
+        messages = {
+            "es": "_Aún no hay dispositivos. Usa **Añadir dispositivo** para crear uno._",
+            "en": "_No devices yet. Use **Add device** to create one._",
+        }
+        return messages.get(language, messages["en"])
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -148,10 +165,11 @@ class RuneOptionsFlow(OptionsFlow):
                     {
                         vol.Required("action"): selector.SelectSelector(
                             selector.SelectSelectorConfig(
+                                translation_key="menu",
                                 options=[
-                                    {"value": "add_device", "label": "Add device"},
-                                    {"value": "manage_devices", "label": "Manage devices"},
-                                ]
+                                    {"value": "add_device"},
+                                    {"value": "manage_devices"},
+                                ],
                             )
                         ),
                     }
@@ -279,18 +297,26 @@ class RuneOptionsFlow(OptionsFlow):
         repo = HAStoreDeviceRepository(self.hass)
         devices = await repo.load()
 
-        summary_lines = [
-            f"• **{d.name}** ({d.category.value}, {len(d.commands)} command(s))"
-            for d in devices
-        ]
-        if not summary_lines:
-            summary_lines = ["No devices yet. Use **Add device** to create one."]
+        # Per-device lines stay as data (the user picked these names); the
+        # surrounding prose is owned by ``translations/{en,es}.json`` via
+        # the ``device_list`` and ``empty_message`` placeholders so the
+        # whole block can be translated.
+        empty_message = self._empty_state_message() if not devices else ""
+
+        if devices:
+            device_list = "\n".join(
+                f"• **{d.name}** ({d.category.value}, {len(d.commands)})"
+                for d in devices
+            )
+        else:
+            device_list = ""
 
         return self.async_show_form(
             step_id="manage_devices",
             data_schema=vol.Schema({}),
             description_placeholders={
                 "device_count": str(len(devices)),
-                "device_list": "\n".join(summary_lines),
+                "device_list": device_list,
+                "empty_message": empty_message,
             },
         )
