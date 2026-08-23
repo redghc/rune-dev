@@ -580,9 +580,12 @@ async def _ws_debug_registry_check(
     ``area`` / ``device_name`` come back blank from ``transmitter/list``.
     """
     target = msg.get("entity_id")
-    area_by_entity, device_by_entity, registry_ok = _entity_indexes_debug(ctx.hass)
-    device_by_id, device_registry_ok = _device_index_debug(ctx.hass)
-    area_by_id, area_registry_ok = _area_index_debug(ctx.hass)
+    entity_payload, entity_err = _try_entity_registry(ctx.hass)
+    device_payload, device_err = _try_device_registry(ctx.hass)
+    area_payload, area_err = _try_area_registry(ctx.hass)
+    area_by_entity, device_by_entity = entity_payload
+    device_by_id = device_payload
+    area_by_id = area_payload
     rows: list[dict[str, Any]] = []
     for state in ctx.hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
@@ -617,38 +620,49 @@ async def _ws_debug_registry_check(
         )
     return {
         "registries": {
-            "entity_registry_ok": registry_ok,
+            "entity_registry_ok": entity_err is None,
             "entity_count": len(area_by_entity) + len(device_by_entity) // 2,
-            "device_registry_ok": device_registry_ok,
+            "entity_error": entity_err,
+            "device_registry_ok": device_err is None,
             "device_count": len(device_by_id),
-            "area_registry_ok": area_registry_ok,
+            "device_error": device_err,
+            "area_registry_ok": area_err is None,
             "area_count": len(area_by_id),
+            "area_error": area_err,
+            "hass_type": type(ctx.hass).__name__,
+            "has_helpers": hasattr(ctx.hass, "helpers"),
+            "helpers_type": type(getattr(ctx.hass, "helpers", None)).__name__,
         },
         "rows": rows,
     }
 
 
-def _entity_indexes_debug(hass: Any) -> tuple[dict[str, str], dict[str, str], bool]:
+def _try_entity_registry(hass: Any) -> tuple[tuple[dict[str, str], dict[str, str]], str | None]:
+    """Return ``(({entity_id: area_id}, {entity_id: device_id}), error)``.
+    ``error`` is ``None`` when the registry was reached successfully."""
     try:
-        registry = hass.helpers.entity_registry.async_get(hass)
-        entities = registry.entities
+        from homeassistant.helpers import entity_registry as er
+
+        registry = er.async_get(hass)
         area: dict[str, str] = {}
         device: dict[str, str] = {}
-        for entry in entities.values():
+        for entry in registry.entities.values():
             area_id = getattr(entry, "area_id", None)
             device_id = getattr(entry, "device_id", None)
             if area_id:
                 area[entry.entity_id] = area_id
             if device_id:
                 device[entry.entity_id] = device_id
-        return area, device, True
-    except Exception:
-        return {}, {}, False
+        return (area, device), None
+    except Exception as exc:
+        return ({}, {}), f"{type(exc).__name__}: {exc}"
 
 
-def _device_index_debug(hass: Any) -> tuple[dict[str, dict[str, str]], bool]:
+def _try_device_registry(hass: Any) -> tuple[dict[str, dict[str, str]], str | None]:
     try:
-        registry = hass.helpers.device_registry.async_get(hass)
+        from homeassistant.helpers import device_registry as dr
+
+        registry = dr.async_get(hass)
         out: dict[str, dict[str, str]] = {}
         for entry in registry.devices.values():
             name = (
@@ -667,22 +681,24 @@ def _device_index_debug(hass: Any) -> tuple[dict[str, dict[str, str]], bool]:
                 "name": str(name) if name else "",
                 "area_id": str(getattr(entry, "area_id", None) or ""),
             }
-        return out, True
-    except Exception:
-        return {}, False
+        return out, None
+    except Exception as exc:
+        return {}, f"{type(exc).__name__}: {exc}"
 
 
-def _area_index_debug(hass: Any) -> tuple[dict[str, str], bool]:
+def _try_area_registry(hass: Any) -> tuple[dict[str, str], str | None]:
     try:
-        registry = hass.helpers.area_registry.async_get(hass)
+        from homeassistant.helpers import area_registry as ar
+
+        registry = ar.async_get(hass)
         out: dict[str, str] = {}
         for entry in registry.areas.values():
             name = getattr(entry, "name", None) or getattr(entry, "id", "")
             if name:
                 out[entry.id] = str(name)
-        return out, True
-    except Exception:
-        return {}, False
+        return out, None
+    except Exception as exc:
+        return {}, f"{type(exc).__name__}: {exc}"
 
 
 # ---------------------------------------------------------------------------
