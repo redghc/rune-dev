@@ -2,12 +2,7 @@ import { localized, msg, str } from "@lit/localize";
 import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import {
-  getLocalePref,
-  onLocalePrefChange,
-  setLocalePref,
-  SUPPORTED_LOCALES,
-} from "@/state/locale-pref.js";
+import { getLocalePref, onLocalePrefChange, setLocalePref } from "@/state/locale-pref.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import type { LocalePref } from "@/state/locale-pref.js";
@@ -133,7 +128,3 @@ declare global {
     "rune-locale-toggle": RuneLocaleToggle;
   }
 }
-
-/** Re-export so the i18n bootstrap can validate user-typed locales
- *  against the same allow-list. */
-export { SUPPORTED_LOCALES };

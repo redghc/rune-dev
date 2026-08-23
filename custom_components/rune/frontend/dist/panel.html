@@ -1051,14 +1051,32 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Theme propagation into shadow roots.
+   *
+   * state/theme.ts puts sl-theme-light / sl-theme-dark on
+   * document.documentElement. Plain :host(.sl-theme-dark) only checks
+   * the shadow host element itself, which never has the class — so
+   * the override was silently ignored inside Lit shadow roots and the
+   * page stuck on whatever the OS reported. :host-context matches
+   * when any ancestor of the host carries the selector, which is
+   * what we actually want.
+   *
+   * Cascade order: the explicit-context rules come AFTER the
+   * prefers-color-scheme block so a forced light class beats an
+   * OS-prefers-dark default.
+   */
   @media (prefers-color-scheme: dark) {
-    :host(:not(.sl-theme-light)) {
+    :host {
       ${T(gi)}
     }
   }
 
-  :host(.sl-theme-dark) {
+  :host-context(.sl-theme-dark) {
     ${T(gi)}
+  }
+
+  :host-context(.sl-theme-light) {
+    ${T(hi)}
   }
 
   *,
@@ -23896,8 +23914,8 @@ ${vi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
       }
       .seg {
         display: inline-flex;
-        gap: 0;
-        padding: 2px;
+        gap: 2px;
+        padding: 3px;
         background: var(--rune-surface-alt);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-md);
@@ -23910,30 +23928,41 @@ ${vi.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         font: inherit;
         font-size: var(--rune-fs-xs);
         font-weight: var(--rune-fw-medium);
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-radius: var(--rune-radius-sm);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
+        min-height: 28px;
         transition:
           background-color var(--rune-dur-fast) var(--rune-ease),
           color var(--rune-dur-fast) var(--rune-ease);
       }
       .opt:hover {
+        background: var(--rune-surface);
         color: var(--rune-text);
       }
+      .opt:focus-visible {
+        outline: none;
+        box-shadow: var(--rune-focus-ring);
+      }
       .opt.active {
-        background: var(--rune-surface);
-        color: var(--rune-text-strong);
+        background: var(--rune-primary);
+        color: var(--rune-on-primary);
+        font-weight: var(--rune-fw-semibold);
         box-shadow: var(--rune-shadow-1);
       }
+      .opt.active:hover {
+        background: var(--rune-primary-hover);
+        color: var(--rune-on-primary);
+      }
       .opt i {
-        font-size: 13px;
+        font-size: 16px;
         line-height: 1;
       }
       .compact .opt {
-        padding: 4px;
+        padding: 6px 8px;
       }
       .compact .opt span {
         display: none;

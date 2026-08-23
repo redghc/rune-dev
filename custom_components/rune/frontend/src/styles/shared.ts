@@ -162,14 +162,32 @@ export const sharedStyles = css`
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Theme propagation into shadow roots.
+   *
+   * state/theme.ts puts sl-theme-light / sl-theme-dark on
+   * document.documentElement. Plain :host(.sl-theme-dark) only checks
+   * the shadow host element itself, which never has the class — so
+   * the override was silently ignored inside Lit shadow roots and the
+   * page stuck on whatever the OS reported. :host-context matches
+   * when any ancestor of the host carries the selector, which is
+   * what we actually want.
+   *
+   * Cascade order: the explicit-context rules come AFTER the
+   * prefers-color-scheme block so a forced light class beats an
+   * OS-prefers-dark default.
+   */
   @media (prefers-color-scheme: dark) {
-    :host(:not(.sl-theme-light)) {
+    :host {
       ${unsafeCSS(hostDark)}
     }
   }
 
-  :host(.sl-theme-dark) {
+  :host-context(.sl-theme-dark) {
     ${unsafeCSS(hostDark)}
+  }
+
+  :host-context(.sl-theme-light) {
+    ${unsafeCSS(hostLight)}
   }
 
   *,

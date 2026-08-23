@@ -114,13 +114,29 @@ test.describe("RUNE sidebar panel", () => {
         const iframe = document.getElementById("panel") as HTMLIFrameElement | null;
         return iframe?.contentDocument?.documentElement?.className ?? "";
       });
+    // Read the resolved ``--rune-bg`` token on ``<rune-app>`` — verifies
+    // the theme tokens actually cascade into the shadow DOM. ``shared.ts``
+    // used to rely on ``:host(.sl-theme-dark)`` which never matched (the
+    // class lives on ``<html>``, not the shadow host) so the page silently
+    // stayed on whatever the OS preferred. We cycle Dark → Light → Auto
+    // and confirm the bg token actually changes between Dark and Light
+    // (regardless of the OS pref).
+    const readAppBg = async () =>
+      await page.evaluate(() => {
+        const iframe = document.getElementById("panel") as HTMLIFrameElement | null;
+        const app = iframe?.contentDocument?.querySelector("rune-app");
+        return app ? getComputedStyle(app).getPropertyValue("--rune-bg").trim() : "";
+      });
+    // Dark first — should always differ from the Light value below.
+    await toggle.getByRole("radio", { name: /Dark/i }).click();
+    expect(await readIframeClass()).toContain("sl-theme-dark");
+    const darkBg = await readAppBg();
     // Light
     await toggle.getByRole("radio", { name: /Light/i }).click();
     expect(await readIframeClass()).toContain("sl-theme-light");
-    // Dark
-    await toggle.getByRole("radio", { name: /Dark/i }).click();
-    expect(await readIframeClass()).toContain("sl-theme-dark");
-    // Auto
+    const lightBg = await readAppBg();
+    expect(lightBg).not.toBe(darkBg);
+    // Auto — neither forced class, falls back to OS media query.
     await toggle.getByRole("radio", { name: /Auto/i }).click();
     const autoClass = await readIframeClass();
     expect(autoClass).not.toContain("sl-theme-light");

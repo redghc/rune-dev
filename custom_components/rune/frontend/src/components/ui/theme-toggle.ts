@@ -49,8 +49,8 @@ export class RuneThemeToggle extends LitElement {
       }
       .seg {
         display: inline-flex;
-        gap: 0;
-        padding: 2px;
+        gap: 2px;
+        padding: 3px;
         background: var(--rune-surface-alt);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-md);
@@ -63,30 +63,41 @@ export class RuneThemeToggle extends LitElement {
         font: inherit;
         font-size: var(--rune-fs-xs);
         font-weight: var(--rune-fw-medium);
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-radius: var(--rune-radius-sm);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
+        min-height: 28px;
         transition:
           background-color var(--rune-dur-fast) var(--rune-ease),
           color var(--rune-dur-fast) var(--rune-ease);
       }
       .opt:hover {
+        background: var(--rune-surface);
         color: var(--rune-text);
       }
+      .opt:focus-visible {
+        outline: none;
+        box-shadow: var(--rune-focus-ring);
+      }
       .opt.active {
-        background: var(--rune-surface);
-        color: var(--rune-text-strong);
+        background: var(--rune-primary);
+        color: var(--rune-on-primary);
+        font-weight: var(--rune-fw-semibold);
         box-shadow: var(--rune-shadow-1);
       }
+      .opt.active:hover {
+        background: var(--rune-primary-hover);
+        color: var(--rune-on-primary);
+      }
       .opt i {
-        font-size: 13px;
+        font-size: 16px;
         line-height: 1;
       }
       .compact .opt {
-        padding: 4px;
+        padding: 6px 8px;
       }
       .compact .opt span {
         display: none;
