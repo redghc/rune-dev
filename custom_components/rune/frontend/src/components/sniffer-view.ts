@@ -6,7 +6,7 @@ import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
-import { store } from "@/state/store.js";
+import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { toolbarStyles } from "@/styles/views.js";
 import { pluralize } from "@/utils/format.js";
@@ -146,7 +146,7 @@ export class RuneSnifferView extends LitElement {
       const { remotes } = await api.listSniffer();
       store.setRemotes(remotes ?? []);
     } catch (err) {
-      store.pushToast(msg(str`Load sniffer: ${(err as Error).message}`), "err");
+      reportError(err, msg(str`Load sniffer`));
     } finally {
       this._loading = false;
     }
@@ -157,7 +157,7 @@ export class RuneSnifferView extends LitElement {
       await api.dismissRemote(r.id);
       await this._refresh();
     } catch (err) {
-      store.pushToast((err as Error).message, "err");
+      reportError(err);
     }
   }
 

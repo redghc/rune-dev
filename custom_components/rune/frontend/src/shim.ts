@@ -35,6 +35,19 @@ interface BridgeRequest {
   service_data?: Record<string, unknown>;
 }
 
+// Shim <-> bridge traffic is noisy in prod. Enable with ``?rune-debug=1``
+// or ``localStorage.runeDebug = "1"`` when debugging a panel issue.
+const DEBUG = (() => {
+  if (typeof window === "undefined") return false;
+  try {
+    if (localStorage.getItem("rune-debug") === "1") return true;
+  } catch {
+    /* ignore */
+  }
+  return new URLSearchParams(window.location.search).get("rune-debug") === "1";
+})();
+const dlog = DEBUG ? (...args: unknown[]) => console.warn("[rune-shim]", ...args) : () => {};
+
 interface HassLike {
   callWS: (msg: Record<string, unknown>) => Promise<unknown>;
   callService: (
@@ -140,9 +153,7 @@ class RunePanel extends HTMLElement {
   private _installMessageHandler(iframe: HTMLIFrameElement): void {
     const onMsg = (event: MessageEvent): void => {
       const data = (event.data ?? {}) as Partial<BridgeRequest>;
-      if (typeof data !== "object" || data === null) return;
-      if (data.type !== "rune-bridge") return;
-      if (typeof data.id !== "number") return;
+      if (!this._isBridgeRequest(data)) return;
 
       const reply = (payload: Record<string, unknown>): void => {
         const win = iframe.contentWindow;
@@ -175,15 +186,23 @@ class RunePanel extends HTMLElement {
     this._listeners.push(onMsg);
   }
 
+  private _isBridgeRequest(data: Partial<BridgeRequest>): data is BridgeRequest & { id: number } {
+    // ``(event.data ?? {})`` already eliminates ``null`` / ``undefined``
+    // so by the time we see ``data`` it's at minimum an empty object.
+    if (data.type !== "rune-bridge") return false;
+    if (typeof data.id !== "number") return false;
+    return true;
+  }
+
   private _handleWsCall(
     message: Record<string, unknown>,
     reply: (payload: Record<string, unknown>) => void,
   ): void {
-    console.debug(`[rune-shim] ws -> ${JSON.stringify(message)}`);
+    dlog(`ws -> ${JSON.stringify(message)}`);
     this._hass
       ?.callWS(message)
       .then((result) => {
-        console.debug(`[rune-shim] ws <- ok ${JSON.stringify(message)}`);
+        dlog(`ws <- ok ${JSON.stringify(message)}`);
         reply({ result: result === undefined ? null : result });
       })
       .catch((err) => {

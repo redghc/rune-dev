@@ -6,7 +6,7 @@ import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
-import { store } from "@/state/store.js";
+import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { entityCardStyles, toolbarStyles } from "@/styles/views.js";
 
@@ -137,7 +137,7 @@ export class RuneSettingsView extends LitElement {
       store.setReceivers(receivers ?? []);
       store.setDevices(devices ?? []);
     } catch (err) {
-      store.pushToast(msg(str`Load settings: ${(err as Error).message}`), "err");
+      reportError(err, msg(str`Load settings`));
     }
   }
 

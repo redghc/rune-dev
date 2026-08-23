@@ -50,18 +50,6 @@ export const rootTokens = `
 
     --rune-focus-ring: 0 0 0 3px #90c8ff;
 
-    /* Legacy aliases — kept until existing components migrate to --rune-*. */
-    --primary:    #0061d1;
-    --bg:         #f8fafc;
-    --bg-2:       #f1f5f9;
-    --card:       #ffffff;
-    --text:       #0f172a;
-    --muted:      #475569;
-    --border:     #e2e8f0;
-    --danger:     #dc2626;
-    --ok:         #059669;
-    --warn:       #d97706;
-
     color-scheme: light;
   }
 
@@ -99,17 +87,6 @@ export const rootTokens = `
     --rune-danger-text:    #f87171;
 
     --rune-focus-ring: 0 0 0 3px #003a82;
-
-    --primary:    #2e95ff;
-    --bg:         #020617;
-    --bg-2:       #0f172a;
-    --card:       #0f172a;
-    --text:       #f1f5f9;
-    --muted:      #94a3b8;
-    --border:     #1e293b;
-    --danger:     #ef4444;
-    --ok:         #10b981;
-    --warn:       #f59e0b;
 
     color-scheme: dark;
   }
@@ -150,17 +127,6 @@ export const rootTokens = `
       --rune-danger-text:    #f87171;
 
       --rune-focus-ring: 0 0 0 3px #003a82;
-
-      --primary:    #2e95ff;
-      --bg:         #020617;
-      --bg-2:       #0f172a;
-      --card:       #0f172a;
-      --text:       #f1f5f9;
-      --muted:      #94a3b8;
-      --border:     #1e293b;
-      --danger:     #ef4444;
-      --ok:         #10b981;
-      --warn:       #f59e0b;
 
       color-scheme: dark;
     }

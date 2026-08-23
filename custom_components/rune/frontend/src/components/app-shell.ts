@@ -323,7 +323,7 @@ export class RuneApp extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener("keydown", this._onKeydown);
-    if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+    this._disarmShortcut();
   }
 
   private _renderSection() {
@@ -342,31 +342,46 @@ export class RuneApp extends LitElement {
 
   private _onKeydown = (ev: KeyboardEvent): void => {
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-    const target = ev.target as HTMLElement | null;
-    const inField =
-      target?.tagName === "INPUT" ||
-      target?.tagName === "TEXTAREA" ||
-      target?.tagName === "SELECT" ||
-      target?.isContentEditable;
-    if (inField) return;
+    if (this._isInFormField(ev.target)) return;
     if (ev.key === "g") {
-      this._shortcutPrefix = "g";
-      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
-      this._shortcutTimer = setTimeout(() => {
-        this._shortcutPrefix = null;
-      }, SHORTCUT_TIMEOUT_MS);
+      this._armShortcut();
       return;
     }
-    if (this._shortcutPrefix === "g") {
-      const section = SHORTCUT_MAP[ev.key.toLowerCase()];
-      if (section) {
-        ev.preventDefault();
-        store.setSection(section);
-      }
-      this._shortcutPrefix = null;
-      if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+    if (this._shortcutPrefix !== "g") return;
+    const section = SHORTCUT_MAP[ev.key.toLowerCase()];
+    if (section) {
+      ev.preventDefault();
+      store.setSection(section);
     }
+    this._disarmShortcut();
   };
+
+  private _isInFormField(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    return (
+      el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable === true
+    );
+  }
+
+  private _armShortcut(): void {
+    this._shortcutPrefix = "g";
+    if (this._shortcutTimer) clearTimeout(this._shortcutTimer);
+    this._shortcutTimer = setTimeout(() => {
+      this._shortcutPrefix = null;
+    }, SHORTCUT_TIMEOUT_MS);
+  }
+
+  private _disarmShortcut(): void {
+    this._shortcutPrefix = null;
+    if (this._shortcutTimer) {
+      clearTimeout(this._shortcutTimer);
+      this._shortcutTimer = null;
+    }
+  }
 
   render() {
     return html`

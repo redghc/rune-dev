@@ -4,10 +4,10 @@ import { customElement, state } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
 
-import { api } from "@/api/bridge.js";
+import { api, refreshDevices } from "@/api/bridge.js";
 import { attachDialogFocus } from "@/components/ui/dialog-focus.js";
 import { attachStoreController } from "@/state/store-controller.js";
-import { store } from "@/state/store.js";
+import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import type { LearnStatus } from "@/state/store.js";
@@ -215,10 +215,9 @@ export class RuneLearnDialog extends LitElement {
       await api.updateDevice({ device_id: deviceId, commands });
       store.pushToast(msg(str`Learned "${commandKey}"`), "ok");
       store.closeLearnDialog();
-      const { devices } = await api.list();
-      store.setDevices(devices ?? []);
+      await refreshDevices();
     } catch (err) {
-      store.pushToast((err as Error).message, "err");
+      reportError(err);
     } finally {
       this._saving = false;
     }

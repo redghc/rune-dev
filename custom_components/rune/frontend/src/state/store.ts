@@ -158,3 +158,13 @@ export function subscribe(fn: Listener): () => void {
 function notify(): void {
   for (const fn of listeners) fn();
 }
+
+/** Surface an Error (or unknown thrown value) as an error toast. Pass
+ *  a ``prefix`` (already-localized ``msg(...)`` template) to give the
+ *  user context — e.g. ``reportError(err, msg(str`Load devices`))``
+ *  renders as ``"Load devices: <message>"``. */
+export function reportError(err: unknown, prefix?: string | unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  const text = prefix !== undefined && prefix !== "" ? `${prefix}: ${message}` : message;
+  store.pushToast(text, "err");
+}

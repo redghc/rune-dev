@@ -4,9 +4,9 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
 
-import { api } from "@/api/bridge.js";
+import { api, refreshDevices } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
-import { store } from "@/state/store.js";
+import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { pluralize } from "@/utils/format.js";
 
@@ -189,10 +189,9 @@ export class RuneDeviceCard extends LitElement {
     try {
       await api.deleteDevice(this.device.id);
       store.pushToast(msg(str`Deleted`), "ok");
-      const { devices } = await api.list();
-      store.setDevices(devices ?? []);
+      await refreshDevices();
     } catch (err) {
-      store.pushToast((err as Error).message, "err");
+      reportError(err);
     }
   }
 
@@ -203,7 +202,7 @@ export class RuneDeviceCard extends LitElement {
       setTimeout(() => btn.classList.remove("flash"), FLASH_MS);
       store.pushToast(msg(str`Sent ${cmd.label ?? cmd.key}`), "ok");
     } catch (err) {
-      store.pushToast((err as Error).message, "err");
+      reportError(err);
     }
   }
 

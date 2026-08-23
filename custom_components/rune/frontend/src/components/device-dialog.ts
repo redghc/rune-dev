@@ -6,17 +6,18 @@ import type { TemplateResult } from "lit";
 
 import "@/components/ui/index.js";
 
-import { api } from "@/api/bridge.js";
+import { api, refreshDevices } from "@/api/bridge.js";
 import { attachDialogFocus } from "@/components/ui/dialog-focus.js";
 import { attachStoreController } from "@/state/store-controller.js";
 import { store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
+import { nonEmpty } from "@/utils/format.js";
 
-import { requiredFields, visibleFields } from "./devices/dialog-schema.js";
+import { entityOptions, requiredFields, visibleFields } from "./devices/dialog-schema.js";
 
 import type { FieldDef, FormState } from "./devices/dialog-schema.js";
 import type { AsyncLoader } from "@/components/ui/select.js";
-import type { DeviceSummary, TxEntity } from "@/types.js";
+import type { DeviceSummary } from "@/types.js";
 
 const CATEGORY_LABEL: Record<string, () => ReturnType<typeof msg>> = {
   fan: () => msg(str`Fan`),
@@ -159,8 +160,8 @@ export class RuneDeviceDialog extends LitElement {
     const rfTx = String(this._form.rf_transmitter || "").trim();
     const irRx = String(this._form.ir_receiver || "").trim();
     const rfRx = String(this._form.rf_receiver || "").trim();
-    const txList = [irTx, rfTx].filter(Boolean);
-    const rxList = [irRx, rfRx].filter(Boolean);
+    const txList = nonEmpty(irTx, rfTx);
+    const rxList = nonEmpty(irRx, rfRx);
     payload.transmitter_entity_ids = txList;
     payload.receiver_entity_ids = rxList;
     payload.transmitter = txList[0];
@@ -182,8 +183,7 @@ export class RuneDeviceDialog extends LitElement {
     }
     this._lastEditingId = null;
     store.closeDeviceDialog();
-    const { devices } = await api.list();
-    store.setDevices(devices ?? []);
+    await refreshDevices();
   }
 
   private async _save(): Promise<void> {
@@ -205,34 +205,19 @@ export class RuneDeviceDialog extends LitElement {
 
   private _loadTransmitters(): AsyncLoader {
     return async () => {
-      const r = await api.transmitters();
-      const txs = (r.transmitters ?? []) as TxEntity[];
-      return txs.map((t) => ({
-        value: t.entity_id,
-        label: t.name || t.entity_id,
-        description: t.entity_id,
-      }));
+      const { transmitters } = await api.transmitters();
+      return entityOptions(transmitters ?? []);
     };
   }
 
   private _loadReceivers(): AsyncLoader {
     return async () => {
-      const r = await api.receivers();
-      const rxs = (r.receivers ?? []) as TxEntity[];
-      if (rxs.length === 0) {
-        return [
-          {
-            value: "",
-            label: msg(str`(no receivers)`),
-            description: msg(str`Add an IR or RF receiver first`),
-          },
-        ];
-      }
-      return rxs.map((t) => ({
-        value: t.entity_id,
-        label: t.name || t.entity_id,
-        description: t.entity_id,
-      }));
+      const { receivers } = await api.receivers();
+      return entityOptions(receivers ?? [], {
+        value: "",
+        label: msg(str`(no receivers)`),
+        description: msg(str`Add an IR or RF receiver first`),
+      });
     };
   }
 

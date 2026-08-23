@@ -6,7 +6,7 @@ import "@/components/ui/index.js";
 
 import { api } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
-import { store } from "@/state/store.js";
+import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 import { toolbarStyles } from "@/styles/views.js";
 import { pluralize } from "@/utils/format.js";
@@ -92,7 +92,7 @@ export class RuneActionsView extends LitElement {
       const { actions } = await api.listActions();
       store.setActions(actions ?? []);
     } catch (err) {
-      store.pushToast(msg(str`Load actions: ${(err as Error).message}`), "err");
+      reportError(err, msg(str`Load actions`));
     } finally {
       this._loading = false;
     }

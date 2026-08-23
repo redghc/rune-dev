@@ -25,6 +25,20 @@ import type {
 
 const BRIDGE_TIMEOUT_MS = 8000;
 
+// Bridge traffic is verbose enough to drown the console in production.
+// Opt in with ``?rune-debug=1`` (or ``localStorage.runeDebug = "1"``) when
+// chasing a flaky parent <-> iframe roundtrip.
+const DEBUG = (() => {
+  if (typeof window === "undefined") return false;
+  try {
+    if (localStorage.getItem("rune-debug") === "1") return true;
+  } catch {
+    /* ignore */
+  }
+  return new URLSearchParams(window.location.search).get("rune-debug") === "1";
+})();
+const dlog = DEBUG ? (...args: unknown[]) => console.warn("[rune-bridge]", ...args) : () => {};
+
 interface PendingResolver {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -91,7 +105,7 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
       timer,
       resolve: (v) => {
         clearTimeout(timer);
-        console.debug(`[rune-bridge] ok id=${id} result=${JSON.stringify(v)}`);
+        dlog(`ok id=${id} result=${JSON.stringify(v)}`);
         resolve(v);
       },
       reject: (e) => {
@@ -101,7 +115,7 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
       },
     };
     pending.set(id, resolver);
-    console.debug(`[rune-bridge] -> id=${id} payload=${JSON.stringify(payload)}`);
+    dlog(`-> id=${id} payload=${JSON.stringify(payload)}`);
     window.parent.postMessage({ type: "rune-bridge", id, ...payload }, "*");
   });
 }
@@ -178,3 +192,10 @@ export const api = {
       service_data: { device_id: deviceId, command_key: commandKey },
     }) as Promise<true>,
 };
+
+/** Fetch the full device list and write it into the store. Used by every
+ *  view that needs the list (initial load + after every mutation). */
+export async function refreshDevices(): Promise<void> {
+  const { devices } = await api.list();
+  store.setDevices(devices ?? []);
+}

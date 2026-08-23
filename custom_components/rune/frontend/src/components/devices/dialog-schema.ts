@@ -14,7 +14,7 @@
 
 import { msg, str } from "@lit/localize";
 
-import type { AsyncLoader } from "@/components/ui/select.js";
+import type { AsyncLoader, RuneSelectOption } from "@/components/ui/select.js";
 import type { TemplateResult } from "lit";
 
 export type FieldKind = "text" | "textarea" | "number" | "select" | "async-select";
@@ -184,4 +184,26 @@ export function visibleFields(state: FormState): FieldDef[] {
  *  decide whether Save can fire. */
 export function requiredFields(state: FormState): FieldDef[] {
   return visibleFields(state).filter((f) => f.required);
+}
+
+/** Minimal contract for entity-shaped rows returned by the
+ *  ``rune/transmitter/list`` and ``rune/receiver/list`` WS endpoints. */
+export interface EntityLike {
+  entity_id: string;
+  name?: string;
+}
+
+/** Map entity rows to ``<rune-select>`` options. ``empty`` renders a
+ *  single placeholder when the source list is empty (the receiver
+ *  picker uses this to nudge the user to add hardware). */
+export function entityOptions(
+  entities: readonly EntityLike[],
+  empty?: RuneSelectOption,
+): RuneSelectOption[] {
+  if (entities.length === 0 && empty) return [empty];
+  return entities.map((e) => ({
+    value: e.entity_id,
+    label: e.name || e.entity_id,
+    description: e.entity_id,
+  }));
 }
