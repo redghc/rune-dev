@@ -1540,10 +1540,16 @@ def _try_area_registry(hass: Any) -> tuple[dict[str, str], str | None]:
 def _device_summary(device: RuneDevice) -> dict[str, Any]:
     """Compact summary used by ``rune/list``.
 
-    Includes every field the SPA's edit dialog needs so reopening the
-    dialog pre-fills correctly without a per-card ``rune/device/get``
-    round-trip. Keep this list in sync with ``DeviceSummary`` on the
-    TS side (``frontend/src/types.ts``).
+    Includes every field the SPA needs to render the device card AND
+    its command tiles — the SPA iterates ``commands`` to draw the
+    send-button + Edit / Re-learn / Delete row under each tile, so
+    the list endpoint must include them (compact form: just
+    ``key`` / ``label`` / ``category`` — the raw timings are
+    fetched on demand via ``rune/command/get`` when the user opens
+    the edit dialog).
+
+    Keep this list in sync with ``DeviceSummary`` on the TS side
+    (``frontend/src/types.ts``).
     """
     return {
         "id": device.id,
@@ -1555,6 +1561,23 @@ def _device_summary(device: RuneDevice) -> dict[str, Any]:
         "transmitter_entity_ids": list(device.transmitter_entity_ids),
         "receiver_entity_ids": list(device.receiver_entity_ids),
         "command_count": len(device.commands),
+        "commands": [
+            {
+                "key": key,
+                "label": cmd.label,
+                "category": str(cmd.category),
+                # Include transport + carrier_frequency_hz so the SPA
+                # can decorate the tile (e.g. an RF icon vs an IR
+                # one) without a per-command round-trip.
+                "signal_category": {
+                    "transport": str(cmd.signal_category.transport),
+                    "encoding": str(cmd.signal_category.encoding),
+                    "carrier_frequency_hz": cmd.signal_category.carrier_frequency_hz,
+                },
+                "has_payload": not cmd.payload.is_empty,
+            }
+            for key, cmd in device.commands.items()
+        ],
     }
 
 

@@ -936,7 +936,65 @@ class TestDeviceSummary:
             "transmitter_entity_ids": ["infrared.bedroom"],
             "receiver_entity_ids": [],
             "command_count": 1,
+            # SPA iterates ``commands`` to render the per-tile action
+            # row, so the list endpoint must include them.
+            "commands": [
+                {
+                    "key": "power_on",
+                    "label": "Power On",
+                    "category": "power",
+                    "signal_category": {
+                        "transport": "ir",
+                        "encoding": "raw_timings",
+                        "carrier_frequency_hz": 38000,
+                    },
+                    "has_payload": True,
+                }
+            ],
         }
+
+    def test_commands_includes_all_learned(self) -> None:
+        """Regression: SPA's device card iterates ``commands`` to render
+        the send-button + Edit / Re-learn / Delete row. A device with
+        multiple commands must round-trip every one through the
+        summary — otherwise the user sees ``command_count: 2`` on the
+        card chip but only the "Learn command" placeholder tile.
+        """
+        from custom_components.rune.websocket_api import _device_summary
+
+        device = RuneDevice(
+            id="d1",
+            name="My fan",
+            category=EntityCategory.FAN,
+            transmitter_entity_ids=["infrared.bedroom"],
+            commands={
+                "off": PulseCommand(
+                    key="off",
+                    label="Off",
+                    category=CommandCategory.POWER,
+                    signal_category=SignalCategory.default_ir(),
+                    payload=PulsePayload(raw_timings=(9000, -4500)),
+                ),
+                "speed_1": PulseCommand(
+                    key="speed_1",
+                    label="Speed 1",
+                    category=CommandCategory.SPEED_PRESET,
+                    signal_category=SignalCategory.default_ir(),
+                    payload=PulsePayload(),
+                ),
+            },
+        )
+
+        summary = _device_summary(device)
+        assert summary["command_count"] == 2
+        assert len(summary["commands"]) == 2
+        keys = {c["key"] for c in summary["commands"]}
+        assert keys == {"off", "speed_1"}
+        # Empty-payload command is flagged so the SPA can hint it.
+        speed_1 = next(c for c in summary["commands"] if c["key"] == "speed_1")
+        assert speed_1["has_payload"] is False
+        off = next(c for c in summary["commands"] if c["key"] == "off")
+        assert off["has_payload"] is True
 
 
 class TestRegistryShape:
