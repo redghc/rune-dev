@@ -214,6 +214,49 @@ _register_schema(
     ),
 )
 _register_schema(
+    "command/list",
+    vol.Schema(
+        {vol.Required("device_id"): str},
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "command/get",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("command_key"): str,
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "command/delete",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("command_key"): str,
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "command/update",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("command_key"): str,
+            vol.Optional("label"): str,
+            vol.Optional("category"): str,
+            vol.Optional("raw_timings"): [vol.Coerce(int)],
+            vol.Optional("carrier_frequency_hz"): vol.Coerce(int),
+            vol.Optional("repeat_count"): vol.Coerce(int),
+            vol.Optional("send_count"): vol.Coerce(int),
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
     "sniffer/list",
     vol.Schema({}, extra=vol.ALLOW_EXTRA),
 )
@@ -518,11 +561,21 @@ async def _ws_device_create(
 async def _ws_device_delete(
     ctx: RuneWebSocketContext, msg: dict[str, Any]
 ) -> dict[str, Any]:
-    """Remove a device by id."""
+    """Remove a device by id.
+
+    Also retires every live HA entity that backed the device (the
+    primary fan / climate / etc. plus one button per learned command).
+    Without this hook the entities would linger with stale state —
+    buttons pointing at a deleted command, fans with no device behind
+    them.
+    """
     device_id = msg.get("device_id")
     if not device_id:
         raise ActionError("device_id is required")
     removed = await (await ctx.device_repository()).delete(device_id)
+    coordinator = ctx.coordinator()
+    if coordinator is not None:
+        await coordinator.async_remove_device_entities(device_id)
     return {"removed": removed}
 
 
@@ -946,6 +999,274 @@ async def _ws_command_test(
 
     await coordinator.async_send_command(device=device, command=command)
     return {"sent": True}
+
+
+# ---------------------------------------------------------------------------
+# Command CRUD (list / get / update / delete)
+# ---------------------------------------------------------------------------
+
+
+def _command_summary(key: str, command: PulseCommand) -> dict[str, Any]:
+    """Compact view of a :class:`PulseCommand` for ``rune/command/list``.
+
+    Includes everything the SPA's per-command menu needs without
+    shipping the full payload (raw timings can be several KB each;
+    the panel only needs to know whether one exists and how big it is).
+    """
+    timings = command.payload.raw_timings
+    return {
+        "key": key,
+        "label": command.label,
+        "category": str(command.category),
+        "transport": str(command.signal_category.transport),
+        "carrier_frequency_hz": command.signal_category.carrier_frequency_hz,
+        "has_payload": not command.payload.is_empty,
+        "timings_count": len(timings) if timings else 0,
+        "repeat_count": command.payload.repeat_count,
+        "send_count": command.payload.send_count,
+    }
+
+
+@_register("command/list")
+async def _ws_command_list(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Return a compact view of every command on ``device_id``.
+
+    The SPA's device card uses this to render the per-command menu
+    (rename / re-learn / delete) without paying the bandwidth cost of
+    shipping every full PulseCommand every time the user opens the
+    card. Returns ``{"commands": [_command_summary, ...]}``.
+    """
+    device_id = msg.get("device_id")
+    if not device_id:
+        raise ActionError("device_id is required")
+    device = await (await ctx.device_repository()).get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+    return {
+        "commands": [
+            _command_summary(key, command) for key, command in device.commands.items()
+        ]
+    }
+
+
+@_register("command/get")
+async def _ws_command_get(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Return the full :class:`PulseCommand` payload for a single command.
+
+    Used by the SPA's Edit dialog to pre-fill the label / category /
+    raw-timings fields. The raw timings can be edited inline and sent
+    back through ``rune/command/update`` — no need to re-capture when
+    the user just wants to tweak a couple of microseconds.
+    """
+    device_id = msg.get("device_id")
+    command_key = msg.get("command_key")
+    if not device_id or not command_key:
+        raise ActionError("device_id and command_key are required")
+    device = await (await ctx.device_repository()).get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+    command = device.commands.get(command_key)
+    if command is None:
+        raise CommandNotLearnedError(
+            f"Device {device_id!r} has no command {command_key!r}"
+        )
+    return {"command": command.to_dict()}
+
+
+@_register("command/update")
+async def _ws_command_update(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Edit a single command in place.
+
+    The SPA's per-command menu exposes three sub-flows, all of which
+    funnel through here:
+
+    - **Rename / re-categorise**: send ``label`` and/or ``category``
+      with no payload — the existing payload is preserved.
+    - **Re-learn**: the Learn dialog fires a fresh capture, then sends
+      ``raw_timings`` (and optionally ``carrier_frequency_hz``) which
+      replace the payload. The label / category survive.
+    - **Edit raw timings**: the user opens the Edit dialog, tweaks
+      a couple of microseconds inline, and sends ``raw_timings`` —
+      same path as Re-learn.
+
+    At least one of ``label`` / ``category`` / ``raw_timings`` /
+    ``repeat_count`` / ``send_count`` must be supplied. The empty
+    call is rejected so a misclick can't silently no-op.
+
+    Returns ``{"command": <PulseCommand dict>}`` with the persisted
+    state.
+    """
+    device_id = msg.get("device_id")
+    command_key = msg.get("command_key")
+    if not device_id or not command_key:
+        raise ActionError("device_id and command_key are required")
+
+    repo = await ctx.device_repository()
+    device = await repo.get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+    existing = device.commands.get(command_key)
+    if existing is None:
+        raise CommandNotLearnedError(
+            f"Device {device_id!r} has no command {command_key!r}"
+        )
+
+    updated_command = _apply_command_edit(existing, msg)
+
+    device.add_command(updated_command)
+    await repo.upsert(device)
+
+    # Push the new descriptor through the live adder so HA picks up
+    # the rename / re-learn without a full reload. HA's
+    # ``async_add_entities`` deduplicates by ``unique_id`` (which
+    # embeds ``command_key``), so the existing button entity is
+    # refreshed in place — its ``name`` attribute and any other
+    # label-derived property update on the next state write.
+    coordinator = ctx.coordinator()
+    if coordinator is not None:
+        await coordinator.async_add_entities_for_device(device)
+    else:
+        _LOGGER.warning(
+            "rune: no coordinator on WS context; command %s updated on "
+            "device %s but live entities will only refresh on next reload",
+            command_key,
+            device_id,
+        )
+
+    return {"command": updated_command.to_dict()}
+
+
+def _apply_command_edit(existing: PulseCommand, msg: dict[str, Any]) -> PulseCommand:
+    """Build a new :class:`PulseCommand` from ``existing`` + a WS payload.
+
+    Pure helper extracted from ``_ws_command_update`` so the WS
+    handler stays under the per-file ``PLR0915`` statement budget.
+    Validation and per-field coercion live here: empty payload
+    rejection, ``CommandCategory`` enum check, ``raw_timings``
+    coercion, and the optional ``carrier_frequency_hz`` swap.
+    """
+    from custom_components.rune.domain.enums import (
+        DEFAULT_IR_CARRIER_HZ,
+        CommandCategory,
+        SignalCategory,
+    )
+    from custom_components.rune.domain.models import PulsePayload
+
+    label = msg.get("label")
+    category_str = msg.get("category")
+    raw_timings = msg.get("raw_timings")
+    carrier_hz = msg.get("carrier_frequency_hz")
+    repeat_count = msg.get("repeat_count")
+    send_count = msg.get("send_count")
+
+    if all(
+        value is None
+        for value in (label, category_str, raw_timings, repeat_count, send_count)
+    ):
+        raise ActionError(
+            "command/update needs at least one of: label, category, "
+            "raw_timings, repeat_count, send_count"
+        )
+
+    category = existing.category
+    if category_str is not None:
+        try:
+            category = CommandCategory(category_str)
+        except ValueError as err:
+            raise ActionError(f"unknown category: {category_str!r}") from err
+
+    new_label = existing.label if label is None else str(label).strip() or existing.label
+
+    payload = existing.payload
+    if raw_timings is not None:
+        if not isinstance(raw_timings, list) or not raw_timings:
+            raise ActionError("raw_timings must be a non-empty list of integers")
+        timings_tuple = tuple(int(t) for t in raw_timings)
+    else:
+        timings_tuple = payload.raw_timings
+
+    rc = payload.repeat_count if repeat_count is None else int(repeat_count)
+    sc = payload.send_count if send_count is None else int(send_count)
+
+    new_payload = PulsePayload(
+        raw_timings=timings_tuple,
+        decoded_hex=payload.decoded_hex,
+        base64_packet=payload.base64_packet,
+        json_payload=payload.json_payload,
+        repeat_count=rc,
+        send_count=sc,
+    )
+
+    signal_category = existing.signal_category
+    if carrier_hz is not None:
+        try:
+            signal_category = SignalCategory(
+                transport=signal_category.transport,
+                encoding=signal_category.encoding,
+                carrier_frequency_hz=int(carrier_hz) or DEFAULT_IR_CARRIER_HZ,
+            )
+        except (TypeError, ValueError) as err:
+            raise ActionError(
+                f"carrier_frequency_hz must be an integer (got {carrier_hz!r})"
+            ) from err
+
+    return PulseCommand(
+        key=existing.key,
+        label=new_label,
+        category=category,
+        signal_category=signal_category,
+        payload=new_payload,
+    )
+
+
+@_register("command/delete")
+async def _ws_command_delete(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Remove a single command from a device.
+
+    Also retires the matching live button entity via the coordinator
+    so the user's device card in HA stops showing a button that no
+    longer fires anything. Returns ``{"removed": bool}`` — ``False``
+    when the command wasn't on the device to begin with (no-op, not
+    an error: matches the same idempotency contract as
+    ``rune/device/delete``).
+    """
+    device_id = msg.get("device_id")
+    command_key = msg.get("command_key")
+    if not device_id or not command_key:
+        raise ActionError("device_id and command_key are required")
+
+    repo = await ctx.device_repository()
+    device = await repo.get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+
+    if command_key not in device.commands:
+        return {"removed": False}
+
+    device.remove_command(command_key)
+    await repo.upsert(device)
+
+    coordinator = ctx.coordinator()
+    if coordinator is not None:
+        await coordinator.async_remove_command_entities(device_id, command_key)
+    else:
+        _LOGGER.warning(
+            "rune: no coordinator on WS context; command %s deleted on "
+            "device %s but the live button entity will linger until "
+            "next reload",
+            command_key,
+            device_id,
+        )
+
+    return {"removed": True}
 
 
 @_register("sniffer/list")

@@ -4,9 +4,11 @@ import { store } from "@/state/store.js";
 
 import type {
   ActionBinding,
+  CommandSummary,
   DeviceSummary,
   LearnResult,
   ListResponse,
+  PulseCommand,
   Remote,
   RxEntity,
   TxEntity,
@@ -230,6 +232,63 @@ export const api = {
       kind: "ws",
       message: { type: "rune/command/test", ...payload },
     }) as Promise<{ sent: boolean }>,
+
+  /** Compact summaries for every command on a device — powers the
+   *  per-command context menu (rename / re-learn / delete). */
+  listCommands: (deviceId: string): Promise<{ commands: CommandSummary[] }> =>
+    bridgeWs({
+      kind: "ws",
+      message: { type: "rune/command/list", device_id: deviceId },
+    }) as Promise<{ commands: CommandSummary[] }>,
+
+  /** Full PulseCommand record for the Edit dialog. */
+  getCommand: (deviceId: string, commandKey: string): Promise<{ command: PulseCommand }> =>
+    bridgeWs({
+      kind: "ws",
+      message: {
+        type: "rune/command/get",
+        device_id: deviceId,
+        command_key: commandKey,
+      },
+    }) as Promise<{ command: PulseCommand }>,
+
+  /** Edit a single command in place — supports rename, re-categorise,
+   *  re-learn (raw_timings + carrier_frequency_hz), and inline
+   *  edits to raw timings without re-capturing. */
+  updateCommand: (
+    deviceId: string,
+    commandKey: string,
+    patch: Partial<{
+      label: string;
+      category: string;
+      raw_timings: number[];
+      carrier_frequency_hz: number;
+      repeat_count: number;
+      send_count: number;
+    }>,
+  ): Promise<{ command: PulseCommand }> =>
+    bridgeWs({
+      kind: "ws",
+      message: {
+        type: "rune/command/update",
+        device_id: deviceId,
+        command_key: commandKey,
+        ...patch,
+      },
+    }) as Promise<{ command: PulseCommand }>,
+
+  /** Remove a command and its live button entity. Returns ``true``
+   *  when something was actually removed; ``false`` when the key
+   *  wasn't on the device. */
+  deleteCommand: (deviceId: string, commandKey: string): Promise<{ removed: boolean }> =>
+    bridgeWs({
+      kind: "ws",
+      message: {
+        type: "rune/command/delete",
+        device_id: deviceId,
+        command_key: commandKey,
+      },
+    }) as Promise<{ removed: boolean }>,
 
   listSniffer: (): Promise<{ remotes: Remote[] }> =>
     bridgeWs({

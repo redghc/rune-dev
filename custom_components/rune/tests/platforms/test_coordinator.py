@@ -350,3 +350,142 @@ class TestAsyncDispatchAction:
         coord.unregister_entity_adder("fan")
         coord.unregister_entity_builder("fan")
         assert coord.has_entity_adder("fan") is False
+
+
+@pytest.mark.asyncio
+class TestEntityTracking:
+    """The coordinator tracks every entity it pushed so a later
+    ``async_remove_command_entities`` can retire a single button when
+    its command is deleted, without disturbing siblings on the same
+    device."""
+
+    @staticmethod
+    def _make_button(role: str) -> Any:
+        class _Button:
+            def __init__(self, role: str) -> None:
+                self._sub_role = role
+                self.entity_id = f"button.rune_{role}"
+                self.removed = False
+
+            async def async_remove(self) -> None:
+                self.removed = True
+
+        return _Button(role)
+
+    async def test_add_entities_for_device_tracks_each_button(self) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        coord.register_entity_adder("button", lambda _e: None)
+        coord.register_entity_builder(
+            "button",
+            lambda d: [
+                self._make_button(cmd_key)
+                for cmd_key in d.commands
+            ],
+        )
+
+        await coord.async_add_entities_for_device(device)
+        # Four commands on _fan_device's default set → four tracked buttons.
+        assert coord.tracked_entity_count(device.id) == 4
+
+    async def test_remove_command_entities_retires_one_button(self) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        coord.register_entity_adder("button", lambda _e: None)
+        button_builds: list[list[Any]] = []
+        coord.register_entity_builder(
+            "button",
+            lambda d: button_builds.append(
+                [self._make_button(cmd_key) for cmd_key in d.commands]
+            )
+            or button_builds[-1],
+        )
+
+        # First push seeds the cache.
+        await coord.async_add_entities_for_device(device)
+        buttons = button_builds[-1]
+        removed_button = next(b for b in buttons if b._sub_role == "speed_2")
+
+        n = await coord.async_remove_command_entities(device.id, "speed_2")
+
+        assert n == 1
+        assert removed_button.removed is True
+        # Three siblings left.
+        assert coord.tracked_entity_count(device.id) == 3
+
+    async def test_remove_command_entities_unknown_key_is_noop(self) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        coord.register_entity_adder("button", lambda _e: None)
+        coord.register_entity_builder(
+            "button",
+            lambda d: [self._make_button(k) for k in d.commands],
+        )
+        await coord.async_add_entities_for_device(device)
+
+        n = await coord.async_remove_command_entities(device.id, "ghost")
+        assert n == 0
+        assert coord.tracked_entity_count(device.id) == 4
+
+    async def test_repush_replaces_stale_descriptors(self) -> None:
+        """Adding then removing then re-adding a command must not
+        leave orphaned descriptors in the cache."""
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        coord.register_entity_adder("button", lambda _e: None)
+        coord.register_entity_builder(
+            "button",
+            lambda d: [self._make_button(k) for k in d.commands],
+        )
+
+        await coord.async_add_entities_for_device(device)
+        # Drop one command, then re-push — the device's slice of the
+        # cache must reflect the post-delete state, not the stale one.
+        device.remove_command("speed_2")
+        await coord.async_add_entities_for_device(device)
+        assert coord.tracked_entity_count(device.id) == 3
+
+    async def test_remove_device_entities_clears_all(self) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        coord.register_entity_adder("button", lambda _e: None)
+        coord.register_entity_builder(
+            "button",
+            lambda d: [self._make_button(k) for k in d.commands],
+        )
+        await coord.async_add_entities_for_device(device)
+
+        n = await coord.async_remove_device_entities(device.id)
+        assert n == 4
+        assert coord.tracked_entity_count(device.id) == 0
+
+    async def test_remove_command_entities_tolerates_async_remove_failure(
+        self,
+    ) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        class _ExplodingButton:
+            def __init__(self, role: str) -> None:
+                self._sub_role = role
+
+            async def async_remove(self) -> None:
+                raise RuntimeError("simulated HA crash")
+
+        coord.register_entity_adder("button", lambda _e: None)
+        coord.register_entity_builder(
+            "button",
+            lambda d: [_ExplodingButton(k) for k in d.commands],
+        )
+        await coord.async_add_entities_for_device(device)
+
+        # Must not propagate — the cache must still be cleaned so a
+        # later re-push doesn't trip over a stale descriptor.
+        n = await coord.async_remove_command_entities(device.id, "off")
+        assert n == 1
+        assert coord.tracked_entity_count(device.id) == 3

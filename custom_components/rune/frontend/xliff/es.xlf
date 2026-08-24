@@ -701,6 +701,58 @@
               timings land in the command slot for this device.</source>
     <target>RUNE capturó la señal. Pruébala para confirmar que el dispositivo reacciona y luego guarda; los tiempos se almacenan en el slot de comando de este dispositivo.</target>
 </trans-unit>
+<trans-unit id="s079ffc0734880df6">
+  <source>Label is required.</source>
+    <target>La etiqueta es obligatoria.</target>
+</trans-unit>
+<trans-unit id="s1cacf2d37fdc602a">
+  <source>Raw timings must be a JSON array of integers: <x id="0" equiv-text="${(err as Error).message}"/></source>
+    <target>Los tiempos en bruto deben ser un arreglo JSON de enteros: <x id="0" equiv-text="${(err as Error).message}"/></target>
+</trans-unit>
+<trans-unit id="s39815487d61bb4cc">
+  <source>Raw timings must be a JSON array of integers.</source>
+    <target>Los tiempos en bruto deben ser un arreglo JSON de enteros.</target>
+</trans-unit>
+<trans-unit id="s037f22187581bf8f">
+  <source>Edit "<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>"</source>
+    <target>Editar «<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>»</target>
+</trans-unit>
+<trans-unit id="sc366819bd9a5f389">
+  <source>Semantic role (power, speed_preset, volume, …). Used by entity platforms to expose the right controls.</source>
+    <target>Rol semántico (power, speed_preset, volume, …). Lo usan las plataformas de entidades para exponer los controles adecuados.</target>
+</trans-unit>
+<trans-unit id="sb63c2836e9bab938">
+  <source>Raw timings (µs, alternating signs)</source>
+    <target>Tiempos en bruto (µs, signos alternados)</target>
+</trans-unit>
+<trans-unit id="s166b334e7c0792db">
+  <source>JSON array. Marks positive, spaces negative. Edit a value to tweak a mis-captured microsecond.</source>
+    <target>Arreglo JSON. Marcas positivas, espacios negativos. Edita un valor para ajustar un microsegundo mal capturado.</target>
+</trans-unit>
+<trans-unit id="sf95fabfa30438233">
+  <source>Delete this command? This cannot be undone.</source>
+    <target>¿Eliminar este comando? Esta acción no se puede deshacer.</target>
+</trans-unit>
+<trans-unit id="sb78c736a0c349d12">
+  <source>Confirm delete</source>
+    <target>Confirmar eliminación</target>
+</trans-unit>
+<trans-unit id="s617112910d952e74">
+  <source>Deleted "<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>"</source>
+    <target>Eliminado «<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>»</target>
+</trans-unit>
+<trans-unit id="s8cbebb24ca173a81">
+  <source>Command updated</source>
+    <target>Comando actualizado</target>
+</trans-unit>
+<trans-unit id="sbc309046d000b3d8">
+  <source>Command options</source>
+    <target>Opciones del comando</target>
+</trans-unit>
+<trans-unit id="s0e3359e1f96926f0">
+  <source>Edit command</source>
+    <target>Editar comando</target>
+</trans-unit>
 </body>
 </file>
 </xliff>

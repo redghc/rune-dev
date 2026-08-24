@@ -3,6 +3,7 @@ import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
 import "@/components/ui/index.js";
+import "@/components/command-edit-dialog.js";
 
 import { api, refreshDevices } from "@/api/bridge.js";
 import { attachStoreController } from "@/state/store-controller.js";
@@ -167,6 +168,70 @@ export class RuneDeviceCard extends LitElement {
       .cmd.placeholder:hover i {
         color: var(--rune-primary);
       }
+      .cmd-menu {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        opacity: 0;
+        transition: opacity var(--rune-dur-fast) var(--rune-ease);
+      }
+      .cmd:hover .cmd-menu,
+      .cmd-menu:focus-within {
+        opacity: 1;
+      }
+      .cmd-menu rune-button::part(base) {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        font-size: 14px;
+        line-height: 1;
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        color: var(--rune-text-muted);
+        border-radius: var(--rune-radius-sm);
+      }
+      .cmd:hover .cmd-menu rune-button::part(base) {
+        background: var(--rune-surface-alt);
+        border-color: var(--rune-primary);
+        color: var(--rune-primary);
+      }
+      .menu-popover {
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        box-shadow: var(--rune-shadow-3);
+        padding: var(--rune-space-1);
+        z-index: 100;
+        min-width: 160px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .menu-item {
+        background: transparent;
+        border: none;
+        text-align: left;
+        padding: var(--rune-space-2) var(--rune-space-3);
+        font: inherit;
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text);
+        cursor: pointer;
+        border-radius: var(--rune-radius-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--rune-space-2);
+      }
+      .menu-item:hover {
+        background: var(--rune-primary-soft);
+        color: var(--rune-primary-text);
+      }
+      .menu-item.danger {
+        color: var(--rune-danger);
+      }
+      .menu-item.danger:hover {
+        background: var(--rune-danger-soft, rgba(220, 38, 38, 0.12));
+        color: var(--rune-danger);
+      }
     `,
   ];
 
@@ -178,6 +243,10 @@ export class RuneDeviceCard extends LitElement {
   @property({ attribute: false }) device!: DeviceSummary;
 
   @state() private _confirmingDelete = false;
+  @state() private _openMenuKey: string | null = null;
+  @state() private _editingCmd: PulseCommand | null = null;
+  @state() private _menuAnchor: HTMLElement | null = null;
+  @state() private _menuPos: { x: number; y: number } | null = null;
 
   private _onEdit(): void {
     store.openDeviceDialog(this.device);
@@ -209,6 +278,83 @@ export class RuneDeviceCard extends LitElement {
    *  capture + save in a single step-by-step flow. */
   private _learn(): void {
     store.openLearnDialog(this.device.id);
+  }
+
+  /** Open the per-command menu next to the kebab icon the user
+   *  clicked. We position the popover absolutely so the layout
+   *  doesn't reflow; ``_menuPos`` is computed from the anchor's
+   *  bounding rect on click. */
+  private _toggleMenu(cmd: PulseCommand, anchor: HTMLElement): void {
+    if (this._openMenuKey === cmd.key) {
+      this._closeMenu();
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    this._openMenuKey = cmd.key;
+    this._menuAnchor = anchor;
+    this._menuPos = {
+      x: rect.right + window.scrollX,
+      y: rect.bottom + window.scrollY,
+    };
+  }
+
+  private _closeMenu = (): void => {
+    this._openMenuKey = null;
+    this._menuAnchor = null;
+    this._menuPos = null;
+  };
+
+  private _onDocClick = (ev: MouseEvent): void => {
+    if (!this._openMenuKey) return;
+    const path = ev.composedPath();
+    if (this._menuAnchor && path.includes(this._menuAnchor)) return;
+    if (path.some((n) => (n as HTMLElement).id === "rune-cmd-menu")) return;
+    this._closeMenu();
+  };
+
+  private _editCmd(cmd: PulseCommand): void {
+    this._closeMenu();
+    this._editingCmd = cmd;
+  }
+
+  private _relearnCmd(cmd: PulseCommand): void {
+    this._closeMenu();
+    // Reuse the existing Learn dialog — it's already wired for
+    // capture + persist via the same `command/update` flow. The
+    // dialog overwrites the existing command by key.
+    store.openLearnDialog(this.device.id, cmd.key ?? "", cmd.label ?? "");
+  }
+
+  private async _deleteCmdFromMenu(cmd: PulseCommand): Promise<void> {
+    this._closeMenu();
+    try {
+      await api.deleteCommand(this.device.id, cmd.key);
+      store.pushToast(msg(str`Deleted "${cmd.label ?? cmd.key}"`), "ok");
+      await refreshDevices();
+    } catch (err) {
+      reportError(err);
+    }
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener("click", this._onDocClick);
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener("click", this._onDocClick);
+    super.disconnectedCallback();
+  }
+
+  private async _onCommandSaved(): Promise<void> {
+    this._editingCmd = null;
+    store.pushToast(msg(str`Command updated`), "ok");
+    await refreshDevices();
+  }
+
+  private async _onCommandDeleted(): Promise<void> {
+    this._editingCmd = null;
+    await refreshDevices();
   }
 
   render() {
@@ -278,6 +424,16 @@ export class RuneDeviceCard extends LitElement {
               >
                 <i class="ti ti-bolt"></i>
                 <span>${c.label ?? c.key}</span>
+                <span class="cmd-menu" @click=${(e: Event) => e.stopPropagation()}>
+                  <rune-button
+                    icon="dots-vertical"
+                    aria-label=${msg(str`Command options`)}
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._toggleMenu(c, e.currentTarget as HTMLElement);
+                    }}
+                  ></rune-button>
+                </span>
               </button>
             `,
           )}
@@ -287,6 +443,59 @@ export class RuneDeviceCard extends LitElement {
           </button>
         </div>
       </div>
+
+      ${
+        this._openMenuKey && this._menuPos
+          ? html`
+              <div
+                id="rune-cmd-menu"
+                class="menu-popover"
+                style=${`position:absolute;left:${this._menuPos.x}px;top:${this._menuPos.y}px;`}
+                @click=${(e: Event) => e.stopPropagation()}
+              >
+                <button
+                  class="menu-item"
+                  @click=${() => {
+                    const cmd = (d.commands ?? []).find((c) => c.key === this._openMenuKey);
+                    if (cmd) this._editCmd(cmd);
+                  }}
+                >
+                  <i class="ti ti-edit"></i>
+                  ${msg(str`Edit command`)}
+                </button>
+                <button
+                  class="menu-item"
+                  @click=${() => {
+                    const cmd = (d.commands ?? []).find((c) => c.key === this._openMenuKey);
+                    if (cmd) this._relearnCmd(cmd);
+                  }}
+                >
+                  <i class="ti ti-refresh"></i>
+                  ${msg(str`Re-learn`)}
+                </button>
+                <button
+                  class="menu-item danger"
+                  @click=${() => {
+                    const cmd = (d.commands ?? []).find((c) => c.key === this._openMenuKey);
+                    if (cmd) this._deleteCmdFromMenu(cmd);
+                  }}
+                >
+                  <i class="ti ti-trash"></i>
+                  ${msg(str`Delete`)}
+                </button>
+              </div>
+            `
+          : null
+      }
+
+      <rune-command-edit-dialog
+        .deviceId=${d.id}
+        .command=${this._editingCmd}
+        ?open=${this._editingCmd !== null}
+        @close=${() => (this._editingCmd = null)}
+        @saved=${this._onCommandSaved}
+        @deleted=${this._onCommandDeleted}
+      ></rune-command-edit-dialog>
 
       ${
         this._confirmingDelete

@@ -91,3 +91,21 @@ export interface LearnResult {
   raw_timings: number[];
   carrier_frequency_hz: number;
 }
+
+/**
+ * Compact view returned by ``rune/command/list``. The panel uses this
+ * to render the per-command context menu (rename / re-learn /
+ * delete) without paying the bandwidth cost of shipping every full
+ * PulseCommand (raw timings can be several KB each).
+ */
+export interface CommandSummary {
+  key: string;
+  label?: string;
+  category?: string;
+  transport?: string;
+  carrier_frequency_hz?: number;
+  has_payload?: boolean;
+  timings_count?: number;
+  repeat_count?: number;
+  send_count?: number;
+}

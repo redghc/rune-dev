@@ -577,6 +577,253 @@ class TestWsDeviceUpdateCommands:
         assert set(persisted.commands) == {"off", "speed_1"}
 
 
+class TestWsCommandCrud:
+    """Per-command CRUD endpoints — list, get, update, delete.
+
+    These back the SPA's per-command context menu (rename / re-learn /
+    delete) and keep the live HA button entities in sync with the
+    device's persisted command map.
+    """
+
+    @staticmethod
+    async def _seed_repo() -> InMemoryDeviceRepository:
+        repo = InMemoryDeviceRepository()
+        await repo.upsert(
+            RuneDevice(
+                id="d1",
+                name="Bedroom fan",
+                category=EntityCategory.FAN,
+                transmitter_entity_ids=["infrared.bedroom"],
+                commands={
+                    "off": PulseCommand(
+                        key="off",
+                        label="Off",
+                        category=CommandCategory.POWER,
+                        signal_category=SignalCategory.default_ir(),
+                        payload=PulsePayload(raw_timings=(9000, -4500, 600, -1700)),
+                    ),
+                    "speed_1": PulseCommand(
+                        key="speed_1",
+                        label="Speed 1",
+                        category=CommandCategory.SPEED_PRESET,
+                        signal_category=SignalCategory.default_ir(),
+                        payload=PulsePayload(raw_timings=(350, -650)),
+                    ),
+                },
+            )
+        )
+        return repo
+
+    @staticmethod
+    def _stub_repo(repo: InMemoryDeviceRepository) -> Any:
+        async def _list_repo(self):  # type: ignore[no-untyped-def]
+            return repo
+
+        original = RuneWebSocketContext.device_repository
+        RuneWebSocketContext.device_repository = _list_repo  # type: ignore[method-assign]
+        return original
+
+    @pytest.mark.asyncio
+    async def test_command_list_returns_compact_summaries(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_list
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_list(_ctx(), {"device_id": "d1"})
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        keys = [c["key"] for c in result["commands"]]
+        assert keys == ["off", "speed_1"]
+        off = next(c for c in result["commands"] if c["key"] == "off")
+        assert off["label"] == "Off"
+        assert off["category"] == "power"
+        assert off["has_payload"] is True
+        assert off["timings_count"] == 4
+
+    @pytest.mark.asyncio
+    async def test_command_list_missing_device_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_list
+
+        repo = InMemoryDeviceRepository()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(CommandNotLearnedError, match="not found"):
+                await _ws_command_list(_ctx(), {"device_id": "nope"})
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+    @pytest.mark.asyncio
+    async def test_command_get_returns_full_payload(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_get
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_get(_ctx(), {"device_id": "d1", "command_key": "off"})
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        cmd = result["command"]
+        assert cmd["key"] == "off"
+        assert cmd["label"] == "Off"
+        assert cmd["payload"]["raw_timings"] == [9000, -4500, 600, -1700]
+
+    @pytest.mark.asyncio
+    async def test_command_get_unknown_key_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_get
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(CommandNotLearnedError, match="no command"):
+                await _ws_command_get(_ctx(), {"device_id": "d1", "command_key": "ghost"})
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+    @pytest.mark.asyncio
+    async def test_command_update_renames_label(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_update
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_update(
+                _ctx(),
+                {"device_id": "d1", "command_key": "off", "label": "Apagado"},
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        assert result["command"]["label"] == "Apagado"
+        # Payload survived the rename.
+        assert result["command"]["payload"]["raw_timings"] == [9000, -4500, 600, -1700]
+        persisted = await repo.get("d1")
+        assert persisted is not None
+        assert persisted.commands["off"].label == "Apagado"
+
+    @pytest.mark.asyncio
+    async def test_command_update_replaces_raw_timings(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_update
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_update(
+                _ctx(),
+                {
+                    "device_id": "d1",
+                    "command_key": "speed_1",
+                    "raw_timings": [9000, -4500, 600, -1700],
+                    "carrier_frequency_hz": 36_700,
+                },
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        cmd = result["command"]
+        assert cmd["payload"]["raw_timings"] == [9000, -4500, 600, -1700]
+        assert cmd["signal_category"]["carrier_frequency_hz"] == 36_700
+        # Label and category survive.
+        assert cmd["label"] == "Speed 1"
+
+    @pytest.mark.asyncio
+    async def test_command_update_rejects_empty_payload(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_update
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(ActionError, match="at least one"):
+                await _ws_command_update(
+                    _ctx(),
+                    {"device_id": "d1", "command_key": "off"},
+                )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+    @pytest.mark.asyncio
+    async def test_command_update_rejects_bad_category(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_update
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(ActionError, match="unknown category"):
+                await _ws_command_update(
+                    _ctx(),
+                    {
+                        "device_id": "d1",
+                        "command_key": "off",
+                        "category": "definitely-not-a-category",
+                    },
+                )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+    @pytest.mark.asyncio
+    async def test_command_update_rejects_empty_timings(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_update
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(ActionError, match="non-empty"):
+                await _ws_command_update(
+                    _ctx(),
+                    {
+                        "device_id": "d1",
+                        "command_key": "off",
+                        "raw_timings": [],
+                    },
+                )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+    @pytest.mark.asyncio
+    async def test_command_delete_removes_and_returns_true(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_delete
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_delete(
+                _ctx(), {"device_id": "d1", "command_key": "speed_1"}
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        assert result == {"removed": True}
+        persisted = await repo.get("d1")
+        assert persisted is not None
+        assert "speed_1" not in persisted.commands
+        assert "off" in persisted.commands
+
+    @pytest.mark.asyncio
+    async def test_command_delete_missing_key_returns_false(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_delete
+
+        repo = await self._seed_repo()
+        original = self._stub_repo(repo)
+        try:
+            result = await _ws_command_delete(
+                _ctx(), {"device_id": "d1", "command_key": "ghost"}
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+        assert result == {"removed": False}
+
+    @pytest.mark.asyncio
+    async def test_command_delete_missing_device_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_delete
+
+        repo = InMemoryDeviceRepository()
+        original = self._stub_repo(repo)
+        try:
+            with pytest.raises(CommandNotLearnedError, match="not found"):
+                await _ws_command_delete(
+                    _ctx(), {"device_id": "nope", "command_key": "off"}
+                )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+
 class TestWsEntityListers:
     @pytest.mark.asyncio
     async def test_transmitter_list_filters_domains(self) -> None:
@@ -705,6 +952,10 @@ class TestRegistryShape:
             "command/learn",
             "command/learn/cancel",
             "command/test",
+            "command/list",
+            "command/get",
+            "command/update",
+            "command/delete",
             "sniffer/list",
             "sniffer/dismiss",
             "action/list",

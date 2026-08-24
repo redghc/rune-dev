@@ -73,6 +73,18 @@ class EntityDescriptor:
     entity: RunePlatformBase
     sub_role: str = ""  # '' for primary, e.g. 'speed_3' for sub-buttons
 
+    @property
+    def entity_id(self) -> str:
+        """HA's ``entity_id`` for the wrapped entity, when available.
+
+        Used by :meth:`DevicePlatformCoordinator.async_remove_command_entities`
+        to find a specific button entity on a device. Returns an empty
+        string when the entity hasn't been registered with HA yet
+        (no ``entity_id`` attribute — common during platform setup
+        before HA assigns one).
+        """
+        return getattr(self.entity, "entity_id", "") or ""
+
 
 class DevicePlatformCoordinator:
     """Owns the live set of HA entities backed by RuneDevice aggregates."""
@@ -470,7 +482,26 @@ class DevicePlatformCoordinator:
         each platform returns its own entities (empty when the device
         doesn't belong to it). Results are routed to the matching
         platform's ``async_add_entities`` callable.
+
+        Populates :attr:`_entities` keyed by ``(device_id, sub_role)``
+        so :meth:`async_remove_command_entities` can later find and
+        retire a single button when its command is deleted. We rebuild
+        the device's slice of the dict on every push: HA's
+        ``async_add_entities`` deduplicates by ``unique_id``, so a
+        second push with the same entities is a no-op for HA — but our
+        local cache needs the freshest descriptors to know what exists.
         """
+        # Drop this device's stale descriptors before rebuilding — any
+        # sub_role that disappeared (e.g. a deleted command button)
+        # would otherwise linger forever in the cache.
+        stale_keys = [
+            key
+            for key, desc in self._entities.items()
+            if key[0] == device.id
+        ]
+        for key in stale_keys:
+            del self._entities[key]
+
         for platform, builder in list(self._entity_builders.items()):
             try:
                 entities = builder(device)
@@ -484,6 +515,16 @@ class DevicePlatformCoordinator:
                 continue
             if not entities:
                 continue
+            # Track every fresh descriptor for later removal. The
+            # button builder returns ``RunePulseButtonEntity`` whose
+            # ``sub_role`` is the command_key (default ``""`` for the
+            # primary entity).
+            for entity in entities:
+                sub_role = getattr(entity, "_sub_role", "") or ""
+                descriptor = EntityDescriptor(
+                    platform=platform, entity=entity, sub_role=sub_role
+                )
+                self._entities[(device.id, sub_role)] = descriptor
             adder = self._entity_adders.get(platform)
             if adder is None:
                 _LOGGER.debug(
@@ -500,6 +541,89 @@ class DevicePlatformCoordinator:
                     device.id,
                     err,
                 )
+
+    # ------------------------------------------------------------------
+    # Live-entity retirement (used after ``rune/command/delete`` or a
+    # device-level removal)
+    # ------------------------------------------------------------------
+
+    async def async_remove_command_entities(
+        self, device_id: str, command_key: str
+    ) -> int:
+        """Remove every HA entity whose ``sub_role`` matches ``command_key``.
+
+        Called by the ``rune/command/delete`` handler so deleting a
+        command also drops the matching button entity from HA. Returns
+        the number of entities removed. Always safe to call: a
+        no-op when no entity is tracked for the (device_id, key) pair,
+        which happens when the button platform hasn't registered
+        itself yet (e.g. unit tests, or the user hit Delete before any
+        reload).
+        """
+        key = (device_id, command_key)
+        descriptor = self._entities.get(key)
+        if descriptor is None:
+            return 0
+        entity = descriptor.entity
+        # ``async_remove`` is the canonical way to drop a HA entity —
+        # the platform's ``async_remove_from_hass`` handles registry
+        # cleanup. We swallow exceptions per-entity so a single broken
+        # entity doesn't strand its siblings in the cache.
+        try:
+            remove = getattr(entity, "async_remove", None)
+            if remove is not None:
+                result = remove()
+                if hasattr(result, "__await__"):
+                    await result
+        except Exception as err:
+            _LOGGER.warning(
+                "rune: async_remove failed for %s on device %s: %s",
+                command_key,
+                device_id,
+                err,
+            )
+        del self._entities[key]
+        return 1
+
+    async def async_remove_device_entities(self, device_id: str) -> int:
+        """Remove every HA entity owned by ``device_id``.
+
+        Used when the device itself is deleted via ``rune/device/delete``
+        — buttons, primary entities, sub-buttons all retire in one
+        pass. Returns the number of entities removed.
+        """
+        keys = [key for key in self._entities if key[0] == device_id]
+        removed = 0
+        for key in keys:
+            descriptor = self._entities.get(key)
+            if descriptor is None:
+                continue
+            try:
+                remove = getattr(descriptor.entity, "async_remove", None)
+                if remove is not None:
+                    result = remove()
+                    if hasattr(result, "__await__"):
+                        await result
+            except Exception as err:
+                _LOGGER.warning(
+                    "rune: async_remove failed for %s on device %s: %s",
+                    descriptor.sub_role or "<primary>",
+                    device_id,
+                    err,
+                )
+            del self._entities[key]
+            removed += 1
+        return removed
+
+    def tracked_entity_count(self, device_id: str | None = None) -> int:
+        """Number of entities currently tracked by this coordinator.
+
+        Pass ``device_id`` to scope the count to one device; ``None``
+        returns the total. Useful for tests and diagnostics.
+        """
+        if device_id is None:
+            return len(self._entities)
+        return sum(1 for key in self._entities if key[0] == device_id)
 
     # ------------------------------------------------------------------
     # Diagnostics
