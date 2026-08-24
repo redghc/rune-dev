@@ -84,21 +84,30 @@ export class RuneCommandEditDialog extends LitElement {
   @state() private _errorMsg = "";
 
   willUpdate(changed: Map<string, unknown>) {
-    if (changed.has("command") && this.command) {
-      // Pre-populate the form from the current PulseCommand. We
-      // intentionally copy the timings as a JSON array so the user
-      // can paste-edit one value without losing the others.
-      this._label = this.command.label ?? this.command.key ?? "";
-      this._category = this.command.category ?? "custom";
-      this._rawTimings = JSON.stringify(this.command.payload?.raw_timings ?? []);
-      const signal = (this.command.signal_category ?? {}) as Record<string, unknown>;
-      this._carrierHz =
-        typeof signal.carrier_frequency_hz === "number" ? signal.carrier_frequency_hz : null;
-      const payload = (this.command.payload ?? {}) as Record<string, unknown>;
-      this._repeatCount = typeof payload.repeat_count === "number" ? payload.repeat_count : null;
-      this._sendCount = typeof payload.send_count === "number" ? payload.send_count : null;
-      this._confirmingDelete = false;
-      this._errorMsg = "";
+    if (changed.has("command")) {
+      // Sync the dialog's internal ``open`` flag with the parent.
+      // Without this Lit's reactivity doesn't re-trigger the inner
+      // ``<sl-dialog>`` when the parent re-toggles ``?open`` from
+      // false back to true — the element instance is reused, the
+      // ``open`` property stays at its last value, and the modal
+      // never reappears.
+      this.open = this.command !== null;
+      if (this.command) {
+        // Pre-populate the form from the current PulseCommand. We
+        // intentionally copy the timings as a JSON array so the user
+        // can paste-edit one value without losing the others.
+        this._label = this.command.label ?? this.command.key ?? "";
+        this._category = this.command.category ?? "custom";
+        this._rawTimings = JSON.stringify(this.command.payload?.raw_timings ?? []);
+        const signal = (this.command.signal_category ?? {}) as Record<string, unknown>;
+        this._carrierHz =
+          typeof signal.carrier_frequency_hz === "number" ? signal.carrier_frequency_hz : null;
+        const payload = (this.command.payload ?? {}) as Record<string, unknown>;
+        this._repeatCount = typeof payload.repeat_count === "number" ? payload.repeat_count : null;
+        this._sendCount = typeof payload.send_count === "number" ? payload.send_count : null;
+        this._confirmingDelete = false;
+        this._errorMsg = "";
+      }
     }
   }
 

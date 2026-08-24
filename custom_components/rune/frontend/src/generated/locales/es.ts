@@ -199,6 +199,7 @@
 'sf95fabfa30438233': str`¿Eliminar este comando? Esta acción no se puede deshacer.`,
 'sfa5ddf3ac7921f52': str`Transporte`,
 'sfbca8326a775cc77': str`Pulsos`,
+'sfd56f1f54f06e905': str`«${0}» no tiene señal capturada — re-apréndelo desde el menú ⋮`,
 'sfff229536a18b7d3': str`mando`,
 'sfffe12451843f40a': str`Radiofrecuencia`,
     };

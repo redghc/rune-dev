@@ -93,9 +93,17 @@ class PulsePayload:
 
     @property
     def is_empty(self) -> bool:
-        """True when no payload field is populated."""
+        """True when no payload field is populated.
+
+        An empty tuple ``()`` counts as empty too — otherwise a
+        command with ``raw_timings=()`` would pass the empty check,
+        dispatch an empty pulse train, and silently no-op at the
+        hardware (the user sees "Sent" but the device doesn't react).
+        Same logic for empty strings / empty dicts on the other
+        payload fields.
+        """
         return all(
-            value is None
+            not value
             for value in (self.raw_timings, self.decoded_hex, self.base64_packet, self.json_payload)
         )
 

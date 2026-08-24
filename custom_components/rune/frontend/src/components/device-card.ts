@@ -105,7 +105,7 @@ export class RuneDeviceCard extends LitElement {
       }
       .commands {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: var(--rune-space-2);
       }
       .cmd-wrap {
@@ -123,7 +123,10 @@ export class RuneDeviceCard extends LitElement {
         background: var(--rune-surface-alt);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-sm);
-        padding: var(--rune-space-3) var(--rune-space-2);
+        /* Right padding reserves space for the 30px kebab icon at
+         * right:6px so the label never collides with the dots. */
+        padding: var(--rune-space-3) calc(var(--rune-space-2) + 28px) var(--rune-space-3)
+          var(--rune-space-2);
         cursor: pointer;
         font: inherit;
         color: var(--rune-text);
@@ -281,6 +284,20 @@ export class RuneDeviceCard extends LitElement {
   }
 
   private async _send(cmd: PulseCommand, btn: HTMLButtonElement): Promise<void> {
+    // Catch the client-side case where the backend reported the
+    // command as having a payload, but the compact ``commands``
+    // summary the SPA received has ``has_payload: false`` (e.g. the
+    // user learned a command via the API but never actually
+    // captured a signal). Sending it would no-op at the hardware
+    // — the user sees "Sent" but the device doesn't react.
+    const meta = (this.device.commands ?? []).find((c) => c.key === cmd.key);
+    if (meta && meta.has_payload === false) {
+      store.pushToast(
+        msg(str`"${cmd.label ?? cmd.key}" has no captured signal — re-learn it from the ⋮ menu`),
+        "err",
+      );
+      return;
+    }
     try {
       await api.sendCommand(this.device.id, cmd.key);
       btn.classList.add("flash");

@@ -11,6 +11,9 @@ export interface PulseCommand {
   category?: string;
   signal_category?: Record<string, unknown>;
   payload?: Record<string, unknown>;
+  /** Set by the compact ``rune/list`` summary so the SPA can warn
+   *  before sending a command that has no usable signal. */
+  has_payload?: boolean;
 }
 
 export interface DeviceSummary {

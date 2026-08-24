@@ -32,6 +32,16 @@ class TestPulsePayload:
         payload = PulsePayload(raw_timings=(9000, 4500, 600))
         assert not payload.is_empty
 
+    def test_empty_tuple_timings_is_empty(self) -> None:
+        """Regression: ``raw_timings=()`` is indistinguishable from
+        "no signal learned" — the dispatcher would otherwise build a
+        zero-pulse train, send it, and the user sees "Sent" while the
+        device does nothing. Treat empty containers as empty.
+        """
+        assert PulsePayload(raw_timings=()).is_empty is True
+        assert PulsePayload(decoded_hex="").is_empty is True
+        assert PulsePayload(json_payload={}).is_empty is True
+
     def test_negative_repeat_count_rejected(self) -> None:
         with pytest.raises(ValueError, match="repeat_count"):
             PulsePayload(repeat_count=-1)

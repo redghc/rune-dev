@@ -761,6 +761,10 @@
   <source>Options for "<x id="0" equiv-text="${c.label ?? c.key}"/>"</source>
     <target>Opciones de «<x id="0" equiv-text="${c.label ?? c.key}"/>»</target>
 </trans-unit>
+<trans-unit id="sfd56f1f54f06e905">
+  <source>"<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>" has no captured signal — re-learn it from the ⋮ menu</source>
+    <target>«<x id="0" equiv-text="${cmd.label ?? cmd.key}"/>» no tiene señal capturada — re-apréndelo desde el menú ⋮</target>
+</trans-unit>
 </body>
 </file>
 </xliff>
