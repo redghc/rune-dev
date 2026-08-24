@@ -4,10 +4,9 @@
   (HAIR's CaptureOrchestrator, ported and trimmed).
 - :mod:`providers` — :class:`CaptureProvider` ABC + :class:`MockProvider`
   for tests.
-- :mod:`native_ir` — captures from a HA ``InfraredReceiverEntity`` via
-  the platform's async API.
-- :mod:`broadlink_rf` — wraps :class:`BroadlinkRFReceiver`'s sweep+capture
-  as a one-shot capture provider.
+- :mod:`native_ir` — :class:`NativeIRCaptureProvider`, one-shot IR capture
+  from a HA ``InfraredReceiverEntity`` (or any receiver the factory
+  resolves for IR transport).
 
 Each provider translates its hardware's native capture model into a
 :class:`~custom_components.rune.ports.receiver.CapturedPulse`. The

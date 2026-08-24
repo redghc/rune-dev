@@ -630,18 +630,20 @@ async def _ws_command_learn(
     if device is None:
         raise CommandNotLearnedError(f"Device {device_id!r} not found")
 
-    # Pick the first RF receiver attached to the device, else any
+    # Pick the first receiver attached to the device, else any
     # known receiver from HA. Phase 7 will pick based on signal
-    # transport category.
-    from custom_components.rune.adapters.capture.providers import NativeIRCaptureProvider
-
-    receiver_entity_id = (
-        device.receiver_entity_ids[0]
-        if device.receiver_entity_ids
-        else _list_receiver_entities(ctx.hass)[0]["entity_id"]
-        if _list_receiver_entities(ctx.hass)
-        else None
+    # transport category (IR vs RF) instead of always going IR.
+    from custom_components.rune.adapters.capture.native_ir import (
+        NativeIRCaptureProvider,
     )
+
+    receiver_entity_id: str | None = None
+    if device.receiver_entity_ids:
+        receiver_entity_id = device.receiver_entity_ids[0]
+    else:
+        known = _list_receiver_entities(ctx.hass)
+        if known:
+            receiver_entity_id = known[0]["entity_id"]
     if not receiver_entity_id:
         raise CaptureProviderUnavailableError(
             "No IR/RF receiver configured for this device"
