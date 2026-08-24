@@ -66,8 +66,19 @@ class NativeIRTransmitter(TransmitterPort):
 
         infrared_command = self._build_command(command, prepared)
         if infrared_command is None:
+            # ``_build_command`` returns ``None`` only when every encoder
+            # path bailed — in practice, the ``infrared_protocols`` library
+            # couldn't be imported. That lib ships with HA core but a
+            # stripped-down install can miss it; surface a hint so the
+            # user can fix it instead of seeing "Cannot encode …" on every
+            # send (and on every Test-signal press during Learn).
             raise UnsupportedHardwareError(
-                f"Cannot encode command {command.key!r} for native IR"
+                f"Cannot encode command {command.key!r} for native IR — "
+                "the `infrared_protocols` Python library is not importable "
+                "on this Home Assistant host. Reinstall the "
+                "`homeassistant` package (or `pip install "
+                "infrared_protocols`) so the raw-timing encoder is "
+                "available, then retry."
             )
 
         try:

@@ -149,8 +149,16 @@ class BroadlinkIRTransmitter(TransmitterPort):
             from homeassistant.components import infrared
             from infrared_protocols.commands.pronto import ProntoCommand
         except ImportError as err:
+            # ``infrared_protocols`` is the encoding lib used to wrap the
+            # base64 packet as an ``InfraredCommand``; if it's not
+            # importable, neither is ``ProntoCommand``. Tell the user
+            # exactly what's missing instead of blaming the HA helper
+            # (which is unrelated).
             raise UnsupportedHardwareError(
-                "homeassistant.components.infrared is unavailable"
+                "Broadlink native-IR send needs the `infrared_protocols` "
+                "Python library, which is not importable on this Home "
+                "Assistant host. Reinstall the `homeassistant` package "
+                "(or `pip install infrared_protocols`) and retry."
             ) from err
 
         # Convert b64 payload back into a Pronto hex by stripping the
