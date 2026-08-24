@@ -753,10 +753,6 @@
   <source>Delete "<x id="0" equiv-text="${c.label ?? c.key}"/>"</source>
     <target>Eliminar «<x id="0" equiv-text="${c.label ?? c.key}"/>»</target>
 </trans-unit>
-<trans-unit id="s7caffba29d6248f7">
-  <source>Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices &amp; Services → <x id="0" equiv-text="${d.name}"/> and on the Buttons dashboard. Hover any tile to edit, re-learn or delete.</source>
-    <target>Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → <x id="0" equiv-text="${d.name}"/> y en el panel de Botones. Pasa el ratón sobre cualquier tarjeta para editar, re-aprender o eliminar.</target>
-</trans-unit>
 <trans-unit id="s5635de8dcac23eef">
   <source>Delete command</source>
     <target>Eliminar comando</target>
@@ -764,6 +760,14 @@
 <trans-unit id="se2546f76ed66ba22">
   <source>Delete command "<x id="0" equiv-text="${this._confirmingCmdDelete.label ?? this._confirmingCmdDelete.key}"/>" from <x id="1" equiv-text="${d.name}"/>?</source>
     <target>¿Eliminar el comando «<x id="0" equiv-text="${this._confirmingCmdDelete.label ?? this._confirmingCmdDelete.key}"/>» de <x id="1" equiv-text="${d.name}"/>?</target>
+</trans-unit>
+<trans-unit id="s64ef2a6c2dd1d3d1">
+  <source>Edit</source>
+    <target>Editar</target>
+</trans-unit>
+<trans-unit id="s5b36817ae410d161">
+  <source>Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices &amp; Services → <x id="0" equiv-text="${d.name}"/> and on the Buttons dashboard. Use the Edit / Re-learn / Delete buttons under each tile to manage them.</source>
+    <target>Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → <x id="0" equiv-text="${d.name}"/> y en el panel de Botones. Usa los botones Editar / Re-aprender / Eliminar bajo cada tarjeta para gestionarlos.</target>
 </trans-unit>
 </body>
 </file>

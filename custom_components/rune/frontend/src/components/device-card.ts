@@ -178,42 +178,37 @@ export class RuneDeviceCard extends LitElement {
       .cmd.placeholder:hover i {
         color: var(--rune-primary);
       }
-      .cmd-menu {
-        position: absolute;
-        top: 4px;
-        right: 4px;
+      .cmd-actions {
         display: flex;
-        gap: 2px;
-        opacity: 0.7;
-        transition: opacity var(--rune-dur-fast) var(--rune-ease);
+        gap: 4px;
+        justify-content: center;
+        margin-top: 4px;
+        flex-wrap: wrap;
       }
-      .cmd:hover .cmd-menu,
-      .cmd-menu:hover,
-      .cmd-menu:focus-within {
-        opacity: 1;
+      .cmd-actions rune-button {
+        flex: 1;
+        min-width: 0;
       }
-      .cmd-menu rune-button::part(base) {
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        font-size: 13px;
-        line-height: 1;
-        background: var(--rune-surface);
+      .cmd-actions rune-button::part(base) {
+        font-size: var(--rune-fs-xs);
+        padding: 4px 8px;
+        background: transparent;
         border: 1px solid var(--rune-border);
         color: var(--rune-text-muted);
         border-radius: var(--rune-radius-sm);
       }
-      .cmd:hover .cmd-menu rune-button::part(base) {
-        background: var(--rune-surface-alt);
+      .cmd-actions rune-button::part(base):hover {
+        background: var(--rune-primary-soft);
         border-color: var(--rune-primary);
-        color: var(--rune-primary);
+        color: var(--rune-primary-text);
       }
-      .cmd-menu rune-button.danger-btn::part(base) {
+      .cmd-actions rune-button.danger-btn::part(base) {
         color: var(--rune-danger);
       }
-      .cmd-menu rune-button.danger-btn:hover::part(base) {
+      .cmd-actions rune-button.danger-btn:hover::part(base) {
         background: var(--rune-danger-soft, rgba(220, 38, 38, 0.12));
         border-color: var(--rune-danger);
+        color: var(--rune-danger);
       }
       .cmd-hint {
         margin-top: var(--rune-space-3);
@@ -390,41 +385,44 @@ export class RuneDeviceCard extends LitElement {
                   <i class="ti ti-bolt"></i>
                   <span>${c.label ?? c.key}</span>
                 </button>
-                <div class="cmd-menu" @click=${(e: Event) => e.stopPropagation()}>
-                  <rune-tooltip content=${msg(str`Edit "${c.label ?? c.key}"`)}>
-                    <rune-button
-                      icon="pencil"
-                      variant="ghost"
-                      aria-label=${msg(str`Edit "${c.label ?? c.key}"`)}
-                      @click=${(e: Event) => {
-                        e.stopPropagation();
-                        this._editCmd(c);
-                      }}
-                    ></rune-button>
-                  </rune-tooltip>
-                  <rune-tooltip content=${msg(str`Re-learn "${c.label ?? c.key}"`)}>
-                    <rune-button
-                      icon="refresh"
-                      variant="ghost"
-                      aria-label=${msg(str`Re-learn "${c.label ?? c.key}"`)}
-                      @click=${(e: Event) => {
-                        e.stopPropagation();
-                        this._relearnCmd(c);
-                      }}
-                    ></rune-button>
-                  </rune-tooltip>
-                  <rune-tooltip content=${msg(str`Delete "${c.label ?? c.key}"`)}>
-                    <rune-button
-                      icon="trash"
-                      variant="ghost"
-                      class="danger-btn"
-                      aria-label=${msg(str`Delete "${c.label ?? c.key}"`)}
-                      @click=${(e: Event) => {
-                        e.stopPropagation();
-                        this._askDeleteCmd(c);
-                      }}
-                    ></rune-button>
-                  </rune-tooltip>
+                <div class="cmd-actions" @click=${(e: Event) => e.stopPropagation()}>
+                  <rune-button
+                    icon="pencil"
+                    variant="ghost"
+                    size="small"
+                    aria-label=${msg(str`Edit "${c.label ?? c.key}"`)}
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._editCmd(c);
+                    }}
+                  >
+                    ${msg(str`Edit`)}
+                  </rune-button>
+                  <rune-button
+                    icon="refresh"
+                    variant="ghost"
+                    size="small"
+                    aria-label=${msg(str`Re-learn "${c.label ?? c.key}"`)}
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._relearnCmd(c);
+                    }}
+                  >
+                    ${msg(str`Re-learn`)}
+                  </rune-button>
+                  <rune-button
+                    icon="trash"
+                    variant="ghost"
+                    size="small"
+                    class="danger-btn"
+                    aria-label=${msg(str`Delete "${c.label ?? c.key}"`)}
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._askDeleteCmd(c);
+                    }}
+                  >
+                    ${msg(str`Delete`)}
+                  </rune-button>
                 </div>
               </div>
             `,
@@ -440,7 +438,7 @@ export class RuneDeviceCard extends LitElement {
                 <div class="cmd-hint">
                   <i class="ti ti-info-circle"></i>
                   ${msg(
-                    str`Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices & Services → ${d.name} and on the Buttons dashboard. Hover any tile to edit, re-learn or delete.`,
+                    str`Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices & Services → ${d.name} and on the Buttons dashboard. Use the Edit / Re-learn / Delete buttons under each tile to manage them.`,
                   )}
                 </div>
               `
