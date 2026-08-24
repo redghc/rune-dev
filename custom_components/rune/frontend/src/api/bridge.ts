@@ -189,6 +189,16 @@ export const api = {
       message: { type: "rune/command/learn", ...payload },
     }) as Promise<LearnResult>,
 
+  cancelLearnCommand: (deviceId: string, commandKey: string): Promise<{ cancelled: boolean }> =>
+    bridgeWs({
+      kind: "ws",
+      message: {
+        type: "rune/command/learn/cancel",
+        device_id: deviceId,
+        command_key: commandKey,
+      },
+    }) as Promise<{ cancelled: boolean }>,
+
   listSniffer: (): Promise<{ remotes: Remote[] }> =>
     bridgeWs({
       kind: "ws",

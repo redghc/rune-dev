@@ -147,6 +147,25 @@ class BroadlinkRFReceiver(ReceiverPort):
             )
         return await self._device.async_request(method, *args)
 
+    def _fire_and_forget(self, method: Any, *args: Any) -> None:
+        """Schedule a device request without awaiting it.
+
+        Used from ``except asyncio.CancelledError`` handlers: we're
+        inside a cancelled coroutine, so any ``await`` would
+        immediately re-raise. Scheduling the cleanup on the event
+        loop lets the device exit sweep mode while our caller
+        unwinds.
+        """
+        try:
+            coro = self._device.async_request(method, *args)
+            self._hass.async_create_task(coro)
+        except Exception:  # pragma: no cover - best-effort cleanup
+            _LOGGER.debug(
+                "rune: sweep cleanup scheduling failed for %s",
+                self.receiver_entity_id,
+                exc_info=True,
+            )
+
     async def start_listening(self, on_capture: CaptureCallback) -> callable:
         """RF capture is on-demand; no subscription to install.
 
@@ -198,6 +217,15 @@ class BroadlinkRFReceiver(ReceiverPort):
             raise CaptureTimeoutError(
                 f"No RF frequency detected within {LEARNING_TIMEOUT_S:.0f}s"
             )
+        except asyncio.CancelledError:
+            # The user cancelled mid-sweep (``command/learn/cancel``).
+            # The normal ``cancel_sweep_frequency`` call above never
+            # runs on this path, so the device would stay in sweep
+            # mode until its own timeout. Fire the cleanup as a
+            # detached task: we're inside a cancelled coroutine, so
+            # awaiting anything here would immediately re-raise.
+            self._fire_and_forget(api.cancel_sweep_frequency)
+            raise
         except CaptureTimeoutError:
             raise
         except (ReadError, StorageError, OSError) as err:

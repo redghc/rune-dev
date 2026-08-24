@@ -703,6 +703,7 @@ class TestRegistryShape:
             "device/update",
             "device/delete",
             "command/learn",
+            "command/learn/cancel",
             "sniffer/list",
             "sniffer/dismiss",
             "action/list",
@@ -1000,6 +1001,60 @@ class TestBroadlinkRfReceiverRouting:
         # The lookup ran with the user's entity_id — that proves
         # we took the Broadlink path, not the old ``remote.*`` check.
         assert "infrared.broadlink_emitter" in captured
+
+
+class TestLearnCancel:
+    """``command/learn/cancel`` frees the orchestrator's single-flight
+    lock when the user backs out of a running capture. Without it the
+    lock stays held until the provider's internal timeout (30s+ on
+    Broadlink) and every retry fails with ``CaptureInProgressError``."""
+
+    @pytest.mark.asyncio
+    async def test_cancel_calls_orchestrator_with_same_session_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from custom_components.rune.websocket_api import _ws_command_learn_cancel
+
+        cancelled: list[str] = []
+
+        class _FakeOrchestrator:
+            async def cancel_capture(self, session_id: str) -> None:
+                cancelled.append(session_id)
+
+        monkeypatch.setattr(
+            "custom_components.rune.websocket_api._find_capture_orchestrator",
+            lambda hass: _FakeOrchestrator(),
+        )
+        hass = FakeHass()
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        result = await _ws_command_learn_cancel(
+            ctx,
+            {"device_id": "dev-1", "command_key": "off"},
+        )
+        assert result == {"cancelled": True}
+        # Session id must match the one ``command/learn`` builds.
+        assert cancelled == ["dev-1.off"]
+
+    @pytest.mark.asyncio
+    async def test_cancel_without_orchestrator_is_noop(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_learn_cancel
+
+        hass = FakeHass()  # no DOMAIN data → no orchestrator
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        result = await _ws_command_learn_cancel(
+            ctx,
+            {"device_id": "dev-1", "command_key": "off"},
+        )
+        assert result == {"cancelled": False}
+
+    @pytest.mark.asyncio
+    async def test_cancel_requires_ids(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_learn_cancel
+
+        hass = FakeHass()
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        with pytest.raises(ActionError, match="device_id and command_key"):
+            await _ws_command_learn_cancel(ctx, {"device_id": "dev-1"})
 
 
 class TestBroadlinkIrFallback:

@@ -166,3 +166,24 @@ class TestProviderUnavailable:
         # Message must point at the provider by name + (if known)
         # the receiver entity so the panel can show a useful hint.
         assert "mock" in str(info.value)
+
+
+class TestStaleResults:
+    """``_results`` lingered forever — a re-learn of the same
+    ``device_id.command_key`` would instantly "succeed" with the
+    previous capture's timings. ``start_capture`` must drop any
+    stale result for the session id it's about to reuse."""
+
+    @pytest.mark.asyncio
+    async def test_restart_drops_stale_result(self) -> None:
+        orch = CaptureOrchestrator()
+        first = MockProvider(deliver_on_start=_pulse())
+        await orch.start_capture(first, "s1", timeout_s=1.0)
+        await asyncio.sleep(0.1)
+        stale = orch.get_session_result("s1")
+        assert stale is not None
+
+        second = MockProvider(timeout=True)
+        await orch.start_capture(second, "s1", timeout_s=0.2)
+        # The old result must NOT leak into the new session.
+        assert orch.get_session_result("s1") is None

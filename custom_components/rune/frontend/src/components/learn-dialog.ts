@@ -247,8 +247,27 @@ export class RuneLearnDialog extends LitElement {
   }
 
   private _onClose = (): void => {
+    this._cancelActiveSession();
     store.closeLearnDialog();
   };
+
+  /** Fire-and-forget cancel of an in-flight capture session.
+
+   *  The WS ``command/learn`` call blocks until the capture
+   *  completes; closing the dialog or stepping back doesn't abort
+   *  it. Without an explicit ``command/learn/cancel`` the
+   *  orchestrator keeps its single-flight lock until the provider's
+   *  internal timeout (30s+ on Broadlink) and every retry fails
+   *  with ``CaptureInProgressError``. */
+  private _cancelActiveSession(): void {
+    const { deviceId, commandKey, status } = store.learnDialog;
+    if (!deviceId || !commandKey) return;
+    if (status.kind !== "capturing" && !this._busy) return;
+    void api.cancelLearnCommand(deviceId, commandKey).catch(() => {
+      // Best effort — a failed cancel (session already finished,
+      // orchestrator gone) must never block the dialog teardown.
+    });
+  }
 
   private _onPickInput = (ev: CustomEvent<{ value: string }>, field: "key" | "label"): void => {
     if (field === "key") this._commandKeyDraft = ev.detail.value;
@@ -367,6 +386,10 @@ export class RuneLearnDialog extends LitElement {
   };
 
   private _backToPick = (): void => {
+    // A capture may still be in flight (the user hit Back while the
+    // "Start learn" call was blocking) — cancel so the orchestrator
+    // lock frees immediately instead of after the provider timeout.
+    this._cancelActiveSession();
     store.setLearnStep("pick");
   };
 
@@ -749,6 +772,11 @@ export class RuneLearnDialog extends LitElement {
   protected willUpdate(): void {
     const ld = store.learnDialog;
     if (!ld.open) {
+      // The dialog hid (Cancel button, X, overlay click, ESC) —
+      // cancel any session that is still capturing. ``_onClose``
+      // already fires this for the button path; this catches the
+      // dialog-focus controller's teardown paths.
+      this._cancelActiveSession();
       // Reset local drafts every time the dialog hides so reopening
       // starts from a clean slate (and the new command key input
       // doesn't carry leftover text from a previous session).

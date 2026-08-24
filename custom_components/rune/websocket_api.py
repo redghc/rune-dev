@@ -190,6 +190,16 @@ _register_schema(
     ),
 )
 _register_schema(
+    "command/learn/cancel",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("command_key"): str,
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
     "sniffer/list",
     vol.Schema({}, extra=vol.ALLOW_EXTRA),
 )
@@ -683,18 +693,7 @@ async def _ws_command_learn(
             "domain for IR capture."
         )
 
-    orchestrator = None
-    domain_data = ctx.hass.data.get(DOMAIN, {}) if hasattr(ctx.hass, "data") else {}
-    # Walk every entry; the first one with a registered orchestrator
-    # wins. The previous implementation tried ``next(iter(...))`` as a
-    # key into the same dict — which on an empty domain returns ``{}``
-    # and crashes on ``dict.__getitem__`` later.
-    for entry_data in domain_data.values():
-        if isinstance(entry_data, dict):
-            orchestrator = entry_data.get("capture_orchestrator")
-            if orchestrator is not None:
-                break
-
+    orchestrator = _find_capture_orchestrator(ctx.hass)
     if orchestrator is None:
         raise UnsupportedHardwareError(
             "No capture orchestrator registered; restart HA"
@@ -777,10 +776,11 @@ async def _ws_command_learn(
             )
 
     timeout_s = float(msg.get("timeout_s", 15.0))
+    session_id = f"{device_id}.{command_key}"
     try:
         await orchestrator.start_capture(
             provider,
-            session_id=f"{device_id}.{command_key}",
+            session_id=session_id,
             timeout_s=timeout_s,
         )
     except Exception as err:
@@ -788,20 +788,66 @@ async def _ws_command_learn(
             raise ActionError(f"Capture failed: {err}") from err
         raise
 
-    # Block until the result lands.
+    # Block until the result lands. Bail early when the session is
+    # no longer active (user cancelled via ``command/learn/cancel``,
+    # or the provider errored) instead of spinning until the
+    # deadline — otherwise a cancelled session keeps the WS call
+    # hanging for the full window.
     import asyncio
 
     deadline = asyncio.get_event_loop().time() + timeout_s + 1
     while asyncio.get_event_loop().time() < deadline:
-        result = orchestrator.get_session_result(f"{device_id}.{command_key}")
+        result = orchestrator.get_session_result(session_id)
         if result is not None:
             return {
                 "captured": result.to_dict(),
                 "raw_timings": list(result.raw_timings),
                 "carrier_frequency_hz": result.signal_category.carrier_frequency_hz,
             }
+        if not orchestrator.is_capturing:
+            raise ActionError("Capture was cancelled")
         await asyncio.sleep(0.1)
+    # Our own window elapsed but the session may still hold the
+    # orchestrator lock (the provider's internal learn timeout can
+    # outlive ``timeout_s``) — cancel so the next attempt doesn't
+    # bounce off ``CaptureInProgressError``.
+    await orchestrator.cancel_capture(session_id)
     raise ActionError("Capture timed out without a result")
+
+
+@_register("command/learn/cancel")
+async def _ws_command_learn_cancel(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Cancel an in-flight learn session.
+
+    The SPA fires this when the user hits Cancel / Back while a
+    capture is running. Without it the orchestrator keeps its
+    single-flight lock until the provider's internal learn timeout
+    expires (30s+ on Broadlink), and every retry fails with
+    ``CaptureInProgressError``.
+
+    Fields:
+
+    - ``device_id`` + ``command_key`` — the same pair that opened
+      the session; the session id is ``f"{device_id}.{command_key}"``.
+
+    Returns ``{"cancelled": bool}`` — ``False`` when there was
+    nothing to cancel (already finished, or never started). Never
+    raises for a missing session: cancelling something that doesn't
+    exist is a no-op, not an error.
+    """
+    device_id = msg.get("device_id")
+    command_key = msg.get("command_key")
+    if not device_id or not command_key:
+        raise ActionError("device_id and command_key are required")
+
+    orchestrator = _find_capture_orchestrator(ctx.hass)
+    if orchestrator is None:
+        return {"cancelled": False}
+
+    await orchestrator.cancel_capture(f"{device_id}.{command_key}")
+    return {"cancelled": True}
 
 
 @_register("sniffer/list")
@@ -1096,6 +1142,23 @@ def _device_summary(device: RuneDevice) -> dict[str, Any]:
 def _list_transmitter_entities(hass: Any) -> list[dict[str, str]]:
     """Return entity_id + state for every known emitter domain."""
     return _list_entities_for_domains(hass, ("infrared", "remote", "esphome"))
+
+
+def _find_capture_orchestrator(hass: Any) -> Any | None:
+    """First registered :class:`CaptureOrchestrator` across entries.
+
+    Shared by ``command/learn`` and ``command/learn/cancel`` so the
+    session-id construction and lookup stay in one place. Returns
+    ``None`` when the integration hasn't completed setup yet (race
+    during reload) — callers decide whether that's fatal.
+    """
+    domain_data = hass.data.get(DOMAIN, {}) if hasattr(hass, "data") else {}
+    for entry_data in domain_data.values():
+        if isinstance(entry_data, dict):
+            orchestrator = entry_data.get("capture_orchestrator")
+            if orchestrator is not None:
+                return orchestrator
+    return None
 
 
 def _list_receiver_entities(hass: Any) -> list[dict[str, Any]]:

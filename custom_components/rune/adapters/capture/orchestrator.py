@@ -104,6 +104,11 @@ class CaptureOrchestrator:
         await self._lock.acquire()
 
         try:
+            # Drop any stale result from a previous session with the
+            # same id (``device_id.command_key``) — without this a
+            # re-learn of the same key would instantly "succeed" with
+            # the previous capture's timings.
+            self._results.pop(session_id, None)
             self._active_session_id = session_id
             self._active_provider = provider
             await provider.async_start_capture(timeout_s)
