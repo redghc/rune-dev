@@ -1002,6 +1002,152 @@ class TestBroadlinkRfReceiverRouting:
         assert "infrared.broadlink_emitter" in captured
 
 
+class TestBroadlinkIrFallback:
+    """The exact case the user hit: they pick transport=ir with a
+    Broadlink-owned ``infrared.*`` emitter. The native IR probe
+    rejects it (emitter, not receiver) — but the entity belongs to
+    a Broadlink, so the handler must fall back to the SDK's
+    ``enter_learning`` flow instead of raising."""
+
+    @pytest.mark.asyncio
+    async def test_broadlink_emitter_routes_to_sdk_ir_learn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import custom_components.rune.adapters.broadlink_devices as bl_devices
+        from custom_components.rune.adapters.capture import (
+            broadlink_rf as brf_mod,
+        )
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        # 1. The native IR probe says "not available" (it's an emitter).
+        from custom_components.rune.adapters.capture import native_ir as ni_mod
+
+        monkeypatch.setattr(
+            ni_mod,
+            "probe_receiver",
+            lambda hass, eid: ni_mod.ProbeResult(
+                False, f"Entity {eid!r} is an IR emitter, not a receiver.",
+                is_emitter=True,
+            ),
+        )
+        # 2. The Broadlink IR-learn lookup resolves the entity.
+        monkeypatch.setattr(
+            bl_devices,
+            "find_ir_learn_device_for_entity",
+            lambda hass, eid: object() if eid == "infrared.remoto_emisor_ir" else None,
+        )
+        # 3. Stub the provider the fallback constructs.
+        constructed: list[str] = []
+
+        class _FakeProvider:
+            transport = "ir"
+
+            def __init__(self, hass, entity_id) -> None:
+                constructed.append(entity_id)
+
+            is_available = True
+
+        monkeypatch.setattr(brf_mod, "BroadlinkIRCaptureProvider", _FakeProvider)
+        # 4. Fake orchestrator + device repo so we reach the provider
+        #    selection (the repo lookup precedes it in the handler).
+        hass = FakeHass(states=[("infrared.remoto_emisor_ir", "idle")])
+        from custom_components.rune.const import DOMAIN as _DOMAIN
+
+        hass.data[_DOMAIN] = {"entry-1": {"capture_orchestrator": object()}}
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+
+        device = RuneDevice(
+            id="dev-1",
+            name="Test Fan",
+            category=EntityCategory.FAN,
+            transmitter_entity_ids=["infrared.remoto_emisor_ir"],
+            receiver_entity_ids=["infrared.remoto_emisor_ir"],
+        )
+
+        class _StubRepo:
+            async def get(self, device_id: str) -> Any:
+                return device if device_id == "dev-1" else None
+
+        async def _fake_repo() -> Any:
+            return _StubRepo()
+
+        ctx.device_repository = _fake_repo  # type: ignore[method-assign]
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            "transport": "ir",
+            "receiver_entity_id": "infrared.remoto_emisor_ir",
+        }
+        # The handler will raise at the orchestrator's start_capture
+        # (our fake orchestrator is a plain object) — what matters is
+        # that the BroadlinkIRCaptureProvider got built, i.e. we did
+        # NOT raise the "IR emitter, not a receiver" error.
+        with pytest.raises(Exception) as info:
+            await _ws_command_learn(ctx, msg)
+        assert constructed == ["infrared.remoto_emisor_ir"]
+        assert "emitter" not in str(info.value)
+
+    @pytest.mark.asyncio
+    async def test_non_broadlink_emitter_still_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An ``infrared.*`` emitter that does NOT belong to a
+        Broadlink keeps the clear rejection — the fallback only
+        applies to Broadlink-owned entities."""
+        import custom_components.rune.adapters.broadlink_devices as bl_devices
+        from custom_components.rune.adapters.capture import native_ir as ni_mod
+        from custom_components.rune.domain.errors import (
+            CaptureProviderUnavailableError,
+        )
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        monkeypatch.setattr(
+            ni_mod,
+            "probe_receiver",
+            lambda hass, eid: ni_mod.ProbeResult(
+                False, f"Entity {eid!r} is an IR emitter, not a receiver.",
+                is_emitter=True,
+            ),
+        )
+        monkeypatch.setattr(
+            bl_devices,
+            "find_ir_learn_device_for_entity",
+            lambda hass, eid: None,
+        )
+        hass = FakeHass(states=[("infrared.other_emitter", "idle")])
+        from custom_components.rune.const import DOMAIN as _DOMAIN
+
+        hass.data[_DOMAIN] = {"entry-1": {"capture_orchestrator": object()}}
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+
+        device = RuneDevice(
+            id="dev-1",
+            name="Test Fan",
+            category=EntityCategory.FAN,
+            transmitter_entity_ids=["infrared.other_emitter"],
+            receiver_entity_ids=["infrared.other_emitter"],
+        )
+
+        class _StubRepo:
+            async def get(self, device_id: str) -> Any:
+                return device if device_id == "dev-1" else None
+
+        async def _fake_repo() -> Any:
+            return _StubRepo()
+
+        ctx.device_repository = _fake_repo  # type: ignore[method-assign]
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            "transport": "ir",
+            "receiver_entity_id": "infrared.other_emitter",
+        }
+        with pytest.raises(CaptureProviderUnavailableError, match="emitter"):
+            await _ws_command_learn(ctx, msg)
+
+
 @pytest.fixture
 def patched_ir_probes(monkeypatch: pytest.MonkeyPatch):
     """Stub ``_is_ir_receiver`` / ``_list_ir_receivers`` so the WS

@@ -34,6 +34,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from custom_components.rune.adapters.broadlink_devices import (
+    find_ir_learn_device_for_entity,
     find_rf_device_for_entity,
 )
 from custom_components.rune.adapters.capture.providers import CaptureProvider
@@ -191,4 +192,103 @@ class BroadlinkRFCaptureProvider(CaptureProvider):
         return BroadlinkRFReceiver(self._hass, self.receiver_entity_id, device)
 
 
-__all__ = ["BroadlinkRFCaptureProvider"]
+__all__ = ["BroadlinkIRCaptureProvider", "BroadlinkRFCaptureProvider"]
+
+
+class BroadlinkIRCaptureProvider(CaptureProvider):
+    """One-shot IR capture session driven by the Broadlink SDK.
+
+    Why this exists: the HA Broadlink integration exposes IR
+    *emitter* entities (``infrared.*``) but never registers the
+    hardware's IR receiver as an ``InfraredReceiverEntity`` — so the
+    native ``infrared.async_subscribe_receiver`` path can't learn IR
+    on a Broadlink. The SDK's classic flow works regardless:
+    ``enter_learning()`` arms the receiver, polling ``check_data()``
+    returns the captured packet.
+
+    Contract mirrors :class:`BroadlinkRFCaptureProvider`: resolve the
+    device lazily via :func:`find_ir_learn_device_for_entity`, fold
+    the whole learn flow into one ``async_wait_for_signal`` call,
+    cache the result so the orchestrator's polling loop doesn't
+    re-arm the receiver.
+    """
+
+    transport = SignalTransport.IR
+    name = "broadlink-ir"
+
+    def __init__(self, hass: Any, receiver_entity_id: str) -> None:
+        self._hass = hass
+        self.receiver_entity_id = receiver_entity_id
+        self._device: Any = None
+        self._receiver: Any = None
+        self._started = False
+        self._result: CapturedPulse | None = None
+
+    def _resolve_device(self) -> Any:
+        if self._device is None:
+            self._device = find_ir_learn_device_for_entity(
+                self._hass, self.receiver_entity_id
+            )
+        return self._device
+
+    @property
+    def is_available(self) -> bool:
+        device = self._resolve_device()
+        if device is None:
+            return False
+        from custom_components.rune.adapters.receivers.broadlink_rf import (
+            BroadlinkRFReceiver,
+        )
+
+        self._receiver = BroadlinkRFReceiver(
+            self._hass, self.receiver_entity_id, device
+        )
+        # ``is_available`` on the receiver checks ``sweep_frequency``
+        # (its RF assumption). For IR learning the requirement is
+        # ``enter_learning`` — verified by the lookup itself — plus a
+        # bound device, which we have.
+        return True
+
+    async def async_start_capture(self, timeout_s: float) -> None:
+        if self._resolve_device() is None:
+            raise CaptureProviderUnavailableError(
+                f"No Broadlink device found for {self.receiver_entity_id!r}. "
+                "Make sure the entity belongs to a Broadlink (RM Mini, "
+                "RM Pro, RM4 Pro) set up in the Broadlink integration."
+            )
+        self._started = True
+
+    async def async_wait_for_signal(self, timeout_s: float) -> CapturedPulse | None:
+        if not self._started:
+            raise RuntimeError(
+                "BroadlinkIRCaptureProvider.async_wait_for_signal called "
+                "before async_start_capture"
+            )
+        if self._receiver is None:
+            from custom_components.rune.adapters.receivers.broadlink_rf import (
+                BroadlinkRFReceiver,
+            )
+
+            device = self._resolve_device()
+            if device is None:  # pragma: no cover - guarded by start
+                raise CaptureProviderUnavailableError(
+                    f"No Broadlink device bound for {self.receiver_entity_id!r}"
+                )
+            self._receiver = BroadlinkRFReceiver(
+                self._hass, self.receiver_entity_id, device
+            )
+        if self._result is not None:
+            return self._result
+        try:
+            self._result = await self._receiver.capture_ir()
+        except Exception as err:
+            _LOGGER.warning(
+                "Broadlink IR learning failed for %s: %s",
+                self.receiver_entity_id,
+                err,
+            )
+            self._result = None
+        return self._result
+
+    async def async_stop_capture(self) -> None:
+        self._started = False

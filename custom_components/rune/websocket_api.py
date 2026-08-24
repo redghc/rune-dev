@@ -717,9 +717,34 @@ async def _ws_command_learn(
         )
 
         probe = probe_receiver(ctx.hass, receiver_entity_id)
-        if not probe.available:
-            raise CaptureProviderUnavailableError(probe.reason)
-        provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
+        if probe.available:
+            provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
+        else:
+            # Broadlink fallback: the HA Broadlink integration exposes
+            # IR *emitter* entities (``infrared.*``) but never the
+            # hardware's IR receiver, so the native subscribe path
+            # can't learn IR on these devices. When the picked entity
+            # belongs to a Broadlink we drive the SDK's classic
+            # ``enter_learning`` flow instead of bouncing the user.
+            from custom_components.rune.adapters.broadlink_devices import (
+                find_ir_learn_device_for_entity,
+            )
+
+            if find_ir_learn_device_for_entity(
+                ctx.hass, receiver_entity_id
+            ) is not None:
+                _LOGGER.info(
+                    "rune: %s is not an InfraredReceiverEntity but belongs "
+                    "to a Broadlink — learning IR via the Broadlink SDK",
+                    receiver_entity_id,
+                )
+                from custom_components.rune.adapters.capture.broadlink_rf import (
+                    BroadlinkIRCaptureProvider,
+                )
+
+                provider = BroadlinkIRCaptureProvider(ctx.hass, receiver_entity_id)
+            else:
+                raise CaptureProviderUnavailableError(probe.reason)
     else:
         from custom_components.rune.adapters.capture.broadlink_rf import (
             BroadlinkRFCaptureProvider,

@@ -306,6 +306,67 @@ class BroadlinkRFReceiver(ReceiverPort):
             b64_packet=packet["b64"],
         )
 
+    async def capture_ir(self) -> CapturedPulse:
+        """Learn an IR code with the Broadlink's built-in receiver.
+
+        The HA Broadlink integration exposes IR *emitter* entities
+        (``infrared.*``) but not the hardware's IR receiver, so
+        ``infrared.async_subscribe_receiver`` can't drive a learn
+        session for these devices. The SDK's classic IR learn flow
+        works regardless: ``enter_learning()`` arms the receiver,
+        then polling ``check_data()`` returns the captured packet.
+
+        Single-phase (no sweep, no carrier) — the user just presses
+        the remote button once while we listen.
+
+        Raises :class:`CaptureTimeoutError` when nothing arrives
+        within ``LEARNING_TIMEOUT_S``.
+        """
+        from base64 import b64encode
+
+        from custom_components.rune.domain.encoding.broadlink import (
+            decode_broadlink_ir_packet,
+        )
+
+        api = self._api
+        if not hasattr(api, "enter_learning"):
+            raise CaptureProviderUnavailableError(
+                f"Device API for {self.receiver_entity_id} does not support "
+                "IR learning (no enter_learning)"
+            )
+        try:
+            await self._request(api.enter_learning)
+            _LOGGER.warning(
+                "rune: Broadlink IR learning started - PRESS the remote button now"
+            )
+            deadline = time.monotonic() + LEARNING_TIMEOUT_S
+            while time.monotonic() < deadline:
+                await asyncio.sleep(1)
+                try:
+                    code = await self._request(api.check_data)
+                except (ReadError, StorageError):
+                    continue  # nothing captured yet
+                timings, _repeat = decode_broadlink_ir_packet(code)
+                _LOGGER.warning(
+                    "rune: captured %d IR pulses via Broadlink SDK",
+                    len(timings),
+                )
+                return CapturedPulse(
+                    receiver_entity_id=self.receiver_entity_id,
+                    signal_category=SignalCategory.default_ir(),
+                    raw_timings=tuple(timings),
+                    protocol_label=None,
+                    code_hex=None,
+                    b64_packet=b64encode(code).decode("utf8"),
+                )
+            raise CaptureTimeoutError(
+                f"No IR code received within {LEARNING_TIMEOUT_S:.0f}s"
+            )
+        except CaptureTimeoutError:
+            raise
+        except (OSError, ValueError) as err:
+            raise CaptureError(f"Broadlink IR learning failed: {err}") from err
+
 
 def build_unknown_signal_from_packet(
     *,

@@ -78,7 +78,6 @@ def broadlink_to_base64(buffer: bytes) -> str:
 # ---------------------------------------------------------------------------
 # RF: decode captured Broadlink RF pulse packet
 # ---------------------------------------------------------------------------
-
 def decode_broadlink_rf_packet(packet: bytes) -> tuple[list[int], int]:
     """Decode a Broadlink RF pulse packet into signed alternating microseconds.
 
@@ -101,6 +100,7 @@ def decode_broadlink_rf_packet(packet: bytes) -> tuple[list[int], int]:
     repeat_count = packet[1]
     length = packet[2] | (packet[3] << 8)
     pulses = packet[4 : 4 + length]
+
     timings: list[int] = []
     index = 0
     while index < len(pulses):
@@ -115,4 +115,37 @@ def decode_broadlink_rf_packet(packet: bytes) -> tuple[list[int], int]:
             timings.append(abs(microseconds))
         else:
             timings.append(-abs(microseconds))
+    return timings, repeat_count
+
+
+def decode_broadlink_ir_packet(packet: bytes) -> tuple[list[int], int]:
+    """Decode a learned Broadlink IR packet into signed alternating microseconds.
+
+    A learned IR code from ``device.check_data()`` carries the same
+    4-byte header shape as the RF packet (type byte — 0x26 on RM4,
+    0xB2-era on RM3 — repeat count, little-endian payload length)
+    followed by packed IR ticks. The IR tick constant differs from
+    RF: SmartIR's ``269 / 8192`` ratio (≈ 30.46 µs per tick), the
+    same one :func:`lirc_to_broadlink` / :func:`broadlink_to_lirc`
+    round-trip on.
+
+    Returns ``(timings, repeat_count)`` with even indices positive
+    (marks) and odd indices negative (spaces) so the captured pulse
+    feeds straight into ``PulsePayload.raw_timings``.
+    """
+    if len(packet) < 4:
+        raise BroadlinkFormatError(
+            f"IR packet too short: {len(packet)} bytes (need at least 4)"
+        )
+    repeat_count = packet[1]
+    length = packet[2] | (packet[3] << 8)
+    pulses = packet[4 : 4 + length]
+
+    # ``broadlink_to_lirc`` unpacks the 0x00-escaped tick stream into
+    # microsecond pulse widths; we just alternate the sign to match
+    # the raw_timings convention.
+    widths = broadlink_to_lirc(bytes(pulses))
+    timings: list[int] = []
+    for i, us in enumerate(widths):
+        timings.append(abs(us) if i % 2 == 0 else -abs(us))
     return timings, repeat_count
