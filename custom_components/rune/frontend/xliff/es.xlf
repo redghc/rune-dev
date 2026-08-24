@@ -745,14 +745,6 @@
   <source>Command updated</source>
     <target>Comando actualizado</target>
 </trans-unit>
-<trans-unit id="sb87de2c2a3cb592d">
-  <source>Re-learn "<x id="0" equiv-text="${c.label ?? c.key}"/>"</source>
-    <target>Re-aprender «<x id="0" equiv-text="${c.label ?? c.key}"/>»</target>
-</trans-unit>
-<trans-unit id="saf83fe143a83b854">
-  <source>Delete "<x id="0" equiv-text="${c.label ?? c.key}"/>"</source>
-    <target>Eliminar «<x id="0" equiv-text="${c.label ?? c.key}"/>»</target>
-</trans-unit>
 <trans-unit id="s5635de8dcac23eef">
   <source>Delete command</source>
     <target>Eliminar comando</target>
@@ -765,9 +757,13 @@
   <source>Edit</source>
     <target>Editar</target>
 </trans-unit>
-<trans-unit id="s5b36817ae410d161">
-  <source>Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices &amp; Services → <x id="0" equiv-text="${d.name}"/> and on the Buttons dashboard. Use the Edit / Re-learn / Delete buttons under each tile to manage them.</source>
-    <target>Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → <x id="0" equiv-text="${d.name}"/> y en el panel de Botones. Usa los botones Editar / Re-aprender / Eliminar bajo cada tarjeta para gestionarlos.</target>
+<trans-unit id="s283e5cbac93640f4">
+  <source>Options for "<x id="0" equiv-text="${c.label ?? c.key}"/>"</source>
+    <target>Opciones de «<x id="0" equiv-text="${c.label ?? c.key}"/>»</target>
+</trans-unit>
+<trans-unit id="s29e0a1b1cbfb3f08">
+  <source>Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices &amp; Services → <x id="0" equiv-text="${d.name}"/> and on the Buttons dashboard. Click the ⋮ on each tile to edit, re-learn or delete.</source>
+    <target>Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → <x id="0" equiv-text="${d.name}"/> y en el panel de Botones. Pulsa ⋮ en cada tarjeta para editar, re-aprender o eliminar.</target>
 </trans-unit>
 </body>
 </file>
