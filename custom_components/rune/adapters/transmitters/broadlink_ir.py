@@ -147,25 +147,20 @@ class BroadlinkIRTransmitter(TransmitterPort):
     async def _send_via_native_ir(self, base64_payload: str, command: PulseCommand) -> None:
         try:
             from homeassistant.components import infrared
-            from infrared_protocols.commands.pronto import ProntoCommand
         except ImportError as err:
-            # ``infrared_protocols`` is the encoding lib used to wrap the
-            # base64 packet as an ``InfraredCommand``; if it's not
-            # importable, neither is ``ProntoCommand``. Tell the user
-            # exactly what's missing instead of blaming the HA helper
-            # (which is unrelated).
             raise UnsupportedHardwareError(
-                "Broadlink native-IR send needs the `infrared_protocols` "
-                "Python library, which is not importable on this Home "
-                "Assistant host. Reinstall the `homeassistant` package "
-                "(or `pip install infrared_protocols`) and retry."
+                "homeassistant.components.infrared is unavailable on this HA version"
             ) from err
 
         # Convert b64 payload back into a Pronto hex by stripping the
-        # prefix — HA's helper takes a ProntoCommand with the raw hex.
+        # prefix — HA's helper takes a Pronto-shaped command with the
+        # raw hex. Use RUNE's ProntoIRCommand shim so we don't depend
+        # on the optional ``infrared_protocols`` library.
+        from custom_components.rune.domain.encoding.commands import ProntoIRCommand
+
         pronto_hex = base64_payload.removeprefix("b64:")
-        pronto_command = ProntoCommand(
-            code=pronto_hex,
+        pronto_command = ProntoIRCommand(
+            pronto_hex=pronto_hex,
             modulation=command.signal_category.carrier_frequency_hz or 38_000,
         )
         await infrared.async_send_command(self._hass, self._entity_id, pronto_command)

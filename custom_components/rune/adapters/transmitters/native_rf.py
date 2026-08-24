@@ -6,10 +6,13 @@ For any entity that implements
 :class:`PulseCommand` into a :class:`RadioFrequencyCommand` and dispatches
 via the helper.
 
-We construct the command object directly — no library conversion is
-needed because RUNE already stores ``raw_timings`` in the format HA's
-helpers expect (signed alternating microseconds, positive mark /
-negative space).
+We construct the command object directly via the shim in
+:mod:`custom_components.rune.domain.encoding.commands`. The shim is a
+duck-typed ``RadioFrequencyCommand`` that doesn't depend on the
+optional ``rf_protocols`` library — same forward-compatibility trick
+``clevrdavid/rf_fan`` uses: subclass the real base when importable so
+``isinstance`` checks pass, but skip ``super().__init__()`` so library-
+constructor drift can't break us.
 """
 from __future__ import annotations
 
@@ -17,6 +20,7 @@ import logging
 from typing import Any
 
 from custom_components.rune.adapters.transmitters.base import prepare_timings
+from custom_components.rune.domain.encoding.commands import RawTimingRFCommand
 from custom_components.rune.domain.enums import (
     SignalTransport,
     TransmitterSourceKind,
@@ -57,16 +61,14 @@ class NativeRFTransmitter(TransmitterPort):
                 f"Command {command.key!r} has no raw timings to send"
             )
 
-        try:
-            from rf_protocols import ModulationType, RadioFrequencyCommand
-        except ImportError as err:
-            raise UnsupportedHardwareError(
-                "rf_protocols library is unavailable on this HA version"
-            ) from err
-
-        rf_command = RadioFrequencyCommand(
+        # Duck-typed ``RadioFrequencyCommand`` — does NOT depend on the
+        # optional ``rf_protocols`` library. If the lib is importable
+        # the shim subclasses it (see encoding/commands.py) so any
+        # ``isinstance`` check keeps working; if not, our local base
+        # provides the attribute surface the Broadlink / ESPHome RF
+        # emitters actually read.
+        rf_command = RawTimingRFCommand(
             frequency=prepared.carrier_frequency_hz,
-            modulation=ModulationType.OOK,
             timings=prepared.raw_timings,
             repeat_count=prepared.repeat_count,
         )

@@ -111,14 +111,20 @@ class ESPHomeIRTransmitter(TransmitterPort):
     async def _send_via_native_ir(self, pronto_hex: str, command: PulseCommand) -> None:
         try:
             from homeassistant.components import infrared
-            from infrared_protocols.commands.pronto import ProntoCommand
         except ImportError as err:
             raise UnsupportedHardwareError(
                 "homeassistant.components.infrared is unavailable"
             ) from err
 
-        pronto_command = ProntoCommand(
-            code=pronto_hex,
+        # Use RUNE's ProntoIRCommand shim — it duck-types as an
+        # ``InfraredCommand`` without depending on the optional
+        # ``infrared_protocols`` library. HA's IR emitters only call
+        # ``command.get_raw_timings()`` (and the ESPHome emitter also
+        # reads ``command.modulation``), so the shim is sufficient.
+        from custom_components.rune.domain.encoding.commands import ProntoIRCommand
+
+        pronto_command = ProntoIRCommand(
+            pronto_hex=pronto_hex,
             modulation=command.signal_category.carrier_frequency_hz or 38_000,
         )
         await infrared.async_send_command(self._hass, self._entity_id, pronto_command)

@@ -7,16 +7,15 @@ SMLIGHT, etc.), this adapter converts a :class:`PulseCommand` into an
 
 The actual command class depends on what's available:
 
-- A captured Pronto hex string → wrapped in a learned-format command.
-- Raw timings → wrapped via the infrared_protocols library's raw
-  timing class when available.
-- Decoded identity (NEC/RC5/Samsung/Sony/Panasonic) → the matching
-  ``<Protocol>Command`` class.
+- A captured Pronto hex string → wrapped in :class:`ProntoIRCommand`.
+- Raw timings → wrapped in :class:`RawTimingIRCommand`.
 
-We keep things simple: for raw timings we build a generic
-``RawTimingCommand`` (or fall back to a Pronto conversion if the raw
-class isn't available). Decoded identities are handled by
-:mod:`custom_components.rune.domain.encoding` in later phases.
+Both shims live in :mod:`custom_components.rune.domain.encoding.commands`
+and intentionally do NOT depend on the optional ``infrared_protocols``
+library. HA's IR emitters only call ``command.get_raw_timings()`` (and
+the ESPHome emitter additionally reads ``command.modulation``), so a
+duck-typed object with those two attributes works regardless of whether
+the third-party library is installed on the host.
 """
 from __future__ import annotations
 
@@ -24,6 +23,10 @@ import logging
 from typing import Any
 
 from custom_components.rune.adapters.transmitters.base import prepare_timings
+from custom_components.rune.domain.encoding.commands import (
+    ProntoIRCommand,
+    RawTimingIRCommand,
+)
 from custom_components.rune.domain.enums import (
     SignalTransport,
     TransmitterSourceKind,
@@ -66,19 +69,14 @@ class NativeIRTransmitter(TransmitterPort):
 
         infrared_command = self._build_command(command, prepared)
         if infrared_command is None:
-            # ``_build_command`` returns ``None`` only when every encoder
-            # path bailed — in practice, the ``infrared_protocols`` library
-            # couldn't be imported. That lib ships with HA core but a
-            # stripped-down install can miss it; surface a hint so the
-            # user can fix it instead of seeing "Cannot encode …" on every
-            # send (and on every Test-signal press during Learn).
+            # Reachable only if every encoder path failed — shouldn't
+            # happen in practice (we no longer depend on the optional
+            # ``infrared_protocols`` library), but keep the guard so a
+            # regression still surfaces a useful hint instead of a
+            # bare ``None`` crash deep in the helper.
             raise UnsupportedHardwareError(
                 f"Cannot encode command {command.key!r} for native IR — "
-                "the `infrared_protocols` Python library is not importable "
-                "on this Home Assistant host. Reinstall the "
-                "`homeassistant` package (or `pip install "
-                "infrared_protocols`) so the raw-timing encoder is "
-                "available, then retry."
+                "no encoder path produced a usable command object."
             )
 
         try:
@@ -110,48 +108,31 @@ class NativeIRTransmitter(TransmitterPort):
         1. The decoded identity (NEC:0xABCD:0xEF) — strongest identity,
            lets the emitter re-encode canonical timings.
         2. A Pronto hex string (decoded_hex or base64_packet).
-        3. Raw timings via ``RawTimingCommand``.
+        3. Raw timings via :class:`RawTimingIRCommand`.
+
+        All three branches use :mod:`custom_components.rune.domain.encoding.commands`
+        shims — no third-party ``infrared_protocols`` import required.
         """
-        # 1. Decoded identity → protocol-specific command.
+        # 1. Decoded identity → Pronto wrapper.
         decoded = command.payload.decoded_hex
         if decoded:
-            infrared_command = _pronto_to_command(decoded, prepared)
-            if infrared_command is not None:
-                return infrared_command
+            return ProntoIRCommand(
+                pronto_hex=decoded,
+                modulation=prepared.carrier_frequency_hz,
+            )
 
-        # 2. Base64 packet (Broadlink format) → raw Pronto wrapper.
+        # 2. Base64 packet (Broadlink format) → Pronto wrapper.
+        # ``b64:...`` Pronto hex is what Broadlink's native-IR entity
+        # consumes; emitters decode it back to raw timings on the fly.
         if command.payload.base64_packet:
-            return _broadlink_base64_to_command(command.payload.base64_packet, prepared)
+            return ProntoIRCommand(
+                pronto_hex=f"b64:{command.payload.base64_packet}",
+                modulation=prepared.carrier_frequency_hz,
+            )
 
         # 3. Raw timings.
-        return _raw_to_command(prepared.raw_timings, prepared.carrier_frequency_hz)
-
-
-def _pronto_to_command(pronto_hex: str, prepared: Any) -> Any:
-    """Wrap a Pronto hex in a ``RawTimingCommand`` or return None."""
-    try:
-        from infrared_protocols.commands.pronto import ProntoCommand
-    except ImportError:
-        return None
-    return ProntoCommand(code=pronto_hex, modulation=prepared.carrier_frequency_hz)
-
-
-def _broadlink_base64_to_command(base64_packet: str, prepared: Any) -> Any:
-    """Wrap a Broadlink base64 packet in a raw command.
-
-    Some HA platforms accept ``b64:...`` Pronto hex strings and decode
-    them in hardware. We unwrap and rewrap.
-    """
-    return _pronto_to_command(f"b64:{base64_packet}", prepared)
-
-
-def _raw_to_command(timings: list[int], carrier_frequency_hz: int) -> Any:
-    """Wrap raw timings in the appropriate InfraredCommand subclass."""
-    try:
-        from infrared_protocols.commands.raw import RawTimingCommand
-    except ImportError:
-        return None
-    return RawTimingCommand(
-        timings=timings,
-        modulation=carrier_frequency_hz,
-    )
+        return RawTimingIRCommand(
+            timings=prepared.raw_timings,
+            modulation=prepared.carrier_frequency_hz,
+            repeat_count=prepared.repeat_count,
+        )

@@ -86,15 +86,20 @@ class ESPHomeRFTransmitter(TransmitterPort):
     async def _send_via_native_rf(self, prepared: Any) -> None:
         try:
             from homeassistant.components import radio_frequency
-            from rf_protocols import ModulationType, RadioFrequencyCommand
         except ImportError as err:
             raise UnsupportedHardwareError(
                 "Native RF stack unavailable on this HA version"
             ) from err
 
-        rf_command = RadioFrequencyCommand(
+        # Use RUNE's RawTimingRFCommand shim — duck-typed
+        # ``RadioFrequencyCommand`` that does NOT depend on the optional
+        # ``rf_protocols`` library. HA's RF emitters (ESPHome, Broadlink)
+        # only consume ``frequency`` / ``modulation`` / ``repeat_count``
+        # / ``get_raw_timings()``, which the shim provides.
+        from custom_components.rune.domain.encoding.commands import RawTimingRFCommand
+
+        rf_command = RawTimingRFCommand(
             frequency=prepared.carrier_frequency_hz,
-            modulation=ModulationType.OOK,
             timings=prepared.raw_timings,
             repeat_count=prepared.repeat_count,
         )
