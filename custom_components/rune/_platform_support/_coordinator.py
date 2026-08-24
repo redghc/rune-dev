@@ -84,6 +84,7 @@ class DevicePlatformCoordinator:
         device_repository: Any,
         action_repository: Any,
         tx_gate: TxGate,
+        config_entry_id: str | None = None,
         transmitter_factory: Callable[[Any, str, SignalTransport], TransmitterPort] = (
             select_transmitter
         ),
@@ -92,6 +93,7 @@ class DevicePlatformCoordinator:
         self._devices = device_repository
         self._actions = action_repository
         self._tx_gate = tx_gate
+        self._config_entry_id = config_entry_id
         self._transmitter_factory = transmitter_factory
         self._power_monitors: dict[str, HAPowerMonitor | InMemoryPowerMonitor] = {}
         self._entities: dict[str, EntityDescriptor] = {}
@@ -371,6 +373,94 @@ class DevicePlatformCoordinator:
 
     def has_entity_adder(self, platform: str) -> bool:
         return platform in self._entity_adders
+
+    # ------------------------------------------------------------------
+    # HA device-registry funnel (single point of registry writes)
+    # ------------------------------------------------------------------
+
+    def _register_ha_device(self, device: RuneDevice) -> None:
+        """Upsert ``device`` in Home Assistant's device registry.
+
+        Single canonical entry point (mirrors HAIR's
+        ``DeviceManager._register_ha_device``). Every code path that
+        creates or updates a RuneDevice funnels through here so the
+        registry write is unconditional and never silently dropped.
+
+        HA's entity platform would also upsert the device on the first
+        entity add via ``device_info``, but the entity path is empty
+        for a freshly-created device with no learned commands. Calling
+        this explicitly keeps the device visible even before any
+        entity attaches, and surfaces ``DeviceInfoError`` immediately
+        instead of swallowing it.
+        """
+        try:
+            from homeassistant.helpers import device_registry as dr
+        except ImportError:
+            # Pure-Python / unit-test environment with no HA installed;
+            # the registry write is a no-op. Production runtime always
+            # has HA available, so this branch is unreachable there.
+            _LOGGER.debug(
+                "rune: homeassistant not installed; skipping device_registry "
+                "upsert for %s",
+                device.id,
+            )
+            return
+
+        registry = dr.async_get(self._hass)
+        registry.async_get_or_create(
+            config_entry_id=self._config_entry_id,
+            identifiers={("rune", device.id)},
+            name=device.name,
+            manufacturer=device.manufacturer or "RUNE",
+            model=device.model or device.category.value,
+        )
+
+    async def async_create_device(self, device: RuneDevice) -> RuneDevice:
+        """Persist + register + push entities for a freshly created device.
+
+        Funnels the three steps that the WS ``device/create`` handler
+        used to do inline. Centralising here means there is exactly
+        one place that registers a device with HA's device registry
+        and exactly one place that pushes the live entities.
+        """
+        await self._devices.upsert(device)
+        self._register_ha_device(device)
+        await self.async_add_entities_for_device(device)
+        return device
+
+    async def async_update_device(self, device: RuneDevice) -> RuneDevice:
+        """Persist + refresh registry + re-push entities for an updated device.
+
+        Re-registering on every update keeps name / manufacturer /
+        model in sync with what the SPA shows.
+        """
+        await self._devices.upsert(device)
+        self._register_ha_device(device)
+        await self.async_add_entities_for_device(device)
+        return device
+
+    async def async_backfill_registry(self) -> None:
+        """Re-register every device currently in storage.
+
+        Recovers devices whose previous registry write was silently
+        swallowed (e.g. before the unconditional funnel existed) and
+        guarantees the device list is in sync with the JSON store on
+        every integration start.
+        """
+        try:
+            devices = await self._devices.load()
+        except Exception as err:
+            _LOGGER.warning("rune: registry backfill load failed: %s", err)
+            return
+        for device in devices:
+            try:
+                self._register_ha_device(device)
+            except Exception as err:
+                _LOGGER.warning(
+                    "rune: registry backfill upsert failed for %s: %s",
+                    device.id,
+                    err,
+                )
 
     async def async_add_entities_for_device(self, device: RuneDevice) -> None:
         """Build entities for ``device`` and push via registered adders.

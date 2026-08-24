@@ -109,6 +109,7 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
         device_repository=device_repo,
         action_repository=action_repo,
         tx_gate=tx_gate,
+        config_entry_id=entry.entry_id,
         transmitter_factory=select_transmitter,
     )
 
@@ -150,6 +151,13 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
         Platform.REMOTE,
     ]
     await hass.config_entries.async_forward_entry_setups(entry, platforms_list)
+
+    # 3.5. Re-register every persisted device in HA's device registry.
+    #      Recovers devices whose previous registry write was silently
+    #      dropped (e.g. WS handlers that pre-date the unconditional
+    #      funnel) and guarantees the device list stays in sync with
+    #      the JSON store on every integration start.
+    await coordinator.async_backfill_registry()
 
     # 4. Services.
     _register_services(hass, coordinator)

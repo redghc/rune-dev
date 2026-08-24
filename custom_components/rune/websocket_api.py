@@ -456,51 +456,28 @@ async def _ws_device_create(
         commands=commands,
     )
 
-    repo = await ctx.device_repository()
-    await repo.upsert(device)
     _LOGGER.info("rune: created device %s (%s)", device.id, device.name)
 
-    # Register the HA Device registry row. HA's ``EntityPlatform`` would
-    # also upsert one when an entity is added with a ``device_info`` dict,
-    # but doing it explicitly (a) matches the working HAIR pattern, (b)
-    # surfaces ``DeviceInfoError`` (empty identifiers, malformed
-    # manufacturer, etc.) instead of silently dropping the entity, and
-    # (c) keeps the device visible even if no entity ever attaches.
-    entry_id = ctx.entry_id()
-    if entry_id is not None:
-        try:
-            from homeassistant.helpers import device_registry as dr
-
-            registry = dr.async_get(ctx.hass)
-            registry.async_get_or_create(
-                config_entry_id=entry_id,
-                identifiers={(DOMAIN, device.id)},
-                name=device.name,
-                manufacturer=device.manufacturer,
-                model=device.model,
-            )
-        except Exception as err:
-            _LOGGER.warning(
-                "rune: device_registry upsert failed for %s: %s",
-                device.id,
-                err,
-            )
-
-    # Push the new device into HA as live entities without a full
-    # config-entry reload. The coordinator walks every registered
-    # platform builder; only platforms matching the device's category
-    # (plus the always-on button platform) produce entities. Failures
-    # are logged inside the coordinator and don't block the create.
+    # Funnel through the coordinator: persists the device, upserts the
+    # HA device-registry row unconditionally, and pushes live entities
+    # via the registered platform adders. Mirrors HAIR's single
+    # ``DeviceManager.async_create_device`` funnel so registry writes
+    # can never be silently dropped.
     coordinator = ctx.coordinator()
-    if coordinator is not None:
-        await coordinator.async_add_entities_for_device(device)
-    else:
+    if coordinator is None:
+        # Mid-reload / mid-setup race: persist at minimum so the
+        # device is not lost. The registry + entities are reconciled
+        # on the next entry setup (see ``async_backfill_registry``).
+        repo = await ctx.device_repository()
+        await repo.upsert(device)
         _LOGGER.warning(
-            "rune: no coordinator on WS context; entities will appear "
-            "after the next reload (device %s)",
+            "rune: no coordinator on WS context; device %s persisted "
+            "without registry write — will be reconciled on next reload",
             device.id,
         )
+        return {"device": device.to_dict()}
 
+    await coordinator.async_create_device(device)
     return {"device": device.to_dict()}
 
 
@@ -590,27 +567,19 @@ async def _ws_device_update(
     )
     await repo.upsert(updated)
 
-    # Refresh the HA Device registry row so name / manufacturer / model
-    # edits show on the device card without a manual reload.
-    entry_id = ctx.entry_id()
-    if entry_id is not None:
-        try:
-            from homeassistant.helpers import device_registry as dr
-
-            registry = dr.async_get(ctx.hass)
-            registry.async_get_or_create(
-                config_entry_id=entry_id,
-                identifiers={(DOMAIN, updated.id)},
-                name=updated.name,
-                manufacturer=updated.manufacturer,
-                model=updated.model,
-            )
-        except Exception as err:
-            _LOGGER.warning(
-                "rune: device_registry refresh failed for %s: %s",
-                updated.id,
-                err,
-            )
+    # Refresh the HA device-registry row (name / manufacturer / model)
+    # and push any newly added commands through the live entity adders.
+    # Funnels through the coordinator so the registry write is
+    # unconditional, matching the working HAIR pattern.
+    coordinator = ctx.coordinator()
+    if coordinator is not None:
+        await coordinator.async_update_device(updated)
+    else:
+        _LOGGER.warning(
+            "rune: no coordinator on WS context; device %s persisted "
+            "without registry refresh — will be reconciled on next reload",
+            updated.id,
+        )
 
     return {"device": updated.to_dict()}
 
