@@ -50,11 +50,13 @@ export class RuneDeviceDialog extends LitElement {
       .grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 0;
-        row-gap: 0;
+        row-gap: var(--rune-space-3);
       }
       .grid > * {
         grid-column: 1 / -1;
+      }
+      .grid > ::slotted(*) {
+        margin-bottom: 0;
       }
       .preview {
         margin-top: var(--rune-space-3);
@@ -250,14 +252,21 @@ export class RuneDeviceDialog extends LitElement {
 
   private _renderField(f: FieldDef): TemplateResult | typeof nothing {
     const value = this._form[f.key] ?? "";
-    const labelNode = f.required ? html`${f.label()} <span aria-hidden="true">*</span>` : f.label();
     const helperNode = f.helper ? f.helper() : "";
     const placeholderNode = f.placeholder ? f.placeholder() : "";
+    // ``<rune-input>`` delegates to ``<sl-input>`` which already paints a
+    // trailing ``*`` on the label when ``required`` is set, so we skip the
+    // manual asterisk here. ``<rune-select>`` renders its own label and
+    // has no built-in required indicator, so we paint one ourselves.
+    const inputLabel = f.label();
+    const selectLabel = f.required
+      ? html`${inputLabel} <span class="req" aria-hidden="true">*</span>`
+      : inputLabel;
     switch (f.kind) {
       case "text":
         return html`
           <rune-input
-            .label=${labelNode}
+            .label=${inputLabel}
             icon=${f.icon ?? ""}
             .placeholder=${placeholderNode}
             .helper=${helperNode}
@@ -271,7 +280,7 @@ export class RuneDeviceDialog extends LitElement {
       case "number":
         return html`
           <rune-input
-            .label=${labelNode}
+            .label=${inputLabel}
             icon=${f.icon ?? ""}
             .helper=${helperNode}
             type="number"
@@ -286,7 +295,7 @@ export class RuneDeviceDialog extends LitElement {
       case "select":
         return html`
           <rune-select
-            .label=${labelNode}
+            .label=${selectLabel}
             icon=${f.icon ?? ""}
             .helper=${helperNode}
             .options=${f.options ?? []}
@@ -299,7 +308,7 @@ export class RuneDeviceDialog extends LitElement {
       case "async-select":
         return html`
           <rune-select
-            .label=${labelNode}
+            .label=${selectLabel}
             icon=${f.icon ?? ""}
             .helper=${helperNode}
             .placeholder=${placeholderNode}

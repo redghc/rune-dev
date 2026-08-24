@@ -17,7 +17,6 @@ export class RuneInput extends LitElement {
     css`
       :host {
         display: block;
-        margin-bottom: var(--rune-space-2);
       }
       sl-input::part(base) {
         border-radius: var(--rune-radius-sm);
@@ -41,7 +40,7 @@ export class RuneInput extends LitElement {
         letter-spacing: 0.05em;
         margin-bottom: 2px;
       }
-      sl-input::part(help-text) {
+      sl-input::part(form-control-help-text) {
         font-size: 11px;
         color: var(--rune-text-muted);
         margin-top: 2px;

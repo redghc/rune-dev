@@ -45,7 +45,6 @@ export class RuneSelect extends LitElement {
     css`
       :host {
         display: block;
-        margin-bottom: var(--rune-space-2);
       }
       .wrapper {
         position: relative;
@@ -58,6 +57,10 @@ export class RuneSelect extends LitElement {
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 2px;
+      }
+      .lbl .req {
+        color: var(--rune-danger);
+        margin-left: 2px;
       }
       .combo {
         position: relative;
