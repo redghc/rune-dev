@@ -745,13 +745,17 @@
   <source>Command updated</source>
     <target>Comando actualizado</target>
 </trans-unit>
-<trans-unit id="sbc309046d000b3d8">
-  <source>Command options</source>
-    <target>Opciones del comando</target>
-</trans-unit>
 <trans-unit id="s0e3359e1f96926f0">
   <source>Edit command</source>
     <target>Editar comando</target>
+</trans-unit>
+<trans-unit id="s0b23d835667606f1">
+  <source>Command options for <x id="0" equiv-text="${c.label ?? c.key}"/></source>
+    <target>Opciones del comando <x id="0" equiv-text="${c.label ?? c.key}"/></target>
+</trans-unit>
+<trans-unit id="s29e0a1b1cbfb3f08">
+  <source>Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices &amp; Services → <x id="0" equiv-text="${d.name}"/> and on the Buttons dashboard. Click the ⋮ on each tile to edit, re-learn or delete.</source>
+    <target>Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → <x id="0" equiv-text="${d.name}"/> y en el panel de Botones. Pulsa en ⋮ de cada tarjeta para editar, re-aprender o eliminar.</target>
 </trans-unit>
 </body>
 </file>

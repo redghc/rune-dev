@@ -108,6 +108,16 @@ export class RuneDeviceCard extends LitElement {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: var(--rune-space-2);
       }
+      .cmd-wrap {
+        position: relative;
+        display: block;
+      }
+      .cmd-wrap .cmd {
+        width: 100%;
+      }
+      .cmd-placeholder-wrap {
+        display: contents;
+      }
       .cmd {
         position: relative;
         background: var(--rune-surface-alt);
@@ -172,18 +182,19 @@ export class RuneDeviceCard extends LitElement {
         position: absolute;
         top: 4px;
         right: 4px;
-        opacity: 0;
+        opacity: 0.55;
         transition: opacity var(--rune-dur-fast) var(--rune-ease);
       }
       .cmd:hover .cmd-menu,
+      .cmd-menu:hover,
       .cmd-menu:focus-within {
         opacity: 1;
       }
       .cmd-menu rune-button::part(base) {
-        width: 24px;
-        height: 24px;
+        width: 26px;
+        height: 26px;
         padding: 0;
-        font-size: 14px;
+        font-size: 15px;
         line-height: 1;
         background: var(--rune-surface);
         border: 1px solid var(--rune-border);
@@ -231,6 +242,25 @@ export class RuneDeviceCard extends LitElement {
       .menu-item.danger:hover {
         background: var(--rune-danger-soft, rgba(220, 38, 38, 0.12));
         color: var(--rune-danger);
+      }
+      .cmd-hint {
+        margin-top: var(--rune-space-3);
+        padding: var(--rune-space-2) var(--rune-space-3);
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        background: var(--rune-surface-alt);
+        border: 1px dashed var(--rune-border);
+        border-radius: var(--rune-radius-sm);
+        line-height: var(--rune-lh-normal);
+        display: flex;
+        gap: var(--rune-space-2);
+        align-items: flex-start;
+      }
+      .cmd-hint i {
+        font-size: 14px;
+        color: var(--rune-primary);
+        flex-shrink: 0;
+        margin-top: 1px;
       }
     `,
   ];
@@ -417,24 +447,25 @@ export class RuneDeviceCard extends LitElement {
         <div class="commands">
           ${(d.commands ?? []).map(
             (c) => html`
-              <button
-                class="cmd"
-                title=${`Send "${c.label ?? c.key}" to ${d.name}`}
-                @click=${(e: Event) => this._send(c, e.currentTarget as HTMLButtonElement)}
-              >
-                <i class="ti ti-bolt"></i>
-                <span>${c.label ?? c.key}</span>
-                <span class="cmd-menu" @click=${(e: Event) => e.stopPropagation()}>
-                  <rune-button
-                    icon="dots-vertical"
-                    aria-label=${msg(str`Command options`)}
-                    @click=${(e: Event) => {
-                      e.stopPropagation();
-                      this._toggleMenu(c, e.currentTarget as HTMLElement);
-                    }}
-                  ></rune-button>
-                </span>
-              </button>
+              <div class="cmd-wrap">
+                <button
+                  class="cmd"
+                  title=${`Send "${c.label ?? c.key}" to ${d.name}`}
+                  @click=${(e: Event) => this._send(c, e.currentTarget as HTMLButtonElement)}
+                >
+                  <i class="ti ti-bolt"></i>
+                  <span>${c.label ?? c.key}</span>
+                </button>
+                <rune-button
+                  class="cmd-menu"
+                  icon="dots-vertical"
+                  aria-label=${msg(str`Command options for ${c.label ?? c.key}`)}
+                  @click=${(e: Event) => {
+                    e.stopPropagation();
+                    this._toggleMenu(c, e.currentTarget as HTMLElement);
+                  }}
+                ></rune-button>
+              </div>
             `,
           )}
           <button class="cmd placeholder" @click=${this._learn}>
@@ -442,6 +473,18 @@ export class RuneDeviceCard extends LitElement {
             <span>${msg(str`Learn command`)}</span>
           </button>
         </div>
+        ${
+          (d.commands ?? []).length > 0
+            ? html`
+                <div class="cmd-hint">
+                  <i class="ti ti-info-circle"></i>
+                  ${msg(
+                    str`Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices & Services → ${d.name} and on the Buttons dashboard. Click the ⋮ on each tile to edit, re-learn or delete.`,
+                  )}
+                </div>
+              `
+            : null
+        }
       </div>
 
       ${
