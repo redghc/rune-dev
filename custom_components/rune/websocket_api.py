@@ -638,35 +638,32 @@ async def _ws_command_learn(
     # generic HA failure.
     from custom_components.rune.adapters.capture.native_ir import (
         NativeIRCaptureProvider,
+        probe_receiver,
     )
 
-    receiver_entity_id = _pick_ir_receiver(ctx.hass, device.receiver_entity_ids)
+    receiver_entity_id, alternatives = _pick_ir_receiver(
+        ctx.hass, device.receiver_entity_ids
+    )
     if not receiver_entity_id:
-        rf_ids = [r for r in device.receiver_entity_ids if r.startswith("remote.")]
-        hint = (
-            "Configure an IR receiver (domain ``infrared.*``) on this device "
-            "to learn new commands."
-        )
-        if rf_ids and not any(
-            r.startswith("infrared.") for r in device.receiver_entity_ids
-        ):
-            # The user only has RF receivers — be explicit so the SPA
-            # can guide them through adding an IR receiver rather
-            # than blaming the integration.
+        # No configured entity is a real IR receiver. Tell the user
+        # what they have, why it doesn't work, AND which entities
+        # HA does recognise — so they can fix the slot without
+        # having to grep through their entity registry.
+        hint = "Configure an IR receiver (domain ``infrared.*``) on this device."
+        if alternatives:
+            hint += f" HA currently recognises these receivers: {', '.join(alternatives)}."
+        configured = device.receiver_entity_ids or _list_receiver_entities(ctx.hass)
+        rf_ids = [r for r in configured if r.startswith("remote.")]
+        if rf_ids and not alternatives:
             raise UnsupportedHardwareError(
                 f"Device {device.name!r} only has RF receivers "
-                f"({', '.join(rf_ids)}). {hint}"
+                f"({', '.join(rf_ids)}). " + hint
             )
         raise CaptureProviderUnavailableError(
-            "No IR receiver configured for this device. " + hint
+            f"No working IR receiver found for this device. " + hint
         )
 
     provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
-    # Use ``probe_receiver`` instead of ``is_available`` so the panel
-    # gets the specific reason (entity missing / is an emitter /
-    # unavailable state) instead of a single opaque message.
-    from custom_components.rune.adapters.capture.native_ir import probe_receiver
-
     probe = probe_receiver(ctx.hass, receiver_entity_id)
     if not probe.available:
         raise CaptureProviderUnavailableError(probe.reason)
@@ -1000,19 +997,24 @@ def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
 
 def _pick_ir_receiver(
     hass: Any, configured_receivers: list[str]
-) -> str | None:
+) -> tuple[str | None, list[str]]:
     """Pick the best IR receiver for a learn session.
 
-    Prefer receivers the device already references (the user's
-    intent), then any IR entity HA knows about. Returns ``None``
-    when nothing compatible is available — the caller turns that
-    into a friendly error rather than the bare
-    ``Capture provider native-ir is not available`` RuntimeError
-    the orchestrator raises.
+    Returns ``(chosen_entity_id, alternatives)`` where ``alternatives``
+    is the list of entity IDs that HA reports as registered infrared
+    receivers — surfaced in the error message so the user can fix a
+    misconfigured ``device.receiver_entity_ids`` without guessing.
 
-    Only ``infrared.*`` entities pass — ``remote.*`` (Broadlink RF)
-    and ``esphome.*`` (legacy IR via event bus) need a different
-    capture path that isn't implemented yet.
+    Prefers receivers the device already references (user intent),
+    but **validates** them with :func:`_is_ir_receiver` so a typo or
+    an emitter mistakenly attached to the slot doesn't silently break
+    the flow. When every configured candidate fails the probe we
+    fall back to HA discovery — better to learn successfully than to
+    block on a stale entity reference the user can fix later.
+
+    Only ``infrared.*`` entities are considered — ``remote.*``
+    (Broadlink RF) and ``esphome.*`` (legacy IR via event bus) need
+    a different capture path that isn't implemented yet.
     """
     candidates: list[str] = []
     if configured_receivers:
@@ -1021,10 +1023,64 @@ def _pick_ir_receiver(
         for entry in _list_receiver_entities(hass):
             candidates.append(entry["entity_id"])
 
-    for entity_id in candidates:
-        if entity_id.startswith("infrared."):
-            return entity_id
-    return None
+    # Filter to ``infrared.*`` first so a ``remote.*`` Broadlink
+    # entity in the configured list doesn't short-circuit us.
+    infrared_candidates = [c for c in candidates if c.startswith("infrared.")]
+
+    # 1. Try the user's configured pick first — order preserved.
+    for entity_id in infrared_candidates:
+        if _is_ir_receiver(hass, entity_id):
+            return entity_id, _list_ir_receivers(hass)
+
+    # 2. Fall back to HA discovery so a misconfigured slot still
+    #    produces a successful capture when real receivers exist.
+    for entry in _list_receiver_entities(hass):
+        entity_id = entry["entity_id"]
+        if not entity_id.startswith("infrared."):
+            continue
+        if entity_id in infrared_candidates:
+            # Already validated above.
+            continue
+        if _is_ir_receiver(hass, entity_id):
+            return entity_id, _list_ir_receivers(hass)
+
+    # 3. Nothing works — surface the alternatives list so the error
+    #    message tells the user which entities HA does recognise.
+    return None, _list_ir_receivers(hass)
+
+
+def _is_ir_receiver(hass: Any, entity_id: str) -> bool:
+    """True when ``entity_id`` is registered as an HA infrared receiver.
+
+    Wraps ``infrared.async_get_receivers`` with the safe import +
+    try/except the WS handler can rely on without every call site
+    re-implementing the guard.
+    """
+    try:
+        from homeassistant.components import infrared
+    except ImportError:
+        return False
+    try:
+        return entity_id in infrared.async_get_receivers(hass)
+    except Exception:  # pragma: no cover - defensive against HA quirks
+        return False
+
+
+def _list_ir_receivers(hass: Any) -> list[str]:
+    """Every entity HA currently recognises as an infrared receiver.
+
+    Returns ``[]`` (not raises) when the platform is unavailable so
+    the caller can build a "no receivers found" message without an
+    extra guard.
+    """
+    try:
+        from homeassistant.components import infrared
+    except ImportError:
+        return []
+    try:
+        return list(infrared.async_get_receivers(hass))
+    except Exception:  # pragma: no cover - defensive against HA quirks
+        return []
 
 
 def _list_entities_for_domains(

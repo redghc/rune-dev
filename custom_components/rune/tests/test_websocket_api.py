@@ -42,6 +42,10 @@ class FakeHass:
         states: list[tuple[str, str] | tuple[str, str, str]] | None = None,
     ) -> None:
         self._states = states or []
+        # ``hass.data`` is read by several WS-layer helpers — provide
+        # a real dict so tests can stash per-fixture data (e.g. the
+        # ``infrared_receivers`` set the IR probe reads).
+        self.data: dict[str, object] = {}
 
         class _States:
             def __init__(self, outer: FakeHass) -> None:
@@ -822,13 +826,63 @@ def _make_fake_websocket_api(monkeypatch: pytest.MonkeyPatch) -> Any:
     return mod
 
 
+@pytest.fixture
+def patched_ir_probes(monkeypatch: pytest.MonkeyPatch):
+    """Stub ``_is_ir_receiver`` / ``_list_ir_receivers`` so the WS
+    handler's probe runs without HA installed.
+
+    The fake reads from ``hass.data["infrared_receivers"]`` (set of
+    entity IDs) — the same shape the production probe uses, so the
+    tests mirror the contract faithfully.
+    """
+
+    def _is_ir(hass: Any, entity_id: str) -> bool:
+        receivers = getattr(hass, "data", {}).get("infrared_receivers", set())
+        return entity_id in receivers
+
+    def _list(hass: Any) -> list[str]:
+        return sorted(getattr(hass, "data", {}).get("infrared_receivers", set()))
+
+    from custom_components.rune import websocket_api as ws_api
+
+    monkeypatch.setattr(ws_api, "_is_ir_receiver", _is_ir)
+    monkeypatch.setattr(ws_api, "_list_ir_receivers", _list)
+
+
 class TestPickIrReceiver:
     """``_pick_ir_receiver`` is the gate that decides which entity the
     WS learn handler will subscribe to. The choices feed into the
     orchestrator and the SPA's user-facing error messages, so the
-    ordering and fallback rules need to be locked in."""
+    ordering and fallback rules need to be locked in.
 
-    def test_prefers_configured_infrared_entity(self) -> None:
+    The function now also returns ``alternatives`` — the list of
+    entities HA does recognise as receivers — so the WS handler can
+    point the user at real options when their configured slot is
+    wrong. Tests assert both halves of the tuple."""
+
+    def test_prefers_configured_infrared_entity(
+        self, patched_ir_probes: None
+    ) -> None:
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        # ``infrared.bedroom`` is registered with HA's infrared
+        # component; ``remote.broadlink`` is just a state object.
+        hass = FakeHass(
+            states=[
+                ("infrared.bedroom", "idle"),
+                ("remote.broadlink", "idle"),
+            ]
+        )
+        hass.data["infrared_receivers"] = {"infrared.bedroom"}
+        chosen, alternatives = _pick_ir_receiver(
+            hass, ["remote.broadlink", "infrared.bedroom"]
+        )
+        assert chosen == "infrared.bedroom"
+        assert "infrared.bedroom" in alternatives
+
+    def test_falls_back_to_infrared_from_discovery(
+        self, patched_ir_probes: None
+    ) -> None:
         from custom_components.rune.websocket_api import _pick_ir_receiver
 
         hass = FakeHass(
@@ -837,33 +891,81 @@ class TestPickIrReceiver:
                 ("remote.broadlink", "idle"),
             ]
         )
-        # ``device.receiver_entity_ids`` order is preserved — the
-        # user's explicit pick wins over the HA discovery list.
-        assert (
-            _pick_ir_receiver(hass, ["remote.broadlink", "infrared.bedroom"])
-            == "infrared.bedroom"
-        )
-
-    def test_falls_back_to_infrared_from_discovery(self) -> None:
-        from custom_components.rune.websocket_api import _pick_ir_receiver
-
-        hass = FakeHass(
-            states=[
-                ("infrared.bedroom", "idle"),
-                ("remote.broadlink", "idle"),
-            ]
-        )
+        hass.data["infrared_receivers"] = {"infrared.bedroom"}
         # Empty ``configured_receivers`` → fall back to HA discovery.
-        assert _pick_ir_receiver(hass, []) == "infrared.bedroom"
+        chosen, alternatives = _pick_ir_receiver(hass, [])
+        assert chosen == "infrared.bedroom"
+        assert "infrared.bedroom" in alternatives
 
-    def test_returns_none_when_only_rf_receivers(self) -> None:
+    def test_returns_none_when_only_rf_receivers(
+        self, patched_ir_probes: None
+    ) -> None:
         from custom_components.rune.websocket_api import _pick_ir_receiver
 
         hass = FakeHass(states=[("remote.broadlink_rf_rx", "idle")])
-        assert _pick_ir_receiver(hass, ["remote.broadlink_rf_rx"]) is None
+        hass.data["infrared_receivers"] = set()
+        chosen, alternatives = _pick_ir_receiver(
+            hass, ["remote.broadlink_rf_rx"]
+        )
+        assert chosen is None
+        assert alternatives == []
 
-    def test_returns_none_when_no_receivers_anywhere(self) -> None:
+    def test_returns_none_when_no_receivers_anywhere(
+        self, patched_ir_probes: None
+    ) -> None:
         from custom_components.rune.websocket_api import _pick_ir_receiver
 
         hass = FakeHass(states=[("light.kitchen", "on")])
-        assert _pick_ir_receiver(hass, []) is None
+        hass.data["infrared_receivers"] = set()
+        chosen, alternatives = _pick_ir_receiver(hass, [])
+        assert chosen is None
+        assert alternatives == []
+
+    def test_skips_unregistered_infrared_entity(
+        self, patched_ir_probes: None
+    ) -> None:
+        """Entity has the ``infrared.`` domain but HA doesn't list it
+        as a registered receiver (e.g. emitter misconfigured in the
+        slot). ``_pick_ir_receiver`` must skip it and surface the
+        alternatives list so the panel can guide the user."""
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        hass = FakeHass(
+            states=[
+                ("infrared.remoto_emisor_ir", "idle"),  # the wrong one
+                ("infrared.bedroom_rx", "idle"),  # the right one
+            ]
+        )
+        hass.data["infrared_receivers"] = {"infrared.bedroom_rx"}
+        chosen, alternatives = _pick_ir_receiver(
+            hass, ["infrared.remoto_emisor_ir"]
+        )
+        # We refused the misconfigured entity but found the real one
+        # via HA discovery.
+        assert chosen == "infrared.bedroom_rx"
+        assert "infrared.bedroom_rx" in alternatives
+        assert "infrared.remoto_emisor_ir" not in alternatives
+
+    def test_reports_alternatives_even_when_nothing_picked(
+        self, patched_ir_probes: None
+    ) -> None:
+        """When no configured or discoverable entity is a real
+        receiver, the function returns ``(None, alternatives)`` so
+        the WS handler can list the entities HA does recognise in
+        the error message — helping the user fix their slot without
+        hunting through the entity registry."""
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        # Two entities in the infrared domain but HA reports zero
+        # real receivers — the only path the function can take is
+        # the "nothing works" branch.
+        hass = FakeHass(
+            states=[
+                ("infrared.wrong_one", "idle"),
+                ("infrared.also_wrong", "idle"),
+            ]
+        )
+        hass.data["infrared_receivers"] = set()
+        chosen, alternatives = _pick_ir_receiver(hass, ["infrared.wrong_one"])
+        assert chosen is None
+        assert alternatives == []
