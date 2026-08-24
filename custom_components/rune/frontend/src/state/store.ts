@@ -42,6 +42,8 @@ export interface LearnDialogState {
   commandLabel: string;
   transport: LearnTransport;
   receiverEntityId: string;
+  directCapture: boolean;
+  frequencyHz: number;
   status: LearnStatus;
   captured: LearnResult["captured"] | null;
   rawTimings: number[] | null;
@@ -68,6 +70,8 @@ export const store = {
     commandLabel: "",
     transport: "ir" as LearnTransport,
     receiverEntityId: "",
+    directCapture: false,
+    frequencyHz: 433920000,
     status: { kind: "idle" } as LearnStatus,
     captured: null,
     rawTimings: null,
@@ -115,6 +119,8 @@ export const store = {
       commandLabel: commandLabel.trim(),
       transport,
       receiverEntityId,
+      directCapture: false,
+      frequencyHz: 433920000,
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,
@@ -132,6 +138,8 @@ export const store = {
       commandLabel: "",
       transport: "ir",
       receiverEntityId: "",
+      directCapture: false,
+      frequencyHz: 433920000,
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,

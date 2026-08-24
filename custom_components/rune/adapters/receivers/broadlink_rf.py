@@ -1,19 +1,33 @@
 """Broadlink RF receiver — the two-phase sweep + capture learn flow.
 
-RF capture has no native subscription model (unlike IR's ``async_subscribe_receiver``).
-The Broadlink RM Pro / RM4 Pro exposes two-step learning:
+RF capture has no native subscription model (unlike IR's
+``async_subscribe_receiver``). The Broadlink RM Pro / RM4 Pro
+exposes two-step learning:
 
-1. **Sweep**: ``device.api.sweep_frequency`` polls the receiver while
-   the user holds a button, until ``device.api.check_frequency`` reports
-   a carrier was found.
+1. **Sweep**: ``device.api.sweep_frequency`` polls the receiver
+   while the user holds a button, until ``device.api.check_frequency``
+   reports a carrier was found.
 2. **Capture**: ``device.api.find_rf_packet`` locks onto the carrier
    and ``device.api.check_data`` returns the raw packet bytes.
 
-This adapter wraps both phases behind the :class:`ReceiverPort` API.
-Because RF capture is on-demand (no continuous stream), the adapter
-implements ``start_listening`` as an immediate no-op that returns a
-stop callable, and exposes :meth:`capture_now` for the capture orchestrator
-to invoke per-button.
+A third mode — **direct capture** — skips the sweep entirely and
+listens at a preset frequency (433.92 / 315 / 868 / 915 MHz). It
+exists for remotes that send very short bursts the sweep can't lock
+onto (Mercator FRM97 and similar). The user picks the frequency
+explicitly in the SPA's Learn dialog.
+
+This adapter wraps all three flows behind the :class:`ReceiverPort`
+API. Because RF capture is on-demand (no continuous stream), the
+adapter implements ``start_listening`` as an immediate no-op that
+returns a stop callable, and exposes :meth:`capture_with_sweep` /
+:meth:`capture_direct` for the capture orchestrator to invoke
+per-button.
+
+The ``hass`` arg is accepted for interface parity but unused; the
+adapter talks to the Broadlink integration through a pre-resolved
+``device`` object whose ``async_request(api.method)`` coroutine
+wrapper handles the integration's locking. Calling the synchronous
+API directly can race with concurrent sends.
 """
 from __future__ import annotations
 
@@ -57,32 +71,89 @@ _LOGGER = logging.getLogger(__name__)
 class BroadlinkRFReceiver(ReceiverPort):
     """Drives the Broadlink two-phase RF learn flow.
 
-    The ``hass`` arg is unused by this adapter (Broadlink operates
-    directly on the device API); it's accepted for interface parity
-    with the other adapters.
+    Parameters
+    ----------
+    hass:
+        Home Assistant instance (unused; kept for interface parity
+        with the IR receiver adapters).
+    receiver_entity_id:
+        The ``remote.broadlink_*`` entity the capture is bound to.
+    device:
+        The full ``BroadlinkDevice`` wrapper from the Broadlink
+        integration. We call ``device.async_request(api.method)`` —
+        the integration's coroutine wrapper handles locking and
+        async dispatch around the synchronous Broadlink SDK calls.
+        Passing only the bare ``device.api`` would skip that safety
+        net and is not supported here.
+
+        Pass ``None`` only when you want the provider to surface a
+        clear "no Broadlink device bound" error rather than crash.
     """
 
     transport = SignalTransport.RF
     source_kind = ReceiverSourceKind.BROADLINK_RF
 
-    def __init__(self, hass: Any, receiver_entity_id: str, device_api: Any) -> None:
+    def __init__(
+        self,
+        hass: Any,
+        receiver_entity_id: str,
+        device: Any,
+    ) -> None:
         self._hass = hass
         self.receiver_entity_id = receiver_entity_id
-        self._device_api = device_api
+        self._device = device
 
     @property
     def is_available(self) -> bool:
-        # The device is reachable if the underlying API responds.
-        # No cheap way to ping from here; the sniffer's health loop
-        # uses the same check.
-        return self._device_api is not None
+        """True when a live Broadlink device is bound.
+
+        Cheap, in-memory check: we don't ping the device; the actual
+        sweep / capture surfaces a hardware error if the device went
+        offline between this probe and the call.
+        """
+        return self._device is not None and hasattr(
+            getattr(self._device, "api", None), "sweep_frequency"
+        )
+
+    @property
+    def _api(self) -> Any:
+        """The Broadlink API object on the bound device.
+
+        Raises :class:`CaptureProviderUnavailableError` if no device
+        is bound — keeps the ``self._api.foo()`` call sites readable
+        without scattering ``if self._device is None`` checks.
+        """
+        if self._device is None or not hasattr(self._device, "api"):
+            raise CaptureProviderUnavailableError(
+                f"No Broadlink device bound for {self.receiver_entity_id!r}. "
+                "The WS handler couldn't resolve the device — make sure "
+                "the entity belongs to a Broadlink RF-capable unit."
+            )
+        return self._device.api
+
+    async def _request(self, method: Any, *args: Any) -> Any:
+        """Invoke a Broadlink API method through ``async_request``.
+
+        Every Broadlink SDK call is synchronous; the integration's
+        ``async_request`` coroutine wrapper schedules them on its
+        own loop and serialises concurrent sends. Calling
+        ``self._api.method()`` directly can race with concurrent
+        sends or block the HA event loop.
+        """
+        if not hasattr(self._device, "async_request"):
+            raise CaptureProviderUnavailableError(
+                f"Broadlink device for {self.receiver_entity_id!r} is missing "
+                "the async_request wrapper — older Broadlink integration?"
+            )
+        return await self._device.async_request(method, *args)
 
     async def start_listening(self, on_capture: CaptureCallback) -> callable:
         """RF capture is on-demand; no subscription to install.
 
-        The capture orchestrator invokes :meth:`capture_now` directly
-        when the user triggers a learn session. We still return an
-        unsubscribe callable for symmetry with continuous receivers.
+        The capture orchestrator invokes :meth:`capture_with_sweep` /
+        :meth:`capture_direct` directly when the user triggers a
+        learn session. We still return an unsubscribe callable for
+        symmetry with continuous receivers.
         """
 
         def _stop() -> None:
@@ -106,23 +177,24 @@ class BroadlinkRFReceiver(ReceiverPort):
         :class:`CaptureTimeoutError` when nothing is found within
         ``LEARNING_TIMEOUT_S``.
         """
-        if self._device_api is None or not hasattr(self._device_api, "sweep_frequency"):
+        api = self._api
+        if not hasattr(api, "sweep_frequency"):
             raise CaptureProviderUnavailableError(
                 f"Device API for {self.receiver_entity_id} does not support sweep"
             )
         try:
-            await self._device_api.sweep_frequency()
+            await self._request(api.sweep_frequency)
             _LOGGER.warning(
                 "rune: Broadlink RF sweep started - PRESS AND HOLD the remote button now"
             )
             deadline = time.monotonic() + LEARNING_TIMEOUT_S
             while time.monotonic() < deadline:
                 await asyncio.sleep(1)
-                is_found, frequency = await self._device_api.check_frequency()
+                is_found, frequency = await self._request(api.check_frequency)
                 if is_found:
                     _LOGGER.warning("rune: RF carrier detected at %.3f MHz", frequency)
                     return float(frequency)
-            await self._device_api.cancel_sweep_frequency()
+            await self._request(api.cancel_sweep_frequency)
             raise CaptureTimeoutError(
                 f"No RF frequency detected within {LEARNING_TIMEOUT_S:.0f}s"
             )
@@ -132,18 +204,20 @@ class BroadlinkRFReceiver(ReceiverPort):
             raise CaptureError(f"Broadlink RF sweep failed: {err}") from err
 
     async def capture_packet(self, frequency_mhz: float | None = None) -> dict[str, Any]:
-        """Phase 2: capture an RF packet at the locked (or pre-set) frequency.
+        """Phase 2 (or direct): capture an RF packet at the locked /
+        pre-set frequency.
 
         Returns ``{"b64", "timings", "repeat", "length"}``. Raises
         :class:`CaptureTimeoutError` on timeout, :class:`CaptureError`
         on hardware failure.
         """
-        if self._device_api is None or not hasattr(self._device_api, "find_rf_packet"):
+        api = self._api
+        if not hasattr(api, "find_rf_packet"):
             raise CaptureProviderUnavailableError(
                 f"Device API for {self.receiver_entity_id} does not support packet capture"
             )
         try:
-            await self._device_api.find_rf_packet(frequency_mhz)
+            await self._request(api.find_rf_packet, frequency_mhz)
             if frequency_mhz:
                 _LOGGER.warning(
                     "rune: listening at %.3f MHz - PRESS the button once", frequency_mhz
@@ -156,7 +230,7 @@ class BroadlinkRFReceiver(ReceiverPort):
             while time.monotonic() < deadline:
                 await asyncio.sleep(1)
                 try:
-                    code = await self._device_api.check_data()
+                    code = await self._request(api.check_data)
                 except (ReadError, StorageError):
                     continue  # nothing captured yet
                 from base64 import b64encode
@@ -192,6 +266,33 @@ class BroadlinkRFReceiver(ReceiverPort):
         await asyncio.sleep(1)
         packet = await self.capture_packet(frequency_mhz)
         frequency_hz = int(frequency_mhz * 1_000_000)
+        return CapturedPulse(
+            receiver_entity_id=self.receiver_entity_id,
+            signal_category=SignalCategory(
+                transport=SignalTransport.RF,
+                encoding=SignalEncoding.RAW_TIMINGS,
+                carrier_frequency_hz=frequency_hz,
+            ),
+            raw_timings=tuple(packet["timings"]),
+            protocol_label=None,
+            code_hex=None,
+            b64_packet=packet["b64"],
+        )
+
+    async def capture_direct(self, frequency_hz: int) -> CapturedPulse:
+        """Direct capture: listen at ``frequency_hz`` with no sweep.
+
+        For remotes that send very short bursts the Broadlink
+        frequency sweep can't lock onto (Mercator FRM97 and similar).
+        The user picks the carrier explicitly in the SPA's Learn
+        dialog; we listen at that frequency and capture the next
+        packet the receiver sees.
+
+        Raises :class:`CaptureTimeoutError` when nothing arrives
+        within ``LEARNING_TIMEOUT_S``.
+        """
+        frequency_mhz = frequency_hz / 1_000_000.0
+        packet = await self.capture_packet(frequency_mhz)
         return CapturedPulse(
             receiver_entity_id=self.receiver_entity_id,
             signal_category=SignalCategory(

@@ -647,6 +647,52 @@
   <source>Pick a receiver…</source>
     <target>Elige un receptor…</target>
   </trans-unit>
+<trans-unit id="he89748bafb5f4e78">
+  <source>Point your remote at the Broadlink and press the button once. RUNE listens at the
+            chosen frequency for up to 15 seconds — no sweep, single press.</source>
+    <target>Apunta el mando al Broadlink y pulsa el botón una sola vez. RUNE escucha
+            en la frecuencia elegida durante un máximo de 15 segundos — sin barrido, una sola pulsación.</target>
+  </trans-unit>
+<trans-unit id="h0a30b6aa2888b228">
+  <source>Press AND HOLD the remote button while RUNE sweeps for the carrier. When the
+              carrier locks, release and press the same button again to capture the packet.</source>
+    <target>Mantén PULSADO el botón del mando mientras RUNE busca la portadora. Cuando
+              se bloquee, suelta y vuelve a pulsar el mismo botón para capturar el paquete.</target>
+  </trans-unit>
+<trans-unit id="s35d2458c27c8be17">
+  <source>433.92 MHz (default)</source>
+    <target>433.92 MHz (por defecto)</target>
+  </trans-unit>
+<trans-unit id="s4e727f6b2ee501b1">
+  <source>315 MHz</source>
+    <target>315 MHz</target>
+  </trans-unit>
+<trans-unit id="s772f4f725cd1dfe4">
+  <source>868 MHz</source>
+    <target>868 MHz</target>
+  </trans-unit>
+<trans-unit id="s7514a276845d5467">
+  <source>915 MHz</source>
+    <target>915 MHz</target>
+  </trans-unit>
+<trans-unit id="s54404edbbecfaca2">
+  <source>Capture without the sweep</source>
+    <target>Capturar sin barrido</target>
+  </trans-unit>
+<trans-unit id="hb72fe7922daa58c8">
+  <source>Skip the carrier sweep and listen at a fixed frequency. Use this when the sweep
+                can't lock onto your remote (e.g. Mercator FRM97 short bursts).</source>
+    <target>Sáltate el barrido de portadora y escucha en una frecuencia fija. Úsalo cuando el
+                barrido no se enganche a tu mando (p. ej. ráfagas cortas del Mercator FRM97).</target>
+  </trans-unit>
+<trans-unit id="s04c8b01255c7e7d1">
+  <source>Carrier frequency</source>
+    <target>Frecuencia portadora</target>
+  </trans-unit>
+<trans-unit id="s910b2db206ff26ee">
+  <source>Frequency the Broadlink listens on for this capture</source>
+    <target>Frecuencia en la que escucha el Broadlink para esta captura</target>
+  </trans-unit>
 </body>
 </file>
 </xliff>

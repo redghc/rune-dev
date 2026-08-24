@@ -133,6 +133,40 @@ export class RuneLearnDialog extends LitElement {
         letter-spacing: 0.05em;
         font-weight: var(--rune-fw-semibold);
       }
+      .rf-options {
+        display: flex;
+        flex-direction: column;
+        gap: var(--rune-space-3);
+        padding: var(--rune-space-3) var(--rune-space-4);
+        background: var(--rune-surface-alt);
+        border-radius: var(--rune-radius-sm);
+        border: 1px solid var(--rune-border);
+      }
+      .rf-toggle {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--rune-space-3);
+        cursor: pointer;
+        font: inherit;
+        color: var(--rune-text);
+      }
+      .rf-toggle input[type="checkbox"] {
+        margin-top: 4px;
+        cursor: pointer;
+      }
+      .rf-toggle strong {
+        display: block;
+        font-size: var(--rune-fs-sm);
+        font-weight: var(--rune-fw-semibold);
+        color: var(--rune-text-strong);
+      }
+      .rf-hint {
+        display: block;
+        margin-top: 2px;
+        font-size: var(--rune-fs-xs);
+        color: var(--rune-text-muted);
+        line-height: var(--rune-lh-normal);
+      }
       .err {
         color: var(--rune-danger-text);
         background: var(--rune-danger-soft);
@@ -246,7 +280,8 @@ export class RuneLearnDialog extends LitElement {
   };
 
   private async _start(): Promise<void> {
-    const { deviceId, commandKey, transport, receiverEntityId } = store.learnDialog;
+    const { deviceId, commandKey, transport, receiverEntityId, directCapture, frequencyHz } =
+      store.learnDialog;
     if (!deviceId || !commandKey || !receiverEntityId) return;
     store.updateLearn({ status: { kind: "capturing" }, step: "capture" });
     this._busy = true;
@@ -256,6 +291,11 @@ export class RuneLearnDialog extends LitElement {
         command_key: commandKey,
         transport,
         receiver_entity_id: receiverEntityId,
+        // Direct capture is RF-only; the backend ignores the flag
+        // when transport=ir but we still send it so the wire shape
+        // is uniform.
+        direct_capture: directCapture,
+        frequency_hz: directCapture ? frequencyHz : undefined,
         timeout_s: 15,
       });
       if (result?.captured) {
@@ -441,16 +481,26 @@ export class RuneLearnDialog extends LitElement {
     if (this._busy) dotClass = "live";
     else if (ld.status.kind === "captured") dotClass = "ok";
     else if (ld.status.kind === "failed" || ld.status.kind === "no_signal") dotClass = "err";
+    const helpText =
+      ld.transport === "rf" && ld.directCapture
+        ? msg(
+            html`Point your remote at the Broadlink and press the button once. RUNE listens at the
+            chosen frequency for up to 15 seconds — no sweep, single press.`,
+          )
+        : ld.transport === "rf"
+          ? msg(
+              html`Press AND HOLD the remote button while RUNE sweeps for the carrier. When the
+              carrier locks, release and press the same button again to capture the packet.`,
+            )
+          : msg(
+              html`Point your remote at the receiver and press the button you want to capture. RUNE
+              listens for up to 15 seconds.`,
+            );
     return html`
       <div class="step-body">
         <div class="help">
           <i class="ti ti-info-circle"></i>
-          <span>
-            ${msg(
-              html`Point your remote at the receiver and press the button you want to capture. RUNE
-              listens for up to 15 seconds.`,
-            )}
-          </span>
+          <span>${helpText}</span>
         </div>
         <div class="section-label">${msg(str`Capturing for`)}</div>
         <div class="target">
@@ -464,6 +514,55 @@ export class RuneLearnDialog extends LitElement {
           <span class="status-dot ${dotClass}"></span>
           <span>${this._statusRender(ld)}</span>
         </div>
+        ${ld.transport === "rf" ? this._renderRfOptions() : null}
+      </div>
+    `;
+  }
+
+  private _renderRfOptions(): TemplateResult {
+    const ld = store.learnDialog;
+    const freqOptions = [
+      { value: "433920000", label: () => msg(str`433.92 MHz (default)`) },
+      { value: "315000000", label: () => msg(str`315 MHz`) },
+      { value: "868000000", label: () => msg(str`868 MHz`) },
+      { value: "915000000", label: () => msg(str`915 MHz`) },
+    ];
+    return html`
+      <div class="rf-options">
+        <label class="rf-toggle">
+          <input
+            type="checkbox"
+            .checked=${ld.directCapture}
+            @change=${(ev: Event) =>
+              store.updateLearn({
+                directCapture: (ev.target as HTMLInputElement).checked,
+              })}
+          />
+          <span>
+            <strong>${msg(str`Capture without the sweep`)}</strong>
+            <span class="rf-hint">
+              ${msg(
+                html`Skip the carrier sweep and listen at a fixed frequency. Use this when the sweep
+                can't lock onto your remote (e.g. Mercator FRM97 short bursts).`,
+              )}
+            </span>
+          </span>
+        </label>
+        ${
+          ld.directCapture
+            ? html`<rune-select
+                label=${msg(str`Carrier frequency`)}
+                icon="broadcast"
+                .helper=${msg(str`Frequency the Broadlink listens on for this capture`)}
+                .options=${freqOptions}
+                .value=${String(ld.frequencyHz)}
+                @rune-change=${(ev: CustomEvent<{ value: string }>) =>
+                  store.updateLearn({
+                    frequencyHz: Number.parseInt(ev.detail.value, 10),
+                  })}
+              ></rune-select>`
+            : null
+        }
       </div>
     `;
   }

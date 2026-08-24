@@ -182,6 +182,8 @@ _register_schema(
             vol.Required("command_key"): str,
             vol.Required("transport"): vol.In(["ir", "rf"]),
             vol.Required("receiver_entity_id"): str,
+            vol.Optional("direct_capture"): bool,
+            vol.Optional("frequency_hz"): vol.Coerce(int),
             vol.Optional("timeout_s"): vol.Coerce(float),
         },
         extra=vol.ALLOW_EXTRA,
@@ -613,6 +615,11 @@ async def _ws_command_learn(
 
     Optional:
 
+    - ``direct_capture`` (RF only) — when ``true``, skip the
+      frequency sweep and listen at ``frequency_hz`` directly. Use
+      for remotes the sweep can't lock onto (Mercator FRM97 etc.).
+    - ``frequency_hz`` (RF only, ``direct_capture=true``) — carrier
+      frequency in Hz (e.g. ``433920000`` for 433.92 MHz).
     - ``timeout_s`` — capture window, default 15s.
     """
 
@@ -703,15 +710,30 @@ async def _ws_command_learn(
             BroadlinkRFCaptureProvider,
         )
 
-        # ``device_api`` resolution isn't plumbed through the WS
-        # context yet — the provider will surface a clear "not
-        # configured" error if it's None.
-        provider = BroadlinkRFCaptureProvider(ctx.hass, receiver_entity_id)
+        # RF capture has two modes: full sweep + capture (default),
+        # and direct capture at a user-picked frequency. The latter
+        # is the workaround for remotes whose bursts the sweep
+        # can't lock onto (Mercator FRM97 and similar).
+        direct = bool(msg.get("direct_capture", False))
+        frequency_hz = msg.get("frequency_hz")
+        if direct and frequency_hz is not None:
+            try:
+                frequency_hz = int(frequency_hz)
+            except (TypeError, ValueError) as err:
+                raise ActionError(
+                    f"frequency_hz must be an integer (got {frequency_hz!r})"
+                ) from err
+        provider = BroadlinkRFCaptureProvider(
+            ctx.hass,
+            receiver_entity_id,
+            direct=direct,
+            frequency_hz=frequency_hz,
+        )
         if not provider.is_available:
             raise CaptureProviderUnavailableError(
                 f"RF receiver {receiver_entity_id!r} is not available. "
-                "The Broadlink device needs a pre-resolved device API "
-                "handle; check the RUNE integration logs for details."
+                "Make sure the entity belongs to an RF-capable Broadlink "
+                "(RM Pro / RM4 Pro) set up in the Broadlink integration."
             )
 
     timeout_s = float(msg.get("timeout_s", 15.0))

@@ -9,26 +9,33 @@ two on-demand phases (:meth:`BroadlinkRFReceiver.sweep_frequency`
 and :meth:`BroadlinkRFReceiver.capture_packet`) that the SPA's
 "Learn" UX drives in sequence.
 
-This adapter bridges that gap by folding the entire sweep + capture
-flow into a single :meth:`async_wait_for_signal` invocation. The
-user gets to see a single "capturing…" state while the backend runs
+This adapter bridges that gap by folding the sweep + capture flow
+into a single :meth:`async_wait_for_signal` invocation. The user
+gets to see a single "capturing…" state while the backend runs
 through the two phases; the orchestrator + WS handler stay
 agnostic.
 
+A second mode — **direct capture** — listens at a preset frequency
+without sweeping. Used for remotes that send very short bursts
+the sweep can't lock onto (Mercator FRM97 and similar). The
+:attr:`direct` flag and :attr:`frequency_hz` value are forwarded
+straight to :meth:`BroadlinkRFReceiver.capture_direct`.
+
 Unlike :class:`NativeIRCaptureProvider`, this provider needs a live
-``device_api`` handle to the Broadlink device. ``hass`` alone can't
-derive one from an ``entity_id`` — the integration's setup phase
-binds each ``remote.broadlink_*`` entity to its concrete API
-object. The WS handler currently passes ``device_api=None``; until
-the integration wires that plumbing up, RF capture surfaces a
-clear :class:`CaptureProviderUnavailableError` explaining what's
-missing.
+``BroadlinkDevice`` handle to the actual hardware. ``hass`` alone
+can't derive one from an ``entity_id`` — the Broadlink integration's
+setup phase binds each ``remote.broadlink_*`` entity to its concrete
+device object. We look it up at provider-construction time via
+:func:`adapters.broadlink_devices.find_rf_device_for_entity`.
 """
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any
 
+from custom_components.rune.adapters.broadlink_devices import (
+    find_rf_device_for_entity,
+)
 from custom_components.rune.adapters.capture.providers import CaptureProvider
 from custom_components.rune.domain.enums import SignalTransport
 from custom_components.rune.domain.errors import (
@@ -50,15 +57,17 @@ class BroadlinkRFCaptureProvider(CaptureProvider):
     Parameters
     ----------
     hass:
-        Home Assistant instance. Accepted for interface parity with the
-        IR provider; Broadlink operates directly on the device API.
+        Home Assistant instance. Used to look up the BroadlinkDevice
+        that owns ``receiver_entity_id``.
     receiver_entity_id:
         The ``remote.broadlink_*`` entity to capture through.
-    device_api:
-        The live ``broadlink`` API object backing ``receiver_entity_id``.
-        **Required** — without it the provider can't drive the
-        sweep + capture flow. Pass ``None`` only when the caller wants
-        a clear "not configured" error rather than a generic crash.
+    direct:
+        When ``True``, skip the sweep phase and listen at
+        ``frequency_hz`` directly. Default ``False`` (full sweep
+        + capture).
+    frequency_hz:
+        Carrier frequency for direct capture, in Hz. Ignored unless
+        ``direct=True``. Defaults to 433.92 MHz when not provided.
 
     The class is transport-fixed to RF: an RF receiver is identified
     by its ``remote.*`` domain and the Broadlink-only sweep+capture
@@ -74,74 +83,86 @@ class BroadlinkRFCaptureProvider(CaptureProvider):
         self,
         hass: Any,
         receiver_entity_id: str,
-        device_api: Any = None,
+        *,
+        direct: bool = False,
+        frequency_hz: int | None = None,
     ) -> None:
         self._hass = hass
         self.receiver_entity_id = receiver_entity_id
-        self._device_api = device_api
+        self._direct = direct
+        self._frequency_hz = frequency_hz
+        # ``_device`` is resolved lazily in :meth:`is_available` /
+        # :meth:`async_start_capture` so the cost of walking the
+        # Broadlink registry is only paid when the user actually
+        # triggers a learn session.
+        self._device: Any = None
         self._receiver: "BroadlinkRFReceiver | None" = None
         self._started = False
         self._result: CapturedPulse | None = None
 
+    def _resolve_device(self) -> Any:
+        if self._device is None:
+            self._device = find_rf_device_for_entity(
+                self._hass, self.receiver_entity_id
+            )
+        return self._device
+
     @property
     def is_available(self) -> bool:
-        """True when the device API is bound and the entity is loaded.
+        """True when a live Broadlink device is bound to this entity.
 
-        ``is_available`` for a Broadlink receiver isn't a clean state
-        lookup like HA's IR registry — we accept "the API exists" as
-        a proxy. The capture itself will surface a hardware error if
-        the device went offline between this check and the actual
-        sweep.
+        Resolves the device lazily so the sniffer engine's per-tick
+        probe stays cheap. The first miss surfaces a clear error
+        with actionable guidance for the user.
         """
-        if not self.receiver_entity_id or self._device_api is None:
+        device = self._resolve_device()
+        if device is None:
             return False
-        try:
-            from custom_components.rune.adapters.receivers.broadlink_rf import (
-                BroadlinkRFReceiver,
-            )
-        except ImportError:  # pragma: no cover
-            return False
+        from custom_components.rune.adapters.receivers.broadlink_rf import (
+            BroadlinkRFReceiver,
+        )
+
         self._receiver = BroadlinkRFReceiver(
-            self._hass, self.receiver_entity_id, self._device_api
+            self._hass, self.receiver_entity_id, device
         )
         return self._receiver.is_available
 
     async def async_start_capture(self, timeout_s: float) -> None:
-        if not self.is_available:
+        device = self._resolve_device()
+        if device is None:
             raise CaptureProviderUnavailableError(
-                f"RF receiver {self.receiver_entity_id!r} is not available. "
-                "Confirm the Broadlink device is online and that the "
-                "RUNE integration has a live device_api handle for it."
+                f"No Broadlink device found for {self.receiver_entity_id!r}. "
+                "Make sure the entity belongs to an RF-capable Broadlink "
+                "device (RM Pro / RM4 Pro) set up in the Broadlink "
+                "integration."
             )
-        # No subscription to install; ``async_wait_for_signal`` does
-        # the sweep + capture inline.
+        # No subscription to install — ``async_wait_for_signal``
+        # runs sweep + capture inline.
         self._started = True
 
     async def async_wait_for_signal(self, timeout_s: float) -> CapturedPulse | None:
-        """Run sweep + capture in one go; returns the captured pulse.
+        """Run sweep + capture (or direct capture) in one go.
 
-        Caches the result so a re-entry from the orchestrator's loop
-        doesn't trigger a second sweep (which would surprise the
-        user with two more "press and hold" prompts).
+        Caches the result so a re-entry from the orchestrator's
+        polling loop doesn't trigger a second sweep — which would
+        surprise the user with two more "press and hold" prompts.
         """
         if not self._started:
             raise RuntimeError(
                 "BroadlinkRFCaptureProvider.async_wait_for_signal called before "
                 "async_start_capture"
             )
-        if self._receiver is None:  # pragma: no cover - guarded by start
-            raise CaptureProviderUnavailableError(
-                "BroadlinkRFReceiver was not initialised"
-            )
+        if self._receiver is None:
+            self._receiver = self._build_receiver()
         if self._result is not None:
             return self._result
 
-        # We swallow the per-phase errors from the underlying receiver
-        # — they already carry helpful messages. The orchestrator
-        # maps them onto capture-state transitions; we just return
-        # ``None`` to mean "nothing captured within the timeout".
         try:
-            self._result = await self._receiver.capture_with_sweep()
+            if self._direct:
+                assert self._frequency_hz is not None
+                self._result = await self._receiver.capture_direct(self._frequency_hz)
+            else:
+                self._result = await self._receiver.capture_with_sweep()
         except Exception as err:
             _LOGGER.warning(
                 "Broadlink RF capture failed for %s: %s",
@@ -154,6 +175,20 @@ class BroadlinkRFCaptureProvider(CaptureProvider):
     async def async_stop_capture(self) -> None:
         self._started = False
         # Nothing to unsubscribe — RF capture is on-demand.
+
+    def _build_receiver(self) -> "BroadlinkRFReceiver":
+        from custom_components.rune.adapters.receivers.broadlink_rf import (
+            BroadlinkRFReceiver,
+        )
+
+        device = self._resolve_device()
+        if device is None:
+            # ``async_start_capture`` already raised; this is just
+            # defence-in-depth for any caller that skips the probe.
+            raise CaptureProviderUnavailableError(
+                f"No Broadlink device bound for {self.receiver_entity_id!r}"
+            )
+        return BroadlinkRFReceiver(self._hass, self.receiver_entity_id, device)
 
 
 __all__ = ["BroadlinkRFCaptureProvider"]

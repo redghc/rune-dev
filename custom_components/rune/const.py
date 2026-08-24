@@ -153,6 +153,24 @@ TERMINATOR_SPACE_US = 50_000
 # Broadlink RF tick resolution, microseconds per encoded pulse byte.
 BROADLINK_RF_TICK_US = 32.84
 
+# The Broadlink integration stores every discovered device under
+# ``hass.data[BROADLINK_DOMAIN]``. RUNE reaches into this store to
+# resolve an ``entity_id`` → ``BroadlinkDevice`` mapping, so the RF
+# capture provider can drive the two-phase sweep + capture flow
+# via ``device.async_request(api.method)`` instead of poking the
+# synchronous ``device.api`` directly.
+BROADLINK_DOMAIN = "broadlink"
+
+# Common RF carrier frequencies the user can pick from in the Learn
+# dialog when ``direct_capture`` is enabled. Values are in Hz.
+RF_FREQUENCIES_HZ: tuple[int, ...] = (
+    433_920_000,  # 433.92 MHz — what every cheap 433 MHz remote uses
+    315_000_000,  # 315 MHz — US/Japan RF kits
+    868_000_000,  # 868 MHz — EU short-range
+    915_000_000,  # 915 MHz — US ISM band
+)
+DEFAULT_RF_FREQUENCY_HZ = 433_920_000
+
 # ---------------------------------------------------------------------------
 # Identity / fingerprinting
 # ---------------------------------------------------------------------------

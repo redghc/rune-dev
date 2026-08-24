@@ -9,15 +9,21 @@
     /* eslint-disable @typescript-eslint/no-explicit-any */
 
     export const templates = {
-      'h52fda6c9893cdc05': html`Elige un identificador único, el transporte de la señal y la entidad receptora que
+      'h0a30b6aa2888b228': html`Mantén PULSADO el botón del mando mientras RUNE busca la portadora. Cuando
+              se bloquee, suelta y vuelve a pulsar el mismo botón para capturar el paquete.`,
+'h52fda6c9893cdc05': html`Elige un identificador único, el transporte de la señal y la entidad receptora que
               capturará la señal. Pulsarás el botón del mando en el siguiente paso.`,
 'h7ca7e5a17ba26a94': html`Señales en vivo capturadas desde cada receptor que hayas configurado. El sniffer escucha
             automáticamente en cada entidad receptora en cuanto añades un dispositivo. Asigna
             una señal a un comando del dispositivo desde la pestaña <strong>Acciones</strong> o descarta el mando entero aquí.`,
 'hb3fb23481a5285e3': html`RUNE capturó la señal. Revisa los detalles y guarda; los tiempos se almacenan en el slot de comando de este dispositivo.`,
+'hb72fe7922daa58c8': html`Sáltate el barrido de portadora y escucha en una frecuencia fija. Úsalo cuando el
+                barrido no se enganche a tu mando (p. ej. ráfagas cortas del Mercator FRM97).`,
 'hc74c45668e7ba599': html`HA expondrá una entidad de tipo <strong>${0}</strong>`,
 'hcc8755c3cb9139b0': html`Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE escucha durante un máximo de 15 segundos.`,
 'hd8adfdda18c24d3f': html`Dispositivos IR / RF que RUNE controla en Home Assistant. Haz clic en <strong>+ Añadir dispositivo</strong> para crear uno o usa el flujo de configuración.`,
+'he89748bafb5f4e78': html`Apunta el mando al Broadlink y pulsa el botón una sola vez. RUNE escucha
+            en la frecuencia elegida durante un máximo de 15 segundos — sin barrido, una sola pulsación.`,
 's00f1132c0edd135d': str`RUNE`,
 's01171142e8244e76': str`${0} ${1} · ${2} ${3}`,
 's0133d8bd480004e0': str`mandos`,
@@ -26,6 +32,7 @@
 's040fd73de6a91e62': str`nivel de velocidad`,
 's042b45e9d5477a25': str`IR usa el receptor de infrarrojos; RF usa el barrido + captura de Broadlink`,
 's043243e73a40955e': str`Lo que ven los usuarios en la tarjeta del dispositivo`,
+'s04c8b01255c7e7d1': str`Frecuencia portadora`,
 's064a4f8afa514ca2': str`Aprendido "${0}"`,
 's06725aa6ca689120': str`Emisores disponibles`,
 's06b9bf22e6eb6d38': str`El campo "${0}" es obligatorio`,
@@ -52,6 +59,7 @@
 's2ceb11be2290bb1b': str`Cancelar`,
 's33f85f24c0f5f008': str`Guardar`,
 's343d79bca542425b': str`Identificador en minúsculas, p. ej. off, speed_2, power_on`,
+'s35d2458c27c8be17': str`433.92 MHz (por defecto)`,
 's380f188d5f77d6cd': str`Iniciar aprendizaje`,
 's382a2aa3984474dd': str`Crear`,
 's3a99b3c9a703d7d3': str`Receptor IR`,
@@ -65,9 +73,11 @@
 's4a896fe43425c771': str`Radiofrecuencia (RF)`,
 's4caed5b7a7e5d89b': str`Inglés`,
 's4cb9ebef9edf03fd': str`Salud de la integración y entidades descubiertas.`,
+'s4e727f6b2ee501b1': str`315 MHz`,
 's503d4b322b1ed5e1': str`No se capturó señal — inténtalo de nuevo`,
 's5062cd8f7a7fd349': str`señal`,
 's5323f1501f045878': str`Entidad que capturará la señal`,
+'s54404edbbecfaca2': str`Capturar sin barrido`,
 's5590dbf7e425789d': str`Etiqueta`,
 's55dcb71fc2faeb11': str`Opcional — receptor para señales y aprendizaje IR`,
 's593d9c27e95706a7': str`Entidad emisora IR que envía comandos`,
@@ -92,6 +102,8 @@
 's6f17f43b5bf68a35': str`Interruptor / Enchufe`,
 's713bff2861720fab': str`Acciones`,
 's73b2eed2782eeec4': str`Reproductor multimedia`,
+'s7514a276845d5467': str`915 MHz`,
+'s772f4f725cd1dfe4': str`868 MHz`,
 's7b7163270e57e8b4': str`Actualizar`,
 's7ccd5d08a0f2e4d6': str`Cargar dispositivos`,
 's7e75e90f54842950': str`Añade primero un receptor IR o RF`,
@@ -109,6 +121,7 @@
 's8e286950b0f6ff23': str`vinculaciones`,
 's8ee873a2c3081974': str`Climatización`,
 's9008cf2ef15e16e3': str`niveles de velocidad`,
+'s910b2db206ff26ee': str`Frecuencia en la que escucha el Broadlink para esta captura`,
 's91f8eb17bf27c84b': str`Crea vinculaciones desde la API o espera al editor de v0.4.`,
 's96bf2ac2c1ae20a4': str`Elige la entidad receptora que capturará la señal.`,
 's96fe278555c86904': str`RM4 Pro, FRM97, …`,

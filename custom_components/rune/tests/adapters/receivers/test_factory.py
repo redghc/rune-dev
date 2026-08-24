@@ -29,17 +29,17 @@ class TestSelectReceiver:
         r = select_receiver(FakeHass(), "esphome.living_room", SignalTransport.IR)
         assert isinstance(r, ESPHomeLegacyIRReceiver)
 
-    def test_broadlink_rf_requires_device_api(self) -> None:
-        with pytest.raises(UnsupportedHardwareError, match="device API"):
+    def test_broadlink_rf_requires_device(self) -> None:
+        with pytest.raises(UnsupportedHardwareError, match="BroadlinkDevice"):
             select_receiver(FakeHass(), "remote.broadlink", SignalTransport.RF)
 
-    def test_broadlink_rf_with_device_api(self) -> None:
-        api = object()
+    def test_broadlink_rf_with_device(self) -> None:
+        device = object()
         r = select_receiver(
-            FakeHass(), "remote.broadlink", SignalTransport.RF, device_api=api
+            FakeHass(), "remote.broadlink", SignalTransport.RF, device=device
         )
         assert isinstance(r, BroadlinkRFReceiver)
-        assert r._device_api is api
+        assert r._device is device
 
     def test_empty_entity_id_raises(self) -> None:
         with pytest.raises(UnsupportedHardwareError):
