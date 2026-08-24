@@ -39,10 +39,22 @@ from custom_components.rune.domain.models import RuneDevice
 if TYPE_CHECKING:
     pass
 
+# HA's FanEntity is required at runtime — async_add_entities rejects
+# anything that does not subclass the matching Entity base — but the
+# rest of the module imports cleanly in pure-Python test environments
+# by falling back to a no-op stub when HA is unavailable.
+try:
+    from homeassistant.components.fan import FanEntity as _FanEntityBase
+except ImportError:
+
+    class _FanEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class RuneFanEntity(RunePlatformBase):
+class RuneFanEntity(RunePlatformBase, _FanEntityBase):
     """One HA fan entity per RuneDevice."""
 
     _attr_should_poll = False

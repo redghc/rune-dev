@@ -25,6 +25,16 @@ from custom_components.rune.domain.enums import EntityCategory
 if TYPE_CHECKING:
     pass
 
+try:
+    from homeassistant.components.climate import (
+        ClimateEntity as _ClimateEntityBase,
+    )
+except ImportError:
+
+    class _ClimateEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -40,7 +50,7 @@ _HVAC_MODE_FRAGMENT = {
 }
 
 
-class RuneClimateEntity(RunePlatformBase):
+class RuneClimateEntity(RunePlatformBase, _ClimateEntityBase):
     """One HA climate entity per RuneDevice (category CLIMATE)."""
 
     _attr_should_poll = False

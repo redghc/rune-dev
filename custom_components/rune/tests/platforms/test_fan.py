@@ -146,3 +146,50 @@ class TestFanPlatformBuilder:
 
         assert len(added) == 1
         assert added[0].device.id == "fan-1"
+
+
+class TestPlatformEntityBase:
+    """Guard the HA Entity base inheritance on every platform entity.
+
+    Without these bases, HA's ``async_add_entities`` rejects the entity
+    and the device never surfaces in Home Assistant. CI runs without HA
+    installed, so each module falls back to a stub base; this test
+    confirms the stub is wired in (the production module imports the
+    real HA base when HA is present).
+    """
+
+    @pytest.mark.parametrize(
+        "module_path, attr",
+        [
+            ("custom_components.rune.fan", "RuneFanEntity"),
+            ("custom_components.rune.light", "RuneLightEntity"),
+            ("custom_components.rune.climate", "RuneClimateEntity"),
+            ("custom_components.rune.cover", "RuneCoverEntity"),
+            (
+                "custom_components.rune.media_player",
+                "RuneMediaPlayerEntity",
+            ),
+            ("custom_components.rune.switch", "RuneSwitchEntity"),
+            ("custom_components.rune.remote", "RuneRemoteEntity"),
+            ("custom_components.rune.button", "RunePulseButtonEntity"),
+        ],
+    )
+    def test_entity_inherits_some_base(self, module_path: str, attr: str) -> None:
+        """Each entity class must have at least two base classes.
+
+        The first is :class:`RunePlatformBase`; the second is the HA
+        ``*Entity`` base (real when HA is installed, stub otherwise).
+        A class with only one base would silently fail to register in
+        HA — exactly the regression this guard prevents.
+        """
+        import importlib
+
+        module = importlib.import_module(module_path)
+        cls = getattr(module, attr)
+        assert hasattr(cls, "__bases__"), (
+            f"{module_path}.{attr} must declare base classes"
+        )
+        assert len(cls.__bases__) >= 2, (
+            f"{module_path}.{attr} has {cls.__bases__}; "
+            "needs RunePlatformBase + HA Entity base"
+        )

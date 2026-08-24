@@ -22,10 +22,18 @@ from custom_components.rune.domain.mappers.speed_mapper import SpeedMapper
 if TYPE_CHECKING:
     pass
 
+try:
+    from homeassistant.components.light import LightEntity as _LightEntityBase
+except ImportError:
+
+    class _LightEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class RuneLightEntity(RunePlatformBase):
+class RuneLightEntity(RunePlatformBase, _LightEntityBase):
     """One HA light entity per RuneDevice (category LIGHT)."""
 
     _attr_should_poll = False

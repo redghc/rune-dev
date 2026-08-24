@@ -35,10 +35,18 @@ from custom_components.rune.domain.enums import (
 if TYPE_CHECKING:
     pass
 
+try:
+    from homeassistant.components.button import ButtonEntity as _ButtonEntityBase
+except ImportError:
+
+    class _ButtonEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class RunePulseButtonEntity(RunePlatformBase):
+class RunePulseButtonEntity(RunePlatformBase, _ButtonEntityBase):
     """A pressable button that sends one learned pulse."""
 
     _attr_available = True

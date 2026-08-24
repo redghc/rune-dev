@@ -22,10 +22,18 @@ from custom_components.rune.domain.enums import EntityCategory
 if TYPE_CHECKING:
     pass
 
+try:
+    from homeassistant.components.cover import CoverEntity as _CoverEntityBase
+except ImportError:
+
+    class _CoverEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class RuneCoverEntity(RunePlatformBase):
+class RuneCoverEntity(RunePlatformBase, _CoverEntityBase):
     """One HA cover entity per RuneDevice (category COVER)."""
 
     _attr_should_poll = False

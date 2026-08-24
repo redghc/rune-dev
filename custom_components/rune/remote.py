@@ -16,10 +16,18 @@ from custom_components.rune.domain.enums import EntityCategory
 if TYPE_CHECKING:
     pass
 
+try:
+    from homeassistant.components.remote import RemoteEntity as _RemoteEntityBase
+except ImportError:
+
+    class _RemoteEntityBase:  # type: ignore[no-redef]
+        """Fallback base when ``homeassistant`` is not installed."""
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
-class RuneRemoteEntity(RunePlatformBase):
+class RuneRemoteEntity(RunePlatformBase, _RemoteEntityBase):
     """One HA remote per RuneDevice (category REMOTE)."""
 
     _attr_should_poll = False
