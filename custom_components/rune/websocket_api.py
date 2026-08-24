@@ -22,6 +22,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+import voluptuous as vol
+
 from custom_components.rune.const import DOMAIN, WS_PREFIX
 from custom_components.rune.domain.errors import (
     ActionError,
@@ -74,6 +76,7 @@ type _Handler = Callable[["RuneWebSocketContext", dict[str, Any]], Awaitable[dic
 
 
 _HANDLERS: dict[str, _Handler] = {}
+_SCHEMAS: dict[str, vol.Schema] = {}
 
 
 def _register(command: str) -> Callable[[_Handler], _Handler]:
@@ -82,6 +85,94 @@ def _register(command: str) -> Callable[[_Handler], _Handler]:
         return func
 
     return decorator
+
+
+def _register_schema(command: str, schema: vol.Schema) -> None:
+    """Pair a voluptuous schema with a previously-decorated command."""
+    _SCHEMAS[command] = schema
+
+
+def _schema_for(command: str) -> vol.Schema:
+    """Return the schema for ``command``; falls back to permissive."""
+    return _SCHEMAS.get(command) or vol.Schema({}, extra=vol.ALLOW_EXTRA)
+
+
+# Per-command schemas. ``extra=vol.ALLOW_EXTRA`` lets HA's dispatcher accept
+# every payload key the SPA sends; required fields are typed so typos surface
+# as ``ERR_INVALID_FORMAT`` instead of silent ``None``.
+_register_schema(
+    "list",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
+_register_schema(
+    "device/get",
+    vol.Schema(
+        {vol.Required("device_id"): str},
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "device/create",
+    vol.Schema(
+        {
+            vol.Required("name"): str,
+            vol.Required("category"): str,
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "device/update",
+    vol.Schema(
+        {vol.Required("device_id"): str},
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "device/delete",
+    vol.Schema(
+        {vol.Required("device_id"): str},
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "command/learn",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("command_key"): str,
+            vol.Optional("timeout_s"): vol.Coerce(float),
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "sniffer/list",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
+_register_schema(
+    "sniffer/dismiss",
+    vol.Schema(
+        {vol.Required("remote_id"): str},
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
+    "action/list",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
+_register_schema(
+    "transmitter/list",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
+_register_schema(
+    "receiver/list",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
+_register_schema(
+    "debug/registry-check",
+    vol.Schema({}, extra=vol.ALLOW_EXTRA),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -121,16 +212,19 @@ async def async_register_websocket_commands(hass: Any) -> None:
                 websocket_api.result_message(msg_id, payload)
             )
 
-        # HA's WS dispatcher calls ``handler(hass, connection, schema(msg))``.
-        # The 3-arg form of ``async_register_command`` ignores any schema we
-        # pass and stores ``None``; the dispatcher then evaluates ``None(msg)``
-        # -> TypeError, which its top-level catch flattens to the generic
-        # "Unknown error" response -- masking the real exception. Mark the
-        # callback as schema-less so the dispatcher passes ``msg`` through
-        # untouched (the bridge always sends exactly ``{id, type}``).
+        # HA's WS dispatcher validates ``msg`` against ``schema`` before
+        # forwarding to the handler. Without a permissive schema it rejects
+        # every payload carrying anything beyond ``{id, type}`` with
+        # "extra keys not allowed" (voluptuous' default PREVENT_EXTRA).
+        # ``schema is False`` would skip validation but force ``len(msg) <= 2``
+        # -- incompatible with the bridge, which spreads the full payload
+        # (``{id, type, name, category, ...}``) into the WS message.
+        # Pass a per-command schema with ``extra=vol.ALLOW_EXTRA`` so HA
+        # accepts every field the handler reads via ``msg.get(...)``.
         _callback._ws_command = full  # type: ignore[attr-defined]
-        _callback._ws_schema = False  # type: ignore[attr-defined]
-        websocket_api.async_register_command(hass, _callback)
+        websocket_api.async_register_command(
+            hass, full, _callback, schema=_schema_for(command)
+        )
 
 
 async def async_unregister_websocket_commands(hass: Any) -> None:
