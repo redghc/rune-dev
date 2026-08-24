@@ -25,6 +25,12 @@ import type {
 
 const BRIDGE_TIMEOUT_MS = 8000;
 
+/** Extra slack on top of the capture window for ``command/learn``:
+ *  the backend polls the orchestrator every 100ms and keeps its own
+ *  deadline at ``timeout_s + 1s`` — the bridge must outlive all of
+ *  that, plus WS roundtrip latency. */
+const LEARN_BRIDGE_GRACE_MS = 8000;
+
 // Bridge traffic is verbose enough to drown the console in production.
 // Opt in with ``?rune-debug=1`` (or ``localStorage.runeDebug = "1"``) when
 // chasing a flaky parent <-> iframe roundtrip.
@@ -101,7 +107,10 @@ window.addEventListener("message", (event: MessageEvent) => {
   }
 });
 
-function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
+function bridgeCall(
+  payload: Record<string, unknown>,
+  timeoutMs: number = BRIDGE_TIMEOUT_MS,
+): Promise<unknown> {
   const id = nextId++;
   return new Promise<unknown>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -110,7 +119,7 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
         console.warn(`[rune-bridge] timeout id=${id} payload=${JSON.stringify(payload)}`);
         reject(new Error("bridge timeout (no response from HA)"));
       }
-    }, BRIDGE_TIMEOUT_MS);
+    }, timeoutMs);
     const resolver: PendingResolver = {
       timer,
       resolve: (v) => {
@@ -151,8 +160,11 @@ function bridgeReject(err: unknown): never {
 
 /** Wrap a ``bridgeCall`` so the HA WS error envelope is flattened
  *  into a readable message before the caller's ``catch`` sees it. */
-function bridgeWs<T>(payload: Record<string, unknown>): Promise<T> {
-  return bridgeCall(payload).catch(bridgeReject) as Promise<T>;
+function bridgeWs<T>(
+  payload: Record<string, unknown>,
+  timeoutMs: number = BRIDGE_TIMEOUT_MS,
+): Promise<T> {
+  return bridgeCall(payload, timeoutMs).catch(bridgeReject) as Promise<T>;
 }
 
 export const api = {
@@ -183,11 +195,23 @@ export const api = {
       message: { type: "rune/device/delete", device_id: id },
     }) as Promise<{ ok: true }>,
 
-  learnCommand: (payload: Record<string, unknown>): Promise<LearnResult> =>
-    bridgeWs({
-      kind: "ws",
-      message: { type: "rune/command/learn", ...payload },
-    }) as Promise<LearnResult>,
+  learnCommand: (payload: Record<string, unknown>): Promise<LearnResult> => {
+    // ``command/learn`` blocks server-side for the whole capture
+    // window (``timeout_s``, 15s by default) plus a small polling
+    // grace. The default 8s bridge timeout would abort mid-capture
+    // — the WS call keeps running in HA, but the dialog already
+    // showed "bridge timeout". Stretch the bridge deadline past the
+    // capture window instead.
+    const captureWindowMs =
+      typeof payload.timeout_s === "number" ? payload.timeout_s * 1000 : 15000;
+    return bridgeWs(
+      {
+        kind: "ws",
+        message: { type: "rune/command/learn", ...payload },
+      },
+      captureWindowMs + LEARN_BRIDGE_GRACE_MS,
+    ) as Promise<LearnResult>;
+  },
 
   cancelLearnCommand: (deviceId: string, commandKey: string): Promise<{ cancelled: boolean }> =>
     bridgeWs({
