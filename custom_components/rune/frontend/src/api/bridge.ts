@@ -199,6 +199,14 @@ export const api = {
       },
     }) as Promise<{ cancelled: boolean }>,
 
+  /** Transmit a captured signal without persisting it — powers the
+   *  Test button on the Learn dialog's Review step. */
+  testCommand: (payload: Record<string, unknown>): Promise<{ sent: boolean }> =>
+    bridgeWs({
+      kind: "ws",
+      message: { type: "rune/command/test", ...payload },
+    }) as Promise<{ sent: boolean }>,
+
   listSniffer: (): Promise<{ remotes: Remote[] }> =>
     bridgeWs({
       kind: "ws",

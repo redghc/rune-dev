@@ -200,6 +200,20 @@ _register_schema(
     ),
 )
 _register_schema(
+    "command/test",
+    vol.Schema(
+        {
+            vol.Required("device_id"): str,
+            vol.Required("transport"): vol.In(["ir", "rf"]),
+            vol.Required("raw_timings"): [vol.Coerce(int)],
+            vol.Optional("carrier_frequency_hz"): vol.Coerce(int),
+            vol.Optional("command_key"): str,
+            vol.Optional("command_label"): str,
+        },
+        extra=vol.ALLOW_EXTRA,
+    ),
+)
+_register_schema(
     "sniffer/list",
     vol.Schema({}, extra=vol.ALLOW_EXTRA),
 )
@@ -848,6 +862,90 @@ async def _ws_command_learn_cancel(
 
     await orchestrator.cancel_capture(f"{device_id}.{command_key}")
     return {"cancelled": True}
+
+
+@_register("command/test")
+async def _ws_command_test(
+    ctx: RuneWebSocketContext, msg: dict[str, Any]
+) -> dict[str, Any]:
+    """Transmit a captured signal WITHOUT persisting it.
+
+    The SPA's Learn dialog fires this from the Review step so the user
+    can verify the capture actually drives the device before saving
+    the command. Same TX path as ``rune.send_command`` (emitter
+    selection + tx gate) — the only difference is the command is a
+    transient :class:`PulseCommand` built from the wire payload.
+
+    Required fields:
+
+    - ``device_id`` — id of the device whose emitters transmit.
+    - ``transport`` — ``"ir"`` or ``"rf"``.
+    - ``raw_timings`` — captured pulse timings (µs, marks positive).
+
+    Optional:
+
+    - ``carrier_frequency_hz`` — carrier for the transient command
+      (defaults to the IR carrier for ``ir``; RF adapters derive the
+      frequency from the Broadlink packet itself).
+    - ``command_key`` / ``command_label`` — metadata for the mirror
+      log / tx gate entries.
+
+    Returns ``{"sent": true}``.
+    """
+    from custom_components.rune.domain.enums import (
+        DEFAULT_IR_CARRIER_HZ,
+        CommandCategory,
+        SignalCategory,
+        SignalEncoding,
+        SignalTransport,
+    )
+
+    device_id = msg.get("device_id")
+    if not device_id:
+        raise ActionError("device_id is required")
+    transport_str = str(msg.get("transport", "")).strip().lower()
+    if transport_str not in {"ir", "rf"}:
+        raise ActionError("transport must be 'ir' or 'rf'")
+    raw_timings = msg.get("raw_timings")
+    if not isinstance(raw_timings, list) or len(raw_timings) == 0:
+        raise ActionError("raw_timings must be a non-empty list of pulse timings")
+
+    device = await (await ctx.device_repository()).get(device_id)
+    if device is None:
+        raise CommandNotLearnedError(f"Device {device_id!r} not found")
+    if not device.transmitter_entity_ids:
+        raise ActionError(
+            f"Device {device.name!r} has no transmitter configured — "
+            "add one in the device editor before testing."
+        )
+
+    carrier_hz = msg.get("carrier_frequency_hz")
+    try:
+        carrier_hz = int(carrier_hz) if carrier_hz is not None else DEFAULT_IR_CARRIER_HZ
+    except (TypeError, ValueError) as err:
+        raise ActionError(
+            f"carrier_frequency_hz must be an integer (got {carrier_hz!r})"
+        ) from err
+
+    command_key = str(msg.get("command_key") or "test")
+    command = PulseCommand(
+        key=command_key,
+        label=str(msg.get("command_label") or command_key),
+        category=CommandCategory.CUSTOM,
+        signal_category=SignalCategory(
+            transport=SignalTransport.IR if transport_str == "ir" else SignalTransport.RF,
+            encoding=SignalEncoding.RAW_TIMINGS,
+            carrier_frequency_hz=carrier_hz,
+        ),
+        payload=PulsePayload(raw_timings=tuple(int(t) for t in raw_timings)),
+    )
+
+    coordinator = ctx.coordinator()
+    if coordinator is None:
+        raise ActionError("No coordinator registered; restart HA")
+
+    await coordinator.async_send_command(device=device, command=command)
+    return {"sent": True}
 
 
 @_register("sniffer/list")

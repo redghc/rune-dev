@@ -11,12 +11,12 @@
     export const templates = {
       'h0a30b6aa2888b228': html`Mantén PULSADO el botón del mando mientras RUNE busca la portadora. Cuando
               se bloquee, suelta y vuelve a pulsar el mismo botón para capturar el paquete.`,
+'h3f8a538e8548a7c8': html`RUNE capturó la señal. Pruébala para confirmar que el dispositivo reacciona y luego guarda; los tiempos se almacenan en el slot de comando de este dispositivo.`,
 'h52fda6c9893cdc05': html`Elige un identificador único, el transporte de la señal y la entidad receptora que
               capturará la señal. Pulsarás el botón del mando en el siguiente paso.`,
 'h7ca7e5a17ba26a94': html`Señales en vivo capturadas desde cada receptor que hayas configurado. El sniffer escucha
             automáticamente en cada entidad receptora en cuanto añades un dispositivo. Asigna
             una señal a un comando del dispositivo desde la pestaña <strong>Acciones</strong> o descarta el mando entero aquí.`,
-'hb3fb23481a5285e3': html`RUNE capturó la señal. Revisa los detalles y guarda; los tiempos se almacenan en el slot de comando de este dispositivo.`,
 'hb72fe7922daa58c8': html`Sáltate el barrido de portadora y escucha en una frecuencia fija. Úsalo cuando el
                 barrido no se enganche a tu mando (p. ej. ráfagas cortas del Mercator FRM97).`,
 'hc74c45668e7ba599': html`HA expondrá una entidad de tipo <strong>${0}</strong>`,
@@ -76,6 +76,7 @@
 's4e727f6b2ee501b1': str`315 MHz`,
 's503d4b322b1ed5e1': str`No se capturó señal — inténtalo de nuevo`,
 's5062cd8f7a7fd349': str`señal`,
+'s5090e405acc9188e': str`Señal de prueba enviada — comprueba que el dispositivo reacciona`,
 's5323f1501f045878': str`Entidad que capturará la señal`,
 's54404edbbecfaca2': str`Capturar sin barrido`,
 's5590dbf7e425789d': str`Etiqueta`,
@@ -99,6 +100,7 @@
 's6b2b5bea3901009e': str`Entidad emisora RF que envía comandos`,
 's6e7e9ee0ae4dcc2f': str`Apagar`,
 's6ebae7cf5cfc2978': str`Broadlink, ESPHome, …`,
+'s6ed76f876b2cc422': str`No se encontraron receptores RF. La captura RF necesita un Broadlink RM Pro / RM4 Pro (u otro Broadlink con RF) — elige una entidad que pertenezca a ese dispositivo.`,
 's6f17f43b5bf68a35': str`Interruptor / Enchufe`,
 's713bff2861720fab': str`Acciones`,
 's73b2eed2782eeec4': str`Reproductor multimedia`,
@@ -107,6 +109,7 @@
 's7b7163270e57e8b4': str`Actualizar`,
 's7ccd5d08a0f2e4d6': str`Cargar dispositivos`,
 's7e75e90f54842950': str`Añade primero un receptor IR o RF`,
+'s8005e5e98c9ae9d7': str`Probar señal`,
 's81ecf2d4386b8e84': str`Continuar`,
 's82a4e28ab5b56670': str`Conectado`,
 's867ae6f7a84d07d7': str`Portadora`,
@@ -183,6 +186,5 @@
 'sfbca8326a775cc77': str`Pulsos`,
 'sfff229536a18b7d3': str`mando`,
 'sfffe12451843f40a': str`Radiofrecuencia`,
-'s6ed76f876b2cc422': str`No RF receiver entities found. RF capture needs a Broadlink RM Pro / RM4 Pro (or other RF-capable Broadlink) — pick an entity that belongs to that device.`,
     };
   

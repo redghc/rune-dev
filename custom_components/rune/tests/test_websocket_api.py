@@ -704,6 +704,7 @@ class TestRegistryShape:
             "device/delete",
             "command/learn",
             "command/learn/cancel",
+            "command/test",
             "sniffer/list",
             "sniffer/dismiss",
             "action/list",
@@ -1201,6 +1202,155 @@ class TestBroadlinkIrFallback:
         }
         with pytest.raises(CaptureProviderUnavailableError, match="emitter"):
             await _ws_command_learn(ctx, msg)
+
+
+@pytest.mark.asyncio
+class TestWsCommandTest:
+    """``rune/command/test`` transmits a captured signal without
+    persisting it — powers the Learn dialog's Review-step Test button."""
+
+    def _make_ctx(
+        self, *, device: RuneDevice | None, coordinator: Any
+    ) -> RuneWebSocketContext:
+        hass = FakeHass(states=[])
+        from custom_components.rune.const import DOMAIN as _DOMAIN
+
+        hass.data[_DOMAIN] = {"entry-1": {"coordinator": coordinator}}
+
+        class _StubRepo:
+            async def get(self, device_id: str) -> Any:
+                return device if device_id == "dev-1" else None
+
+        async def _fake_repo() -> Any:
+            return _StubRepo()
+
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        ctx.device_repository = _fake_repo  # type: ignore[method-assign]
+        return ctx
+
+    class _FakeCoordinator:
+        def __init__(self) -> None:
+            self.calls: list[tuple[RuneDevice, Any]] = []
+
+        async def async_send_command(self, *, device: RuneDevice, command: Any) -> None:
+            self.calls.append((device, command))
+
+    async def test_happy_path_sends_transient_command(self) -> None:
+        from custom_components.rune.domain.enums import SignalTransport
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = ["infrared.tx"]
+        coord = self._FakeCoordinator()
+        ctx = self._make_ctx(device=device, coordinator=coord)
+
+        result = await _ws_command_test(
+            ctx,
+            {
+                "device_id": "dev-1",
+                "transport": "ir",
+                "raw_timings": [9000, -4500, 560, -560],
+                "carrier_frequency_hz": 38000,
+                "command_key": "power_on",
+                "command_label": "Power on",
+            },
+        )
+        assert result == {"sent": True}
+        assert len(coord.calls) == 1
+        sent_device, sent_command = coord.calls[0]
+        assert sent_device.id == "dev-1"
+        assert sent_command.key == "power_on"
+        assert sent_command.signal_category.transport is SignalTransport.IR
+        assert sent_command.signal_category.carrier_frequency_hz == 38000
+        assert sent_command.payload.raw_timings == (9000, -4500, 560, -560)
+        # Nothing was persisted: the in-memory repo still holds only
+        # the original command set.
+        assert set(device.commands) == {"power_on"}
+        assert device.commands["power_on"].payload.raw_timings != (9000, -4500, 560, -560)
+
+    async def test_missing_device_id_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        ctx = self._make_ctx(device=None, coordinator=self._FakeCoordinator())
+        with pytest.raises(ActionError, match="device_id"):
+            await _ws_command_test(ctx, {"transport": "ir", "raw_timings": [100]})
+
+    async def test_bad_transport_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = ["infrared.tx"]
+        ctx = self._make_ctx(device=device, coordinator=self._FakeCoordinator())
+        with pytest.raises(ActionError, match="transport"):
+            await _ws_command_test(
+                ctx,
+                {"device_id": "dev-1", "transport": "wifi", "raw_timings": [100]},
+            )
+
+    async def test_empty_timings_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = ["infrared.tx"]
+        ctx = self._make_ctx(device=device, coordinator=self._FakeCoordinator())
+        with pytest.raises(ActionError, match="raw_timings"):
+            await _ws_command_test(
+                ctx, {"device_id": "dev-1", "transport": "ir", "raw_timings": []}
+            )
+
+    async def test_unknown_device_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        ctx = self._make_ctx(device=None, coordinator=self._FakeCoordinator())
+        with pytest.raises(CommandNotLearnedError):
+            await _ws_command_test(
+                ctx, {"device_id": "dev-1", "transport": "ir", "raw_timings": [100]}
+            )
+
+    async def test_device_without_transmitters_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = []
+        coord = self._FakeCoordinator()
+        ctx = self._make_ctx(device=device, coordinator=coord)
+        with pytest.raises(ActionError, match="transmitter"):
+            await _ws_command_test(
+                ctx, {"device_id": "dev-1", "transport": "ir", "raw_timings": [100]}
+            )
+        assert coord.calls == []
+
+    async def test_no_coordinator_raises(self) -> None:
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = ["infrared.tx"]
+        ctx = self._make_ctx(device=device, coordinator=None)
+        with pytest.raises(ActionError, match="coordinator"):
+            await _ws_command_test(
+                ctx, {"device_id": "dev-1", "transport": "ir", "raw_timings": [100]}
+            )
+
+    async def test_rf_transport_flows_through(self) -> None:
+        from custom_components.rune.domain.enums import SignalTransport
+        from custom_components.rune.websocket_api import _ws_command_test
+
+        device = _device(device_id="dev-1")
+        device.transmitter_entity_ids = ["remote.rm4_pro"]
+        coord = self._FakeCoordinator()
+        ctx = self._make_ctx(device=device, coordinator=coord)
+        await _ws_command_test(
+            ctx,
+            {
+                "device_id": "dev-1",
+                "transport": "rf",
+                "raw_timings": [400, -1200],
+                "carrier_frequency_hz": 433920000,
+            },
+        )
+        _sent_device, sent_command = coord.calls[0]
+        assert sent_command.signal_category.transport is SignalTransport.RF
+        assert sent_command.signal_category.carrier_frequency_hz == 433920000
 
 
 @pytest.fixture

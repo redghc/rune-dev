@@ -564,11 +564,6 @@
   <source>Capturing for</source>
     <target>Capturando para</target>
   </trans-unit>
-<trans-unit id="hb3fb23481a5285e3">
-  <source>RUNE captured the signal. Review the details below and save — the timings land in
-              the command slot for this device.</source>
-    <target>RUNE capturó la señal. Revisa los detalles y guarda; los tiempos se almacenan en el slot de comando de este dispositivo.</target>
-  </trans-unit>
 <trans-unit id="s61e136c0658e27d5">
   <source>Protocol</source>
     <target>Protocolo</target>
@@ -691,6 +686,20 @@
   </trans-unit>
 <trans-unit id="s6ed76f876b2cc422">
   <source>No RF receiver entities found. RF capture needs a Broadlink RM Pro / RM4 Pro (or other RF-capable Broadlink) — pick an entity that belongs to that device.</source>
+    <target>No se encontraron receptores RF. La captura RF necesita un Broadlink RM Pro / RM4 Pro (u otro Broadlink con RF) — elige una entidad que pertenezca a ese dispositivo.</target>
+</trans-unit>
+<trans-unit id="s5090e405acc9188e">
+  <source>Test signal sent — check the device reacts</source>
+    <target>Señal de prueba enviada — comprueba que el dispositivo reacciona</target>
+</trans-unit>
+<trans-unit id="s8005e5e98c9ae9d7">
+  <source>Test signal</source>
+    <target>Probar señal</target>
+</trans-unit>
+<trans-unit id="h3f8a538e8548a7c8">
+  <source>RUNE captured the signal. Test it to confirm the device reacts, then save — the
+              timings land in the command slot for this device.</source>
+    <target>RUNE capturó la señal. Pruébala para confirmar que el dispositivo reacciona y luego guarda; los tiempos se almacenan en el slot de comando de este dispositivo.</target>
 </trans-unit>
 </body>
 </file>

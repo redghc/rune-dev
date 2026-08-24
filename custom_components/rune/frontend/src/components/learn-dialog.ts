@@ -216,11 +216,15 @@ export class RuneLearnDialog extends LitElement {
 
   @state() private _busy = false;
   @state() private _saving = false;
+  @state() private _testing = false;
   @state() private _pickError = "";
   @state() private _commandKeyDraft = "";
   @state() private _commandLabelDraft = "";
   @state() private _transportDraft: LearnTransport = "ir";
   @state() private _receiverEntityIdDraft = "";
+  /** Open-state shadow so hydration only runs on the closed → open
+   *  transition instead of on every update. */
+  private _wasOpen = false;
 
   private get _stepDefs(): RuneStepDef[] {
     return [
@@ -385,6 +389,32 @@ export class RuneLearnDialog extends LitElement {
     store.setLearnStep("capture");
   };
 
+  /** Replay the captured signal through the device's emitters so the
+   *  user can confirm it actually drives the hardware BEFORE saving.
+   *  Backend builds a transient PulseCommand — nothing is persisted. */
+  private async _test(): Promise<void> {
+    const { deviceId, commandKey, commandLabel, transport, captured, rawTimings, carrierHz } =
+      store.learnDialog;
+    if (!deviceId || !captured || !rawTimings) return;
+    this._testing = true;
+    try {
+      await api.testCommand({
+        device_id: deviceId,
+        transport,
+        raw_timings: rawTimings,
+        carrier_frequency_hz:
+          carrierHz ?? (captured.signal_category.carrier_frequency_hz as number | undefined),
+        command_key: commandKey,
+        command_label: commandLabel || commandKey,
+      });
+      store.pushToast(msg(str`Test signal sent — check the device reacts`), "ok");
+    } catch (err) {
+      reportError(err, msg(str`Test signal`));
+    } finally {
+      this._testing = false;
+    }
+  }
+
   private _backToPick = (): void => {
     // A capture may still be in flight (the user hit Back while the
     // "Start learn" call was blocking) — cancel so the orchestrator
@@ -435,10 +465,10 @@ export class RuneLearnDialog extends LitElement {
     const transport = this._transportDraft;
     // IR receivers live in ``store.receivers`` (HA returns every
     // entity in the infrared domain). RF receivers come from the
-    // ``store.transmitters`` list because Broadlink RF devices expose
-    // a single ``remote.*`` entity that can both transmit and
-    // receive — the same entity the user picked as a transmitter is
-    // the one to listen on for RF capture.
+    // union of the receiver + transmitter lists because Broadlink RF
+    // devices expose a single ``remote.*`` entity that can both
+    // transmit and receive — the same entity the user picked as a
+    // transmitter is the one to listen on for RF capture.
     const irReceivers = store.receivers
       .filter((r) => r.entity_id.startsWith("infrared."))
       .map((r) => ({
@@ -454,36 +484,11 @@ export class RuneLearnDialog extends LitElement {
     // Broadlink device. The backend validates every pick; if the
     // entity doesn't resolve to a BroadlinkDevice the user gets a
     // clear error rather than an empty picker.
-    const rfReceivers = [
-      ...store.receivers
-        .filter(
-          (r) =>
-            r.broadlink ||
-            r.entity_id.startsWith("remote.") ||
-            r.entity_id.startsWith("radio_frequency."),
-        )
-        .map((r) => ({
-          value: r.entity_id,
-          label: r.name || r.entity_id,
-        })),
-      ...store.transmitters
-        .filter(
-          (t) => t.entity_id.startsWith("remote.") || t.entity_id.startsWith("radio_frequency."),
-        )
-        .map((t) => ({
-          value: t.entity_id,
-          label: t.name || t.entity_id,
-        })),
-    ];
-    // De-duplicate by entity_id (some Broadlink devices expose the
-    // same entity as both a "receiver" and a "transmitter" entry,
-    // and we union the two stores above).
-    const seenRf = new Set<string>();
-    const rfReceiversUnique = rfReceivers.filter((opt) => {
-      if (seenRf.has(opt.value)) return false;
-      seenRf.add(opt.value);
-      return true;
-    });
+    const rfCandidateIds = this._rfCandidateEntityIds();
+    const rfReceiversUnique = [...rfCandidateIds].map((entityId) => ({
+      value: entityId,
+      label: this._entityLabel(entityId),
+    }));
     const receiverOptions = transport === "rf" ? rfReceiversUnique : irReceivers;
     const selected = this._receiverEntityIdDraft || ld.receiverEntityId;
     const transportOptions = [
@@ -677,8 +682,8 @@ export class RuneLearnDialog extends LitElement {
           <i class="ti ti-check"></i>
           <span>
             ${msg(
-              html`RUNE captured the signal. Review the details below and save — the timings land in
-              the command slot for this device.`,
+              html`RUNE captured the signal. Test it to confirm the device reacts, then save — the
+              timings land in the command slot for this device.`,
             )}
           </span>
         </div>
@@ -754,6 +759,15 @@ export class RuneLearnDialog extends LitElement {
         ${msg(str`Re-capture`)}
       </rune-button>
       <span class="grow"></span>
+      <rune-button
+        variant="secondary"
+        icon="broadcast"
+        ?loading=${this._testing}
+        ?disabled=${!canSave || this._testing}
+        @click=${this._test}
+      >
+        ${msg(str`Test signal`)}
+      </rune-button>
       <rune-button variant="secondary" icon="x" @click=${this._onClose}>
         ${msg(str`Cancel`)}
       </rune-button>
@@ -801,22 +815,37 @@ export class RuneLearnDialog extends LitElement {
     if (!store.hasReceiverEntitiesLoaded) {
       void refreshReceiverEntities();
     }
+    // Hydrate the drafts from the persisted dialog state ONCE, on the
+    // closed → open transition. Running this on every update used to
+    // clobber the user's edits: picking RF in the transport select
+    // sets ``_transportDraft = "rf"`` and the next update immediately
+    // reverted it to the (stale) store value — so the receiver list
+    // never switched away from the IR entities.
+    const justOpened = ld.open && !this._wasOpen;
+    this._wasOpen = ld.open;
     if (ld.step === "pick") {
-      if (ld.commandKey && !this._commandKeyDraft) {
-        this._commandKeyDraft = ld.commandKey;
+      if (justOpened) {
+        if (ld.commandKey && !this._commandKeyDraft) {
+          this._commandKeyDraft = ld.commandKey;
+        }
+        if (ld.commandLabel && !this._commandLabelDraft) {
+          this._commandLabelDraft = ld.commandLabel;
+        }
+        if (ld.transport) {
+          this._transportDraft = ld.transport;
+        }
       }
-      if (ld.commandLabel && !this._commandLabelDraft) {
-        this._commandLabelDraft = ld.commandLabel;
-      }
-      if (ld.transport && this._transportDraft !== ld.transport) {
-        this._transportDraft = ld.transport;
-      }
-      // Validate the persisted receiver against the IR registry. A
-      // previously-stored entity may have changed status (e.g. the
-      // user reconfigured it as an emitter) since the last session —
-      // don't silently keep an invalid pick, force a re-selection.
+      // Validate the persisted receiver against the entity registries.
+      // Runs on every update (not just on open) because the registries
+      // load asynchronously — a pick made before ``refreshReceiverEntities``
+      // landed can't be validated yet. A previously-stored entity may
+      // also have changed status (e.g. the user reconfigured it as an
+      // emitter) since the last session — don't silently keep an
+      // invalid pick, force a re-selection. The transport used here is
+      // the *draft*: on the pick step the store still holds the value
+      // from the previous session until Continue persists it.
       const stored = this._receiverEntityIdDraft || ld.receiverEntityId;
-      if (stored && !this._isValidReceiver(stored, ld.transport)) {
+      if (stored && !this._isValidReceiver(stored, this._transportDraft)) {
         if (this._receiverEntityIdDraft) this._receiverEntityIdDraft = "";
         store.updateLearn({ receiverEntityId: "" });
       } else if (stored && !this._receiverEntityIdDraft) {
@@ -826,18 +855,55 @@ export class RuneLearnDialog extends LitElement {
   }
 
   /** True when ``entity_id`` is registered with HA as an IR receiver
-   *  (for IR transport) or as a Broadlink device (for RF transport).
+   *  (for IR transport) or as an RF-capable entity (for RF transport).
    *
-   *  Mirrors the backend's pre-flight checks in ``probe_receiver`` /
-   *  ``find_rf_device_for_entity`` — keeping the frontend filter in
-   *  sync means a stale store pick (e.g. an emitter mistakenly saved
-   *  as a receiver in a prior session) gets cleared on reopen instead
-   *  of bouncing off the backend with an opaque error. */
+   *  Mirrors the picker's filter exactly (``_renderPick``): IR accepts
+   *  ``infrared.*`` receivers; RF accepts the union of Broadlink-tagged /
+   *  ``remote.*`` / ``radio_frequency.*`` receivers and the
+   *  ``remote.*`` / ``radio_frequency.*`` transmitters. Keeping both
+   *  lists in sync means a stale store pick gets cleared on reopen
+   *  instead of bouncing off the backend with an opaque error — and a
+   *  *valid* RF pick (e.g. a ``radio_frequency.*`` entity that only
+   *  exists in the receiver list) is never cleared by mistake. */
   private _isValidReceiver(entity_id: string, transport: LearnTransport): boolean {
     if (transport === "ir") {
       return store.receivers.some((r) => r.entity_id === entity_id);
     }
-    return store.transmitters.some((t) => t.entity_id === entity_id);
+    return this._rfCandidateEntityIds().has(entity_id);
+  }
+
+  /** Entity ids the RF picker offers: Broadlink-tagged or
+   *  ``remote.*`` / ``radio_frequency.*`` receivers, plus the
+   *  ``remote.*`` / ``radio_frequency.*`` transmitters (Broadlink RF
+   *  devices are both), de-duplicated. Insertion order preserved —
+   *  receivers first, matching the pre-refactor picker. */
+  private _rfCandidateEntityIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const r of store.receivers) {
+      if (
+        r.broadlink ||
+        r.entity_id.startsWith("remote.") ||
+        r.entity_id.startsWith("radio_frequency.")
+      ) {
+        ids.add(r.entity_id);
+      }
+    }
+    for (const t of store.transmitters) {
+      if (t.entity_id.startsWith("remote.") || t.entity_id.startsWith("radio_frequency.")) {
+        ids.add(t.entity_id);
+      }
+    }
+    return ids;
+  }
+
+  /** Friendly label for an entity offered by the RF picker — looks in
+   *  the receiver list first, then the transmitter list (Broadlink RF
+   *  entities can appear in either). */
+  private _entityLabel(entityId: string): string {
+    const rx = store.receivers.find((r) => r.entity_id === entityId);
+    if (rx) return rx.name || rx.entity_id;
+    const tx = store.transmitters.find((t) => t.entity_id === entityId);
+    return tx?.name || tx?.entity_id || entityId;
   }
 
   render() {
