@@ -24834,9 +24834,9 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         background: var(--rune-surface-alt);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-sm);
-        /* Right padding reserves space for the 30px kebab icon at
-         * right:6px so the label never collides with the dots. */
-        padding: var(--rune-space-3) calc(var(--rune-space-2) + 28px) var(--rune-space-3)
+        /* Right padding reserves space for the 24px kebab icon at
+         * right:4px so the label never collides with the dots. */
+        padding: var(--rune-space-3) calc(var(--rune-space-2) + 24px) var(--rune-space-3)
           var(--rune-space-2);
         cursor: pointer;
         font: inherit;
@@ -24894,31 +24894,43 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
       }
       .cmd-kebab {
         position: absolute;
-        top: 6px;
-        right: 6px;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        color: var(--rune-text);
+        border-radius: var(--rune-radius-sm);
+        cursor: pointer;
         opacity: 0.85;
-        transition: opacity var(--rune-dur-fast) var(--rune-ease);
+        transition:
+          opacity var(--rune-dur-fast) var(--rune-ease),
+          background-color var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          color var(--rune-dur-fast) var(--rune-ease);
       }
       .cmd:hover .cmd-kebab,
       .cmd-kebab:hover,
       .cmd-kebab:focus-within {
         opacity: 1;
       }
-      .cmd-kebab rune-button::part(base) {
-        width: 30px;
-        height: 30px;
-        padding: 0;
-        font-size: 16px;
-        line-height: 1;
-        background: var(--rune-surface);
-        border: 1px solid var(--rune-border);
-        color: var(--rune-text);
-        border-radius: var(--rune-radius-sm);
-      }
-      .cmd-kebab rune-button::part(base):hover {
+      .cmd-kebab:hover {
         background: var(--rune-primary);
         border-color: var(--rune-primary);
         color: var(--rune-on-primary);
+      }
+      .cmd-kebab:focus-visible {
+        outline: 2px solid var(--rune-primary);
+        outline-offset: 1px;
+      }
+      .cmd-kebab i {
+        font-size: 14px;
+        line-height: 1;
       }
       .menu-popover {
         background: var(--rune-surface);
@@ -24930,6 +24942,11 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         min-width: 180px;
         display: flex;
         flex-direction: column;
+        /* Clicks on the menu's padding pass through to whatever sits
+         * behind (often a sibling cmd button the menu is overlapping).
+         * Only the menu items capture clicks; the rest is a visual
+         * shell so we can still see the menu above the card. */
+        pointer-events: none;
       }
       .menu-item {
         background: transparent;
@@ -24945,6 +24962,9 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         align-items: center;
         gap: var(--rune-space-2);
         width: 100%;
+        /* Counter the menu container's pointer-events: none so the
+         * rows stay clickable. */
+        pointer-events: auto;
       }
       .menu-item:hover {
         background: var(--rune-primary-soft);
@@ -24962,7 +24982,7 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
         width: 16px;
         text-align: center;
       }
-    `]}constructor(){super(),this._confirmingDelete=!1,this._confirmingCmdDelete=null,this._editingCmd=null,this._openMenuKey=null,this._menuAnchor=null,this._menuPos=null,this._closeMenu=()=>{this._openMenuKey=null,this._menuAnchor=null,this._menuPos=null},this._onDocClick=e=>{if(!this._openMenuKey)return;let t=e.composedPath();this._menuAnchor&&t.includes(this._menuAnchor)||t.some(e=>e.id===`rune-cmd-menu`)||this._closeMenu()},Ds(this)}_onEdit(){C.openDeviceDialog(this.device)}async _confirmDelete(){this._confirmingDelete=!1;try{await $.deleteDevice(this.device.id),C.pushToast(m(o`Deleted`),`ok`),await Is()}catch(e){yt(e)}}async _send(e,t){let n=(this.device.commands??[]).find(t=>t.key===e.key);if(n&&n.has_payload===!1){C.pushToast(m(o`"${e.label??e.key}" has no captured signal — re-learn it from the ⋮ menu`),`err`);return}try{await $.sendCommand(this.device.id,e.key),t.classList.add(`flash`),setTimeout(()=>t.classList.remove(`flash`),Hs),C.pushToast(m(o`Sent ${e.label??e.key}`),`ok`)}catch(e){yt(e)}}_learn(){C.openLearnDialog(this.device.id)}_toggleMenu(e,t){if(this._openMenuKey===e.key){this._closeMenu();return}let n=t.getBoundingClientRect();this._openMenuKey=e.key,this._menuAnchor=t,this._menuPos={x:n.left+window.scrollX,y:n.bottom+window.scrollY}}_editCmd(e){this._closeMenu(),this._editingCmd=e}_relearnCmd(e){this._closeMenu(),C.openLearnDialog(this.device.id,e.key??``,e.label??``)}_askDeleteCmd(e){this._closeMenu(),this._confirmingCmdDelete=e}_cancelDeleteCmd(){this._confirmingCmdDelete=null}async _confirmDeleteCmd(e){this._confirmingCmdDelete=null;try{await $.deleteCommand(this.device.id,e.key),C.pushToast(m(o`Deleted "${e.label??e.key}"`),`ok`),await Is()}catch(e){yt(e)}}connectedCallback(){super.connectedCallback(),document.addEventListener(`click`,this._onDocClick)}disconnectedCallback(){document.removeEventListener(`click`,this._onDocClick),super.disconnectedCallback()}async _onCommandSaved(){this._editingCmd=null,C.pushToast(m(o`Command updated`),`ok`),await Is()}async _onCommandDeleted(){this._editingCmd=null,await Is()}render(){let e=this.device,t=(e.transmitter_entity_ids??[]).join(`, `)||`—`,n=(e.receiver_entity_ids??[]).join(`, `),r=Vs[e.category]??`remote`;return D`
+    `]}constructor(){super(),this._confirmingDelete=!1,this._confirmingCmdDelete=null,this._editingCmd=null,this._openMenuKey=null,this._menuAnchor=null,this._menuPos=null,this._closeMenu=()=>{this._openMenuKey=null,this._menuAnchor=null,this._menuPos=null},this._onDocClick=e=>{if(!this._openMenuKey)return;let t=e.composedPath();this._menuAnchor&&t.includes(this._menuAnchor)||t.some(e=>e.id===`rune-cmd-menu`)||this._closeMenu()},Ds(this)}_onEdit(){C.openDeviceDialog(this.device)}async _confirmDelete(){this._confirmingDelete=!1;try{await $.deleteDevice(this.device.id),C.pushToast(m(o`Deleted`),`ok`),await Is()}catch(e){yt(e)}}async _send(e,t){let n=(this.device.commands??[]).find(t=>t.key===e.key);if(n&&n.has_payload===!1){C.pushToast(m(o`"${e.label??e.key}" has no captured signal — re-learn it from the ⋮ menu`),`err`);return}try{await $.sendCommand(this.device.id,e.key),t.classList.add(`flash`),setTimeout(()=>t.classList.remove(`flash`),Hs),C.pushToast(m(o`Sent ${e.label??e.key}`),`ok`)}catch(e){yt(e)}}_learn(){C.openLearnDialog(this.device.id)}_toggleMenu(e,t){if(this._openMenuKey===e.key){this._closeMenu();return}let n=t.getBoundingClientRect();this._openMenuKey=e.key,this._menuAnchor=t,this._menuPos={x:n.left,y:n.bottom}}_editCmd(e){this._closeMenu(),this._editingCmd=e}_relearnCmd(e){this._closeMenu(),C.openLearnDialog(this.device.id,e.key??``,e.label??``)}_askDeleteCmd(e){this._closeMenu(),this._confirmingCmdDelete=e}_cancelDeleteCmd(){this._confirmingCmdDelete=null}async _confirmDeleteCmd(e){this._confirmingCmdDelete=null;try{await $.deleteCommand(this.device.id,e.key),C.pushToast(m(o`Deleted "${e.label??e.key}"`),`ok`),await Is()}catch(e){yt(e)}}connectedCallback(){super.connectedCallback(),document.addEventListener(`click`,this._onDocClick)}disconnectedCallback(){document.removeEventListener(`click`,this._onDocClick),super.disconnectedCallback()}async _onCommandSaved(){this._editingCmd=null,C.pushToast(m(o`Command updated`),`ok`),await Is()}async _onCommandDeleted(){this._editingCmd=null,await Is()}render(){let e=this.device,t=(e.transmitter_entity_ids??[]).join(`, `)||`—`,n=(e.receiver_entity_ids??[]).join(`, `),r=Vs[e.category]??`remote`;return D`
       <div class="card">
         <div class="head">
           <div class="head-left">
@@ -25017,13 +25037,15 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
                   <i class="ti ti-bolt"></i>
                   <span>${t.label??t.key}</span>
                 </button>
-                <rune-button
+                <button
+                  type="button"
                   class="cmd-kebab"
-                  icon="dots-vertical"
-                  variant="ghost"
+                  title=${m(o`Options for "${t.label??t.key}"`)}
                   aria-label=${m(o`Options for "${t.label??t.key}"`)}
                   @click=${e=>{e.stopPropagation(),this._toggleMenu(t,e.currentTarget)}}
-                ></rune-button>
+                >
+                  <i class="ti ti-dots-vertical" aria-hidden="true"></i>
+                </button>
               </div>
             `)}
           <button class="cmd placeholder" @click=${this._learn}>
@@ -25038,7 +25060,6 @@ ${Sr.replace(/@font-face\s*\{[^}]*\}/g,``).replace(/^\/\*![\s\S]*?\*\/\s*/,``).t
                 id="rune-cmd-menu"
                 class="menu-popover"
                 style=${`position:fixed;left:${this._menuPos.x}px;top:${this._menuPos.y}px;`}
-                @click=${e=>e.stopPropagation()}
               >
                 <button
                   class="menu-item"

@@ -123,9 +123,9 @@ export class RuneDeviceCard extends LitElement {
         background: var(--rune-surface-alt);
         border: 1px solid var(--rune-border);
         border-radius: var(--rune-radius-sm);
-        /* Right padding reserves space for the 30px kebab icon at
-         * right:6px so the label never collides with the dots. */
-        padding: var(--rune-space-3) calc(var(--rune-space-2) + 28px) var(--rune-space-3)
+        /* Right padding reserves space for the 24px kebab icon at
+         * right:4px so the label never collides with the dots. */
+        padding: var(--rune-space-3) calc(var(--rune-space-2) + 24px) var(--rune-space-3)
           var(--rune-space-2);
         cursor: pointer;
         font: inherit;
@@ -183,31 +183,43 @@ export class RuneDeviceCard extends LitElement {
       }
       .cmd-kebab {
         position: absolute;
-        top: 6px;
-        right: 6px;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--rune-surface);
+        border: 1px solid var(--rune-border);
+        color: var(--rune-text);
+        border-radius: var(--rune-radius-sm);
+        cursor: pointer;
         opacity: 0.85;
-        transition: opacity var(--rune-dur-fast) var(--rune-ease);
+        transition:
+          opacity var(--rune-dur-fast) var(--rune-ease),
+          background-color var(--rune-dur-fast) var(--rune-ease),
+          border-color var(--rune-dur-fast) var(--rune-ease),
+          color var(--rune-dur-fast) var(--rune-ease);
       }
       .cmd:hover .cmd-kebab,
       .cmd-kebab:hover,
       .cmd-kebab:focus-within {
         opacity: 1;
       }
-      .cmd-kebab rune-button::part(base) {
-        width: 30px;
-        height: 30px;
-        padding: 0;
-        font-size: 16px;
-        line-height: 1;
-        background: var(--rune-surface);
-        border: 1px solid var(--rune-border);
-        color: var(--rune-text);
-        border-radius: var(--rune-radius-sm);
-      }
-      .cmd-kebab rune-button::part(base):hover {
+      .cmd-kebab:hover {
         background: var(--rune-primary);
         border-color: var(--rune-primary);
         color: var(--rune-on-primary);
+      }
+      .cmd-kebab:focus-visible {
+        outline: 2px solid var(--rune-primary);
+        outline-offset: 1px;
+      }
+      .cmd-kebab i {
+        font-size: 14px;
+        line-height: 1;
       }
       .menu-popover {
         background: var(--rune-surface);
@@ -219,6 +231,11 @@ export class RuneDeviceCard extends LitElement {
         min-width: 180px;
         display: flex;
         flex-direction: column;
+        /* Clicks on the menu's padding pass through to whatever sits
+         * behind (often a sibling cmd button the menu is overlapping).
+         * Only the menu items capture clicks; the rest is a visual
+         * shell so we can still see the menu above the card. */
+        pointer-events: none;
       }
       .menu-item {
         background: transparent;
@@ -234,6 +251,9 @@ export class RuneDeviceCard extends LitElement {
         align-items: center;
         gap: var(--rune-space-2);
         width: 100%;
+        /* Counter the menu container's pointer-events: none so the
+         * rows stay clickable. */
+        pointer-events: auto;
       }
       .menu-item:hover {
         background: var(--rune-primary-soft);
@@ -327,9 +347,12 @@ export class RuneDeviceCard extends LitElement {
     const rect = anchor.getBoundingClientRect();
     this._openMenuKey = cmd.key;
     this._menuAnchor = anchor;
+    // ``position: fixed`` is viewport-relative, so we feed it raw
+    // ``getBoundingClientRect`` coords — adding ``window.scrollX/Y``
+    // would push the menu off-screen on any scrolled page.
     this._menuPos = {
-      x: rect.left + window.scrollX,
-      y: rect.bottom + window.scrollY,
+      x: rect.left,
+      y: rect.bottom,
     };
   }
 
@@ -470,16 +493,18 @@ export class RuneDeviceCard extends LitElement {
                   <i class="ti ti-bolt"></i>
                   <span>${c.label ?? c.key}</span>
                 </button>
-                <rune-button
+                <button
+                  type="button"
                   class="cmd-kebab"
-                  icon="dots-vertical"
-                  variant="ghost"
+                  title=${msg(str`Options for "${c.label ?? c.key}"`)}
                   aria-label=${msg(str`Options for "${c.label ?? c.key}"`)}
                   @click=${(e: Event) => {
                     e.stopPropagation();
                     this._toggleMenu(c, e.currentTarget as HTMLElement);
                   }}
-                ></rune-button>
+                >
+                  <i class="ti ti-dots-vertical" aria-hidden="true"></i>
+                </button>
               </div>
             `,
           )}
@@ -497,7 +522,6 @@ export class RuneDeviceCard extends LitElement {
                 id="rune-cmd-menu"
                 class="menu-popover"
                 style=${`position:fixed;left:${this._menuPos.x}px;top:${this._menuPos.y}px;`}
-                @click=${(e: Event) => e.stopPropagation()}
               >
                 <button
                   class="menu-item"
