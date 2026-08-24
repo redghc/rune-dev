@@ -7,6 +7,7 @@ in-memory repository.
 """
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 import pytest
@@ -706,3 +707,116 @@ class TestRegistryShape:
             "debug/registry-check",
         }
         assert set(_HANDLERS.keys()) == expected
+
+
+class TestCallbackErrorEnvelope:
+    """Regression: HA's ``error_message`` signature is
+    ``(msg_id, code, message, ...)`` — the human text goes in
+    ``message``, not ``code``. The earlier wrapper packed the
+    exception text into ``code`` and left ``message`` at the HA
+    default ``"Unknown error"``, so every backend failure looked
+    identical in the panel."""
+
+    @pytest.mark.asyncio
+    async def test_handler_exception_surfaces_message_not_unknown_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Pre-seed ``homeassistant.components.websocket_api`` so the
+        # ``from homeassistant.components import websocket_api`` inside
+        # ``async_register_websocket_commands`` resolves to our stub
+        # without touching the real HA install.
+        fake = _make_fake_websocket_api(monkeypatch)
+
+        sent: list[dict[str, Any]] = []
+
+        class _FakeConnection:
+            def send_message(self, payload: dict[str, Any]) -> None:
+                sent.append(payload)
+
+        class _FakeHass:
+            pass
+
+        # Register a one-shot handler that raises so we can verify
+        # the wrapper sends a readable ``message`` field.
+        from custom_components.rune.websocket_api import (
+            _HANDLERS,
+            _register,
+            async_register_websocket_commands,
+        )
+
+        @_register("__test_raises__")
+        async def _boom(ctx: Any, msg: dict[str, Any]) -> dict[str, Any]:
+            raise RuntimeError("Capture failed: receiver offline")
+
+        try:
+            await async_register_websocket_commands(_FakeHass())
+            callback = fake.registered["rune/__test_raises__"]["handler"]
+            await callback(
+                _FakeHass(),
+                _FakeConnection(),
+                {"id": 7, "type": "rune/__test_raises__"},
+            )
+        finally:
+            _HANDLERS.pop("__test_raises__", None)
+
+        assert len(sent) == 1, sent
+        envelope = sent[0]
+        assert envelope["success"] is False
+        err = envelope["error"]
+        assert err["code"] == "unknown_error", err
+        assert "RuntimeError" in err["message"], err
+        assert "receiver offline" in err["message"], err
+
+
+def _make_fake_websocket_api(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Build a stub ``homeassistant.components.websocket_api`` that
+    captures every registered callback so the test can invoke them
+    directly without a real HA install."""
+    import types
+
+    # ``from homeassistant.components import websocket_api`` walks the
+    # parent package first, so seed ``homeassistant`` and
+    # ``homeassistant.components`` as empty modules before the target.
+    for name in ("homeassistant", "homeassistant.components"):
+        if name not in sys.modules:
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+    mod = types.ModuleType("homeassistant.components.websocket_api")
+    mod.registered: dict[str, dict[str, Any]] = {}
+
+    def async_register_command(
+        hass: Any, command: str, handler: Any, schema: Any = None
+    ) -> None:
+        mod.registered[command] = {"handler": handler, "schema": schema}
+
+    def async_response(func: Any) -> Any:
+        return func
+
+    def error_message(
+        msg_id: int,
+        code: Any = "unknown_error",
+        message: str | None = None,
+        **kw: Any,
+    ) -> dict[str, Any]:
+        # Mirror HA's default: ``message`` falls back to
+        # ``"Unknown error"`` when not supplied.
+        return {
+            "id": msg_id,
+            "type": "result",
+            "success": False,
+            "error": {
+                "code": code,
+                "message": message if message is not None else "Unknown error",
+                **{k: v for k, v in kw.items() if v is not None},
+            },
+        }
+
+    def result_message(msg_id: int, payload: Any) -> dict[str, Any]:
+        return {"id": msg_id, "type": "result", "success": True, "result": payload}
+
+    mod.async_register_command = async_register_command
+    mod.async_response = async_response
+    mod.error_message = error_message
+    mod.result_message = result_message
+    monkeypatch.setitem(sys.modules, "homeassistant.components.websocket_api", mod)
+    return mod

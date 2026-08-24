@@ -87,8 +87,18 @@ window.addEventListener("message", (event: MessageEvent) => {
   const r = pending.get(data.id);
   if (!r) return;
   pending.delete(data.id);
-  if (typeof data.error === "string") r.reject(new Error(data.error));
-  else r.resolve(data.result);
+  if (typeof data.error === "string") {
+    r.reject(new Error(data.error));
+  } else if (data.error && typeof data.error === "object") {
+    // Defensive: the shim flattens to a string today, but if it ever
+    // forwards the HA envelope raw we already know how to read it.
+    const e = data.error as { code?: unknown; message?: unknown };
+    const code = typeof e.code === "string" ? e.code : "";
+    const msg = typeof e.message === "string" ? e.message : "Unknown error";
+    r.reject(new Error(code && code !== "unknown_error" ? `${code}: ${msg}` : msg));
+  } else {
+    r.resolve(data.result);
+  }
 });
 
 function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
@@ -120,66 +130,91 @@ function bridgeCall(payload: Record<string, unknown>): Promise<unknown> {
   });
 }
 
+/** HA wraps every WS rejection as ``{code, message, translation_domain,
+ *  translation_key}``. ``Error.message`` only catches the literal
+ *  ``message`` field — which on older HA builds defaults to
+ *  ``"Unknown error"`` when the integration forgets to set one. We
+ *  flatten the envelope into a single readable string so the panel
+ *  surfaces whatever the backend actually meant. */
+function bridgeReject(err: unknown): never {
+  if (err && typeof err === "object" && "message" in err) {
+    const e = err as { code?: unknown; message?: unknown; translation_key?: unknown };
+    const code = typeof e.code === "string" ? e.code : "";
+    const msg = typeof e.message === "string" ? e.message : String(err);
+    if (code && code !== "unknown_error") {
+      throw new Error(`${code}: ${msg}`);
+    }
+    throw new Error(msg);
+  }
+  throw new Error(String(err));
+}
+
+/** Wrap a ``bridgeCall`` so the HA WS error envelope is flattened
+ *  into a readable message before the caller's ``catch`` sees it. */
+function bridgeWs<T>(payload: Record<string, unknown>): Promise<T> {
+  return bridgeCall(payload).catch(bridgeReject) as Promise<T>;
+}
+
 export const api = {
   list: (): Promise<ListResponse> =>
-    bridgeCall({ kind: "ws", message: { type: "rune/list" } }) as Promise<ListResponse>,
+    bridgeWs({ kind: "ws", message: { type: "rune/list" } }) as Promise<ListResponse>,
 
   getDevice: (id: string): Promise<{ device: DeviceSummary }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/device/get", device_id: id },
     }) as Promise<{ device: DeviceSummary }>,
 
   createDevice: (payload: Record<string, unknown>): Promise<{ device: DeviceSummary }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/device/create", ...payload },
     }) as Promise<{ device: DeviceSummary }>,
 
   updateDevice: (payload: Record<string, unknown>): Promise<{ device: DeviceSummary }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/device/update", ...payload },
     }) as Promise<{ device: DeviceSummary }>,
 
   deleteDevice: (id: string): Promise<{ ok: true }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/device/delete", device_id: id },
     }) as Promise<{ ok: true }>,
 
   learnCommand: (payload: Record<string, unknown>): Promise<LearnResult> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/command/learn", ...payload },
     }) as Promise<LearnResult>,
 
   listSniffer: (): Promise<{ remotes: Remote[] }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/sniffer/list" },
     }) as Promise<{ remotes: Remote[] }>,
 
   dismissRemote: (remoteId: string): Promise<{ ok: true }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/sniffer/dismiss", remote_id: remoteId },
     }) as Promise<{ ok: true }>,
 
   listActions: (): Promise<{ actions: ActionBinding[] }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/action/list" },
     }) as Promise<{ actions: ActionBinding[] }>,
 
   transmitters: (): Promise<{ transmitters: TxEntity[] }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/transmitter/list" },
     }) as Promise<{ transmitters: TxEntity[] }>,
 
   receivers: (): Promise<{ receivers: RxEntity[] }> =>
-    bridgeCall({
+    bridgeWs({
       kind: "ws",
       message: { type: "rune/receiver/list" },
     }) as Promise<{ receivers: RxEntity[] }>,

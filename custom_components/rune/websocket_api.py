@@ -240,11 +240,16 @@ async def async_register_websocket_commands(hass: Any) -> None:
                 payload = await _handler(ctx, msg)
             except Exception as err:
                 _LOGGER.exception("rune ws command %s failed", _command_name)
+                # ``websocket_api.error_message`` signature is
+                # ``(msg_id, code, message, ...)`` — the human-readable
+                # text belongs in ``message``, not ``code``. The previous
+                # shape ``error_message(msg_id, f"{...}: {err}")`` packed
+                # the exception text into the code slot and left ``message``
+                # at HA's default ``"Unknown error"``, which made every
+                # backend failure look identical in the panel.
+                message = f"{type(err).__name__}: {err}" or "Unknown error"
                 connection.send_message(
-                    websocket_api.error_message(
-                        msg_id,
-                        f"{type(err).__name__}: {err}",
-                    )
+                    websocket_api.error_message(msg_id, "unknown_error", message)
                 )
                 return
             connection.send_message(
