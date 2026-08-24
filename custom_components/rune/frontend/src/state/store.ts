@@ -32,6 +32,7 @@ export type LearnStatus =
   | { kind: "failed"; message: string };
 
 export type LearnStep = "pick" | "capture" | "review";
+export type LearnTransport = "ir" | "rf";
 
 export interface LearnDialogState {
   open: boolean;
@@ -39,6 +40,8 @@ export interface LearnDialogState {
   step: LearnStep;
   commandKey: string;
   commandLabel: string;
+  transport: LearnTransport;
+  receiverEntityId: string;
   status: LearnStatus;
   captured: LearnResult["captured"] | null;
   rawTimings: number[] | null;
@@ -63,6 +66,8 @@ export const store = {
     step: "pick" as LearnStep,
     commandKey: "",
     commandLabel: "",
+    transport: "ir" as LearnTransport,
+    receiverEntityId: "",
     status: { kind: "idle" } as LearnStatus,
     captured: null,
     rawTimings: null,
@@ -94,7 +99,13 @@ export const store = {
     notify();
   },
 
-  openLearnDialog(deviceId: string, commandKey = "", commandLabel = ""): void {
+  openLearnDialog(
+    deviceId: string,
+    commandKey = "",
+    commandLabel = "",
+    transport: LearnTransport = "ir",
+    receiverEntityId = "",
+  ): void {
     const hasKey = commandKey.trim().length > 0;
     this.learnDialog = {
       open: true,
@@ -102,6 +113,8 @@ export const store = {
       step: hasKey ? "capture" : "pick",
       commandKey: commandKey.trim(),
       commandLabel: commandLabel.trim(),
+      transport,
+      receiverEntityId,
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,
@@ -117,6 +130,8 @@ export const store = {
       step: "pick",
       commandKey: "",
       commandLabel: "",
+      transport: "ir",
+      receiverEntityId: "",
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,

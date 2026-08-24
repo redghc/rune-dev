@@ -9,7 +9,8 @@
     /* eslint-disable @typescript-eslint/no-explicit-any */
 
     export const templates = {
-      'h18fc17a05364c3ef': html`Elige un identificador único y una etiqueta para el comando que quieres que RUNE aprenda. Pulsarás el botón del mando en el siguiente paso.`,
+      'h52fda6c9893cdc05': html`Elige un identificador único, el transporte de la señal y la entidad receptora que
+              capturará la señal. Pulsarás el botón del mando en el siguiente paso.`,
 'h7ca7e5a17ba26a94': html`Señales en vivo capturadas desde cada receptor que hayas configurado. El sniffer escucha
             automáticamente en cada entidad receptora en cuanto añades un dispositivo. Asigna
             una señal a un comando del dispositivo desde la pestaña <strong>Acciones</strong> o descarta el mando entero aquí.`,
@@ -23,6 +24,7 @@
 's01ffd62761f12537': str`Seguir el idioma de Home Assistant`,
 's03970aa76a09982d': str`Integración`,
 's040fd73de6a91e62': str`nivel de velocidad`,
+'s042b45e9d5477a25': str`IR usa el receptor de infrarrojos; RF usa el barrido + captura de Broadlink`,
 's043243e73a40955e': str`Lo que ven los usuarios en la tarjeta del dispositivo`,
 's064a4f8afa514ca2': str`Aprendido "${0}"`,
 's06725aa6ca689120': str`Emisores disponibles`,
@@ -35,6 +37,7 @@
 's12d6dde9b30c3093': str`Descartar`,
 's13f21b1fc0c0aa9f': str`Elige un emisor RF…`,
 's17479755f9e1e34d': str`Capturando para`,
+'s17abd0c7bdcca83a': str`Infrarrojo (IR)`,
 's17b684cd2733eb8e': str`señales`,
 's1a249b1921e2bdea': str`off`,
 's1a5230a71d9285c1': str`Capturar`,
@@ -59,10 +62,12 @@
 's44a9ac9dd7567f4a': str`Eliminado`,
 's489d4c9535923e35': str`Determina qué entidades expone HA`,
 's498865c7bd1f3959': str`desconocido`,
+'s4a896fe43425c771': str`Radiofrecuencia (RF)`,
 's4caed5b7a7e5d89b': str`Inglés`,
 's4cb9ebef9edf03fd': str`Salud de la integración y entidades descubiertas.`,
 's503d4b322b1ed5e1': str`No se capturó señal — inténtalo de nuevo`,
 's5062cd8f7a7fd349': str`señal`,
+'s5323f1501f045878': str`Entidad que capturará la señal`,
 's5590dbf7e425789d': str`Etiqueta`,
 's55dcb71fc2faeb11': str`Opcional — receptor para señales y aprendizaje IR`,
 's593d9c27e95706a7': str`Entidad emisora IR que envía comandos`,
@@ -76,6 +81,7 @@
 's64de9eceb8172269': str`Editar dispositivo`,
 's665f2a2247cf9c36': str`Añadir dispositivo`,
 's66655dca2c3e8a12': str`comando`,
+'s6853ac458d5acd8b': str`Entidad receptora`,
 's68848df501eff2fe': str`Receptor RF`,
 's69d88ef4b2618980': str`Persiana`,
 's69f4d544bf92eb97': str`Aún no hay dispositivos`,
@@ -104,6 +110,7 @@
 's8ee873a2c3081974': str`Climatización`,
 's9008cf2ef15e16e3': str`niveles de velocidad`,
 's91f8eb17bf27c84b': str`Crea vinculaciones desde la API o espera al editor de v0.4.`,
+'s96bf2ac2c1ae20a4': str`Elige la entidad receptora que capturará la señal.`,
 's96fe278555c86904': str`RM4 Pro, FRM97, …`,
 's984a5e18d85b6d57': str`${0} ${1}`,
 's9a44f95f7acf28e0': str`Error: ${0}`,
@@ -112,6 +119,7 @@
 's9ea5b084355da7ad': str`No se encontraron emisores IR/RF`,
 'sa25ffe7bc563a4ee': str`Cargar acciones`,
 'sa80cab2239d4d8a4': str`Enseña a RUNE un nuevo comando IR o RF capturando la señal en bruto desde tu mando.`,
+'sa9a1a8078caf6621': str`No se encontraron entidades receptoras de infrarrojos. Añade una entidad infrared.* en Home Assistant.`,
 'sac895c732f350ac5': str`Oscuro`,
 'sad3e3c8146fc920f': str`Estado`,
 'sade691dfaef83db6': str`Opcional — receptor para señales y aprendizaje RF`,
@@ -128,6 +136,7 @@
 'sb8e241afc5e40694': str`Aún no hay acciones`,
 'sbb7913463764098f': str`Volver a capturar`,
 'sc16e00a7a8b2fde2': str`Atrás`,
+'sc27af4f2dc1c563e': str`Elige un receptor…`,
 'sc65da9f5018d9fc8': str`Añade un receptor Broadlink / ESPHome RF para habilitar los flujos de sniffer y aprendizaje.`,
 'sc72fb248097bba25': str`Emisor IR`,
 'sc9e494c8346b7cb5': str`Otro`,
@@ -157,7 +166,9 @@
 'sf3ba82f4ac082dc3': str`Niveles de velocidad`,
 'sf6ac8bfcba790e33': str`¿Eliminar el dispositivo «${0}»?`,
 'sf8824fc70d91da9e': str`Español`,
+'sfa5ddf3ac7921f52': str`Transporte`,
 'sfbca8326a775cc77': str`Pulsos`,
+'sff2546622f355459': str`No se encontraron entidades Broadlink remote.*. Añade un dispositivo Broadlink en Home Assistant.`,
 'sfff229536a18b7d3': str`mando`,
 'sfffe12451843f40a': str`Radiofrecuencia`,
     };

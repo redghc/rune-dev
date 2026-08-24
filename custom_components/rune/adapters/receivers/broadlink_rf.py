@@ -184,6 +184,9 @@ class BroadlinkRFReceiver(ReceiverPort):
         """Convenience: full sweep+capture flow returning a CapturedPulse.
 
         Used by the capture orchestrator's "Learn button" UX.
+        Carries the raw ``b64`` packet on the returned pulse so the
+        SPA can build a resendable ``b64:<payload>`` PulseCommand
+        without needing the receiver's device API on the wire side.
         """
         frequency_mhz = await self.sweep_frequency()
         await asyncio.sleep(1)
@@ -199,6 +202,7 @@ class BroadlinkRFReceiver(ReceiverPort):
             raw_timings=tuple(packet["timings"]),
             protocol_label=None,
             code_hex=None,
+            b64_packet=packet["b64"],
         )
 
 

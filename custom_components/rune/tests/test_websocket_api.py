@@ -826,6 +826,122 @@ def _make_fake_websocket_api(monkeypatch: pytest.MonkeyPatch) -> Any:
     return mod
 
 
+class TestWsCommandLearn:
+    """``rune/command/learn`` now requires the SPA to pick both the
+    transport (IR/RF) and the receiver entity. Each branch of the
+    handler is locked in here so we don't regress the user-facing
+    error messages we worked so hard to make actionable."""
+
+    @pytest.mark.asyncio
+    async def test_missing_transport_raises_action_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from custom_components.rune.domain.errors import ActionError
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        hass = FakeHass(states=[("infrared.rx", "idle")])
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            # transport intentionally missing
+            "receiver_entity_id": "infrared.rx",
+        }
+        # Stub the device repo so we get past the early check.
+        repo = self._stub_device_repo(monkeypatch, devices=[])
+        ctx.device_repository = lambda: _async(lambda: repo)  # type: ignore[method-assign]
+        with pytest.raises(ActionError, match="transport"):
+            await _ws_command_learn(ctx, msg)
+
+    @pytest.mark.asyncio
+    async def test_missing_receiver_raises_action_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from custom_components.rune.domain.errors import ActionError
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        hass = FakeHass()
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            "transport": "ir",
+            # receiver_entity_id intentionally missing
+        }
+        with pytest.raises(ActionError, match="receiver_entity_id"):
+            await _ws_command_learn(ctx, msg)
+
+    @pytest.mark.asyncio
+    async def test_rf_receiver_must_be_remote_domain(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from custom_components.rune.domain.errors import (
+            CaptureProviderUnavailableError,
+        )
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        hass = FakeHass(states=[("infrared.rx", "idle")])
+        # Patch the IR probe + the RF provider so the WS handler
+        # exercises the domain-validation branch in isolation.
+        from custom_components.rune import websocket_api as ws_api
+
+        monkeypatch.setattr(
+            ws_api,
+            "_is_ir_receiver",
+            lambda *_a, **_kw: True,
+        )
+        from custom_components.rune.adapters.capture import (
+            broadlink_rf as brf_mod,
+        )
+
+        monkeypatch.setattr(
+            brf_mod.BroadlinkRFCaptureProvider,
+            "is_available",
+            property(lambda _self: True),
+        )
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            "transport": "rf",
+            "receiver_entity_id": "infrared.rx",  # wrong domain for RF
+        }
+        with pytest.raises(
+            CaptureProviderUnavailableError, match="not an RF receiver"
+        ):
+            await _ws_command_learn(ctx, msg)
+
+    @staticmethod
+    def _stub_device_repo(
+        monkeypatch: pytest.MonkeyPatch, devices: list
+    ) -> Any:
+        """Build a fake ``device_repository`` async factory returning
+        a stub repo with ``.get``/``.load`` methods."""
+
+        class _StubRepo:
+            def __init__(self, devs: list) -> None:
+                self._devs = devs
+
+            async def get(self, device_id: str) -> Any:
+                for d in self._devs:
+                    if d.id == device_id:
+                        return d
+                return None
+
+            async def load(self) -> list:
+                return list(self._devs)
+
+        return _StubRepo(devices)
+
+
+async def _async(coro):
+    """Tiny helper to build a one-shot awaitable from a coroutine."""
+    return await coro
+
+
 @pytest.fixture
 def patched_ir_probes(monkeypatch: pytest.MonkeyPatch):
     """Stub ``_is_ir_receiver`` / ``_list_ir_receivers`` so the WS

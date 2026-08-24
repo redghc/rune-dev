@@ -180,6 +180,8 @@ _register_schema(
         {
             vol.Required("device_id"): str,
             vol.Required("command_key"): str,
+            vol.Required("transport"): vol.In(["ir", "rf"]),
+            vol.Required("receiver_entity_id"): str,
             vol.Optional("timeout_s"): vol.Coerce(float),
         },
         extra=vol.ALLOW_EXTRA,
@@ -603,7 +605,15 @@ async def _ws_command_learn(
 
     - ``device_id`` — id of the device.
     - ``command_key`` — which command to fill in.
-    - ``timeout_s`` — optional, default 15.
+    - ``transport`` — ``"ir"`` or ``"rf"`` (mandatory; the SPA's
+      step-by-step Learn dialog picks it explicitly).
+    - ``receiver_entity_id`` — id of the receiver entity to capture
+      through (mandatory; the SPA's step-by-step dialog filters the
+      pick list to entities compatible with the chosen transport).
+
+    Optional:
+
+    - ``timeout_s`` — capture window, default 15s.
     """
 
     device_id = msg.get("device_id")
@@ -611,14 +621,56 @@ async def _ws_command_learn(
     if not device_id or not command_key:
         raise ActionError("device_id and command_key are required")
 
-    orchestrator = ctx.hass.data.get(DOMAIN, {}).get(
-        next(iter(ctx.hass.data.get(DOMAIN, {})), {}), {}
-    ).get("capture_orchestrator")
-    if orchestrator is None:
-        # Fall back: look across all entries
-        for entry_data in ctx.hass.data.get(DOMAIN, {}).values():
-            if isinstance(entry_data, dict) and "capture_orchestrator" in entry_data:
-                orchestrator = entry_data["capture_orchestrator"]
+    transport_str = str(msg.get("transport", "")).strip().lower()
+    receiver_entity_id = str(msg.get("receiver_entity_id", "")).strip()
+    if transport_str not in {"ir", "rf"}:
+        raise ActionError(
+            "transport must be 'ir' or 'rf' — the SPA Learn dialog must "
+            "pick the transport before starting a capture session."
+        )
+    if not receiver_entity_id:
+        raise ActionError(
+            "receiver_entity_id is required — the SPA Learn dialog must "
+            "pick the receiver that will capture the signal."
+        )
+    from custom_components.rune.domain.enums import SignalTransport
+
+    transport = SignalTransport.IR if transport_str == "ir" else SignalTransport.RF
+
+    # Cheap domain check first — if the user picked an IR entity for
+    # an RF session (or vice versa), tell them immediately. We don't
+    # need the orchestrator for this and shouldn't hold its lock just
+    # to bounce a misconfigured entity_id.
+    receiver_domain = (
+        receiver_entity_id.split(".", 1)[0]
+        if "." in receiver_entity_id
+        else ""
+    )
+    if transport is SignalTransport.RF and receiver_domain != "remote":
+        raise CaptureProviderUnavailableError(
+            f"Receiver {receiver_entity_id!r} is not an RF receiver. "
+            "Pick an entity in the ``remote.*`` domain for RF capture."
+        )
+    if transport is SignalTransport.IR and receiver_domain not in {
+        "infrared",
+        "esphome",
+    }:
+        raise CaptureProviderUnavailableError(
+            f"Receiver {receiver_entity_id!r} is not an IR receiver. "
+            "Pick an entity in the ``infrared.*`` or ``esphome.*`` "
+            "domain for IR capture."
+        )
+
+    orchestrator = None
+    domain_data = ctx.hass.data.get(DOMAIN, {}) if hasattr(ctx.hass, "data") else {}
+    # Walk every entry; the first one with a registered orchestrator
+    # wins. The previous implementation tried ``next(iter(...))`` as a
+    # key into the same dict — which on an empty domain returns ``{}``
+    # and crashes on ``dict.__getitem__`` later.
+    for entry_data in domain_data.values():
+        if isinstance(entry_data, dict):
+            orchestrator = entry_data.get("capture_orchestrator")
+            if orchestrator is not None:
                 break
 
     if orchestrator is None:
@@ -630,43 +682,37 @@ async def _ws_command_learn(
     if device is None:
         raise CommandNotLearnedError(f"Device {device_id!r} not found")
 
-    # Pick the first receiver attached to the device, else any
-    # known receiver from HA. The transport (IR vs RF) follows the
-    # entity's domain — ``infrared.*`` → IR, ``remote.*`` → RF.
-    # We only support IR capture today; an RF-only configuration
-    # surfaces a clear "not implemented" message instead of a
-    # generic HA failure.
-    from custom_components.rune.adapters.capture.native_ir import (
-        NativeIRCaptureProvider,
-        probe_receiver,
-    )
-
-    receiver_entity_id, alternatives = _pick_ir_receiver(
-        ctx.hass, device.receiver_entity_ids
-    )
-    if not receiver_entity_id:
-        # No configured entity is a real IR receiver. Tell the user
-        # what they have, why it doesn't work, AND which entities
-        # HA does recognise — so they can fix the slot without
-        # having to grep through their entity registry.
-        hint = "Configure an IR receiver (domain ``infrared.*``) on this device."
-        if alternatives:
-            hint += f" HA currently recognises these receivers: {', '.join(alternatives)}."
-        configured = device.receiver_entity_ids or _list_receiver_entities(ctx.hass)
-        rf_ids = [r for r in configured if r.startswith("remote.")]
-        if rf_ids and not alternatives:
-            raise UnsupportedHardwareError(
-                f"Device {device.name!r} only has RF receivers "
-                f"({', '.join(rf_ids)}). " + hint
-            )
-        raise CaptureProviderUnavailableError(
-            f"No working IR receiver found for this device. " + hint
+    # Build the right provider for the requested transport and probe
+    # it before taking the orchestrator lock. Each provider has its
+    # own diagnostic — the WS handler returns that verbatim so the
+    # panel can render actionable guidance instead of a generic
+    # "not available" string.
+    provider: CaptureProvider
+    if transport is SignalTransport.IR:
+        from custom_components.rune.adapters.capture.native_ir import (
+            NativeIRCaptureProvider,
+            probe_receiver,
         )
 
-    provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
-    probe = probe_receiver(ctx.hass, receiver_entity_id)
-    if not probe.available:
-        raise CaptureProviderUnavailableError(probe.reason)
+        probe = probe_receiver(ctx.hass, receiver_entity_id)
+        if not probe.available:
+            raise CaptureProviderUnavailableError(probe.reason)
+        provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
+    else:
+        from custom_components.rune.adapters.capture.broadlink_rf import (
+            BroadlinkRFCaptureProvider,
+        )
+
+        # ``device_api`` resolution isn't plumbed through the WS
+        # context yet — the provider will surface a clear "not
+        # configured" error if it's None.
+        provider = BroadlinkRFCaptureProvider(ctx.hass, receiver_entity_id)
+        if not provider.is_available:
+            raise CaptureProviderUnavailableError(
+                f"RF receiver {receiver_entity_id!r} is not available. "
+                "The Broadlink device needs a pre-resolved device API "
+                "handle; check the RUNE integration logs for details."
+            )
 
     timeout_s = float(msg.get("timeout_s", 15.0))
     try:

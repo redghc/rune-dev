@@ -28,7 +28,9 @@ class CapturedPulse:
 
     The receiver adapter populates ``raw_timings`` always. The optional
     fields let the matcher upgrade to tier-1 (decoded) identity when the
-    receiver decodes the protocol natively.
+    receiver decodes the protocol natively. ``b64_packet`` carries the
+    raw receiver-native frame (used for RF resends via
+    ``remote.send_command`` with ``commands: "b64:<payload>"``).
     """
 
     receiver_entity_id: str
@@ -37,6 +39,7 @@ class CapturedPulse:
     protocol_label: str | None = None
     code_hex: str | None = None
     decoded_fingerprint: str | None = None
+    b64_packet: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to the wire format the SPA's Learn flow expects.
@@ -45,14 +48,17 @@ class CapturedPulse:
         ``LearnResult.captured`` — ``protocol_label`` (when the receiver
         decoded the protocol natively), ``signal_category`` (transport /
         encoding / carrier), and ``payload`` carrying the raw timings.
-        Decoded-hex / fingerprint fields are layered in when populated
-        so the SPA can upgrade to a tier-1 identity if it wants to.
+        Decoded-hex / fingerprint / base64-packet fields are layered in
+        when populated so the SPA can upgrade to a tier-1 identity or
+        resend via ``b64:<payload>`` as needed.
         """
         payload: dict[str, Any] = {"raw_timings": list(self.raw_timings)}
         if self.code_hex is not None:
             payload["decoded_hex"] = self.code_hex
         if self.decoded_fingerprint is not None:
             payload["decoded_fingerprint"] = self.decoded_fingerprint
+        if self.b64_packet is not None:
+            payload["b64_packet"] = self.b64_packet
         return {
             "protocol_label": self.protocol_label,
             "signal_category": {

@@ -57,6 +57,18 @@ class TestCapturedPulseToDict:
         # Raw timings still ride along.
         assert out["payload"]["raw_timings"] == [100, -200, 300]
 
+    def test_b64_packet_carries_for_rf(self) -> None:
+        """RF capture carries the raw Broadlink packet so the SPA can
+        build a ``b64:<payload>`` PulseCommand for resend."""
+        out = _pulse(b64_packet="sgIA/rsDAA==").to_dict()
+        assert out["payload"]["b64_packet"] == "sgIA/rsDAA=="
+        # b64 doesn't suppress other layers if they happen to be set.
+        assert "raw_timings" in out["payload"]
+
+    def test_b64_packet_absent_when_not_set(self) -> None:
+        out = _pulse().to_dict()
+        assert "b64_packet" not in out["payload"]
+
     def test_signal_category_str_enums_are_plain_strings(self) -> None:
         out = _pulse(
             signal_category=SignalCategory(

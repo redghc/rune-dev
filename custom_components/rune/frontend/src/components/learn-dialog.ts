@@ -13,7 +13,7 @@ import { reportError, store } from "@/state/store.js";
 import { sharedStyles } from "@/styles/shared.js";
 
 import type { RuneStepDef } from "@/components/ui/stepper.js";
-import type { LearnDialogState, LearnStep } from "@/state/store.js";
+import type { LearnDialogState, LearnStep, LearnTransport } from "@/state/store.js";
 
 @customElement("rune-learn-dialog")
 @localized()
@@ -185,6 +185,8 @@ export class RuneLearnDialog extends LitElement {
   @state() private _pickError = "";
   @state() private _commandKeyDraft = "";
   @state() private _commandLabelDraft = "";
+  @state() private _transportDraft: LearnTransport = "ir";
+  @state() private _receiverEntityIdDraft = "";
 
   private get _stepDefs(): RuneStepDef[] {
     return [
@@ -225,10 +227,16 @@ export class RuneLearnDialog extends LitElement {
       this._pickError = msg(str`Use lowercase letters, digits, and underscores only.`);
       return;
     }
+    if (!this._receiverEntityIdDraft) {
+      this._pickError = msg(str`Pick the receiver entity that will capture this signal.`);
+      return;
+    }
     this._pickError = "";
     store.updateLearn({
       commandKey: key,
       commandLabel: this._commandLabelDraft.trim() || key,
+      transport: this._transportDraft,
+      receiverEntityId: this._receiverEntityIdDraft,
       step: "capture",
       status: { kind: "idle" },
       captured: null,
@@ -238,14 +246,16 @@ export class RuneLearnDialog extends LitElement {
   };
 
   private async _start(): Promise<void> {
-    const { deviceId, commandKey } = store.learnDialog;
-    if (!deviceId || !commandKey) return;
+    const { deviceId, commandKey, transport, receiverEntityId } = store.learnDialog;
+    if (!deviceId || !commandKey || !receiverEntityId) return;
     store.updateLearn({ status: { kind: "capturing" }, step: "capture" });
     this._busy = true;
     try {
       const result = await api.learnCommand({
         device_id: deviceId,
         command_key: commandKey,
+        transport,
+        receiver_entity_id: receiverEntityId,
         timeout_s: 15,
       });
       if (result?.captured) {
@@ -320,14 +330,49 @@ export class RuneLearnDialog extends LitElement {
 
   private _renderPick(deviceName: string): TemplateResult {
     const ld = store.learnDialog;
+    const transport = this._transportDraft;
+    // IR receivers live in ``store.receivers`` (HA returns every
+    // entity in the infrared domain). RF receivers come from the
+    // ``store.transmitters`` list because Broadlink RF devices expose
+    // a single ``remote.*`` entity that can both transmit and
+    // receive — the same entity the user picked as a transmitter is
+    // the one to listen on for RF capture.
+    const irReceivers = store.receivers
+      .filter((r) => r.entity_id.startsWith("infrared."))
+      .map((r) => ({
+        value: r.entity_id,
+        label: r.name || r.entity_id,
+      }));
+    const rfReceivers = store.transmitters
+      .filter((t) => t.entity_id.startsWith("remote."))
+      .map((t) => ({
+        value: t.entity_id,
+        label: t.name || t.entity_id,
+      }));
+    const receiverOptions = transport === "rf" ? rfReceivers : irReceivers;
+    const selected = this._receiverEntityIdDraft || ld.receiverEntityId;
+    const transportOptions = [
+      { value: "ir", label: () => msg(str`Infrared (IR)`), icon: "scan-eye" },
+      { value: "rf", label: () => msg(str`Radio frequency (RF)`), icon: "broadcast" },
+    ];
+    const noReceiverHint =
+      receiverOptions.length === 0
+        ? transport === "ir"
+          ? msg(
+              str`No infrared receiver entities found. Add an infrared.* entity in Home Assistant.`,
+            )
+          : msg(
+              str`No Broadlink remote.* entities found. Add a Broadlink device in Home Assistant.`,
+            )
+        : msg(str`Entity that will capture the signal`);
     return html`
       <div class="step-body">
         <div class="help">
           <i class="ti ti-info-circle"></i>
           <span>
             ${msg(
-              html`Pick a unique identifier and a friendly label for the command you want RUNE to
-              learn. You will press the remote button on the next step.`,
+              html`Pick a unique identifier, the signal transport, and the receiver entity that will
+              capture the signal. You will press the remote button on the next step.`,
             )}
           </span>
         </div>
@@ -342,7 +387,6 @@ export class RuneLearnDialog extends LitElement {
           .helper=${msg(str`Lowercase identifier, e.g. off, speed_2, power_on`)}
           .placeholder=${msg(str`off`)}
           .value=${this._commandKeyDraft || ld.commandKey}
-          .error=${this._pickError}
           required
           maxlength="32"
           @rune-input=${(ev: CustomEvent<{ value: string }>) => this._onPickInput(ev, "key")}
@@ -356,8 +400,39 @@ export class RuneLearnDialog extends LitElement {
           maxlength="32"
           @rune-input=${(ev: CustomEvent<{ value: string }>) => this._onPickInput(ev, "label")}
         ></rune-input>
+        <rune-select
+          label=${msg(str`Transport`)}
+          icon="broadcast"
+          .helper=${msg(str`IR uses the infrared receiver, RF uses the Broadlink sweep + capture`)}
+          .options=${transportOptions}
+          .value=${transport}
+          required
+          @rune-change=${(ev: CustomEvent<{ value: string }>) =>
+            this._onTransportChange(ev.detail.value as LearnTransport)}
+        ></rune-select>
+        <rune-select
+          label=${msg(str`Receiver entity`)}
+          icon="antenna"
+          .helper=${noReceiverHint}
+          .placeholder=${msg(str`Pick a receiver…`)}
+          .options=${receiverOptions}
+          .value=${selected}
+          ?disabled=${receiverOptions.length === 0}
+          .error=${this._pickError}
+          required
+          @rune-change=${(ev: CustomEvent<{ value: string }>) =>
+            (this._receiverEntityIdDraft = ev.detail.value)}
+        ></rune-select>
       </div>
     `;
+  }
+
+  private _onTransportChange(transport: LearnTransport): void {
+    this._transportDraft = transport;
+    // Switching transport invalidates the previously chosen
+    // receiver — clear it so the user re-picks from the new list.
+    this._receiverEntityIdDraft = "";
+    this._pickError = "";
   }
 
   private _renderCapture(deviceName: string): TemplateResult {
@@ -447,6 +522,9 @@ export class RuneLearnDialog extends LitElement {
     const ld = store.learnDialog;
     const step = ld.step;
     if (step === "pick") {
+      const canContinue =
+        Boolean(this._commandKeyDraft.trim() || ld.commandKey) &&
+        Boolean(this._receiverEntityIdDraft || ld.receiverEntityId);
       return html`
         <rune-button variant="secondary" icon="x" @click=${this._onClose}>
           ${msg(str`Cancel`)}
@@ -454,7 +532,7 @@ export class RuneLearnDialog extends LitElement {
         <rune-button
           variant="primary"
           icon="arrow-right"
-          ?disabled=${!this._commandKeyDraft.trim() && !ld.commandKey}
+          ?disabled=${!canContinue}
           @click=${this._confirmPick}
         >
           ${msg(str`Continue`)}
@@ -503,9 +581,17 @@ export class RuneLearnDialog extends LitElement {
       // Reset local drafts every time the dialog hides so reopening
       // starts from a clean slate (and the new command key input
       // doesn't carry leftover text from a previous session).
-      if (this._commandKeyDraft || this._commandLabelDraft || this._pickError) {
+      if (
+        this._commandKeyDraft ||
+        this._commandLabelDraft ||
+        this._transportDraft !== "ir" ||
+        this._receiverEntityIdDraft ||
+        this._pickError
+      ) {
         this._commandKeyDraft = "";
         this._commandLabelDraft = "";
+        this._transportDraft = "ir";
+        this._receiverEntityIdDraft = "";
         this._pickError = "";
       }
       return;
@@ -516,6 +602,12 @@ export class RuneLearnDialog extends LitElement {
       }
       if (ld.commandLabel && !this._commandLabelDraft) {
         this._commandLabelDraft = ld.commandLabel;
+      }
+      if (ld.transport && this._transportDraft !== ld.transport) {
+        this._transportDraft = ld.transport;
+      }
+      if (ld.receiverEntityId && !this._receiverEntityIdDraft) {
+        this._receiverEntityIdDraft = ld.receiverEntityId;
       }
     }
   }

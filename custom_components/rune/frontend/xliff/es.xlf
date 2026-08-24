@@ -527,11 +527,6 @@
   <source>Use lowercase letters, digits, and underscores only.</source>
     <target>Usa solo letras minúsculas, dígitos y guiones bajos.</target>
   </trans-unit>
-<trans-unit id="h18fc17a05364c3ef">
-  <source>Pick a unique identifier and a friendly label for the command you want RUNE to
-              learn. You will press the remote button on the next step.</source>
-    <target>Elige un identificador único y una etiqueta para el comando que quieres que RUNE aprenda. Pulsarás el botón del mando en el siguiente paso.</target>
-  </trans-unit>
 <trans-unit id="s0b0a02a4470de153">
   <source>Device</source>
     <target>Dispositivo</target>
@@ -605,6 +600,52 @@
 <trans-unit id="sa80cab2239d4d8a4">
   <source>Teach RUNE a new IR or RF command by capturing the raw signal from your remote.</source>
     <target>Enseña a RUNE un nuevo comando IR o RF capturando la señal en bruto desde tu mando.</target>
+  </trans-unit>
+<trans-unit id="s96bf2ac2c1ae20a4">
+  <source>Pick the receiver entity that will capture this signal.</source>
+    <target>Elige la entidad receptora que capturará la señal.</target>
+  </trans-unit>
+<trans-unit id="s17abd0c7bdcca83a">
+  <source>Infrared (IR)</source>
+    <target>Infrarrojo (IR)</target>
+  </trans-unit>
+<trans-unit id="s4a896fe43425c771">
+  <source>Radio frequency (RF)</source>
+    <target>Radiofrecuencia (RF)</target>
+  </trans-unit>
+<trans-unit id="sa9a1a8078caf6621">
+  <source>No infrared receiver entities found. Add an infrared.* entity in Home Assistant.</source>
+    <target>No se encontraron entidades receptoras de infrarrojos. Añade una entidad infrared.* en Home Assistant.</target>
+  </trans-unit>
+<trans-unit id="sff2546622f355459">
+  <source>No Broadlink remote.* entities found. Add a Broadlink device in Home Assistant.</source>
+    <target>No se encontraron entidades Broadlink remote.*. Añade un dispositivo Broadlink en Home Assistant.</target>
+  </trans-unit>
+<trans-unit id="s5323f1501f045878">
+  <source>Entity that will capture the signal</source>
+    <target>Entidad que capturará la señal</target>
+  </trans-unit>
+<trans-unit id="h52fda6c9893cdc05">
+  <source>Pick a unique identifier, the signal transport, and the receiver entity that will
+              capture the signal. You will press the remote button on the next step.</source>
+    <target>Elige un identificador único, el transporte de la señal y la entidad receptora que
+              capturará la señal. Pulsarás el botón del mando en el siguiente paso.</target>
+  </trans-unit>
+<trans-unit id="sfa5ddf3ac7921f52">
+  <source>Transport</source>
+    <target>Transporte</target>
+  </trans-unit>
+<trans-unit id="s042b45e9d5477a25">
+  <source>IR uses the infrared receiver, RF uses the Broadlink sweep + capture</source>
+    <target>IR usa el receptor de infrarrojos; RF usa el barrido + captura de Broadlink</target>
+  </trans-unit>
+<trans-unit id="s6853ac458d5acd8b">
+  <source>Receiver entity</source>
+    <target>Entidad receptora</target>
+  </trans-unit>
+<trans-unit id="sc27af4f2dc1c563e">
+  <source>Pick a receiver…</source>
+    <target>Elige un receptor…</target>
   </trans-unit>
 </body>
 </file>
