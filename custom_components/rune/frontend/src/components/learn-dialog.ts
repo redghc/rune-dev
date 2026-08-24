@@ -330,6 +330,13 @@ export class RuneLearnDialog extends LitElement {
           receiverEntityId: "",
         });
         this._receiverEntityIdDraft = "";
+        // Surface the error inline on the receiver select so the
+        // user sees *why* they were sent back. Without this the
+        // revert looks like a silent no-op.
+        this._pickError = message;
+        // …and as a toast so the error is hard to miss even if the
+        // receiver field is scrolled off-screen.
+        store.pushToast(message, "err");
       }
       store.updateLearn({
         status: { kind: "failed", message },
@@ -416,27 +423,38 @@ export class RuneLearnDialog extends LitElement {
         label: r.name || r.entity_id,
       }));
     // RF capture resolves any entity that belongs to a Broadlink
-    // RM Pro / RM4 Pro — the backend tags ``broadlink: true`` on
-    // every such entity regardless of domain. We surface ALL of
-    // them in the RF picker so the user can pick whatever entity
-    // HA shows for their Broadlink (typically an IR emitter or
-    // the new ``radio_frequency.*`` transmitter).
+    // RM Pro / RM4 Pro. The backend tags ``broadlink: true`` on every
+    // such entity registered with the HA Broadlink integration, so we
+    // surface those. We also include ``remote.*`` and
+    // ``radio_frequency.*`` entities (the legacy RF transport and
+    // the new 2026+ platform) — anything that could plausibly be a
+    // Broadlink device. The backend validates every pick; if the
+    // entity doesn't resolve to a BroadlinkDevice the user gets a
+    // clear error rather than an empty picker.
     const rfReceivers = [
       ...store.receivers
-        .filter((r) => r.broadlink)
+        .filter(
+          (r) =>
+            r.broadlink ||
+            r.entity_id.startsWith("remote.") ||
+            r.entity_id.startsWith("radio_frequency."),
+        )
         .map((r) => ({
           value: r.entity_id,
           label: r.name || r.entity_id,
         })),
       ...store.transmitters
-        .filter((t) => t.entity_id.startsWith("remote."))
+        .filter(
+          (t) => t.entity_id.startsWith("remote.") || t.entity_id.startsWith("radio_frequency."),
+        )
         .map((t) => ({
           value: t.entity_id,
           label: t.name || t.entity_id,
         })),
     ];
     // De-duplicate by entity_id (some Broadlink devices expose the
-    // same entity as both a "receiver" and a "transmitter" entry).
+    // same entity as both a "receiver" and a "transmitter" entry,
+    // and we union the two stores above).
     const seenRf = new Set<string>();
     const rfReceiversUnique = rfReceivers.filter((opt) => {
       if (seenRf.has(opt.value)) return false;
@@ -456,7 +474,7 @@ export class RuneLearnDialog extends LitElement {
               str`No infrared receiver entities found. Add an infrared.* entity in Home Assistant.`,
             )
           : msg(
-              str`No Broadlink remote.* entities found. Add a Broadlink device in Home Assistant.`,
+              str`No RF receiver entities found. RF capture needs a Broadlink RM Pro / RM4 Pro (or other RF-capable Broadlink) — pick an entity that belongs to that device.`,
             )
         : msg(str`Entity that will capture the signal`);
     return html`

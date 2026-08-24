@@ -181,8 +181,8 @@
 'sf8824fc70d91da9e': str`Español`,
 'sfa5ddf3ac7921f52': str`Transporte`,
 'sfbca8326a775cc77': str`Pulsos`,
-'sff2546622f355459': str`No se encontraron entidades Broadlink remote.*. Añade un dispositivo Broadlink en Home Assistant.`,
 'sfff229536a18b7d3': str`mando`,
 'sfffe12451843f40a': str`Radiofrecuencia`,
+'s6ed76f876b2cc422': str`No RF receiver entities found. RF capture needs a Broadlink RM Pro / RM4 Pro (or other RF-capable Broadlink) — pick an entity that belongs to that device.`,
     };
   

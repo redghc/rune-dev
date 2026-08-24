@@ -617,10 +617,6 @@
   <source>No infrared receiver entities found. Add an infrared.* entity in Home Assistant.</source>
     <target>No se encontraron entidades receptoras de infrarrojos. Añade una entidad infrared.* en Home Assistant.</target>
   </trans-unit>
-<trans-unit id="sff2546622f355459">
-  <source>No Broadlink remote.* entities found. Add a Broadlink device in Home Assistant.</source>
-    <target>No se encontraron entidades Broadlink remote.*. Añade un dispositivo Broadlink en Home Assistant.</target>
-  </trans-unit>
 <trans-unit id="s5323f1501f045878">
   <source>Entity that will capture the signal</source>
     <target>Entidad que capturará la señal</target>
@@ -693,6 +689,9 @@
   <source>Frequency the Broadlink listens on for this capture</source>
     <target>Frecuencia en la que escucha el Broadlink para esta captura</target>
   </trans-unit>
+<trans-unit id="s6ed76f876b2cc422">
+  <source>No RF receiver entities found. RF capture needs a Broadlink RM Pro / RM4 Pro (or other RF-capable Broadlink) — pick an entity that belongs to that device.</source>
+</trans-unit>
 </body>
 </file>
 </xliff>
