@@ -78,15 +78,27 @@ class CaptureOrchestrator:
 
         Raises:
             CaptureInProgressError: another session is already active.
-            RuntimeError: the chosen provider is not available.
+            CaptureProviderUnavailableError: the chosen provider can't
+                run right now (entity missing, wrong transport, not a
+                registered IR receiver, etc.). Callers can surface the
+                reason directly to the user.
         """
+        from custom_components.rune.domain.errors import (
+            CaptureProviderUnavailableError,
+        )
+
         if self._lock.locked():
             raise CaptureInProgressError(
                 "Another capture session is already in progress"
             )
         if not provider.is_available:
-            raise RuntimeError(
-                f"Capture provider {getattr(provider, 'name', provider)} is not available"
+            entity_id = getattr(provider, "receiver_entity_id", None)
+            name = getattr(provider, "name", provider) or "capture provider"
+            raise CaptureProviderUnavailableError(
+                f"Capture provider {name!r} is not available"
+                + (f" for receiver {entity_id!r}" if entity_id else "")
+                + ". Check that the entity is loaded and is a supported "
+                "receiver for this provider."
             )
 
         await self._lock.acquire()

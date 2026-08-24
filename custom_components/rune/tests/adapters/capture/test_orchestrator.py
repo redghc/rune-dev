@@ -154,8 +154,15 @@ class TestUnsubscribe:
 class TestProviderUnavailable:
     @pytest.mark.asyncio
     async def test_unavailable_provider_raises(self) -> None:
+        from custom_components.rune.domain.errors import (
+            CaptureProviderUnavailableError,
+        )
+
         orch = CaptureOrchestrator()
         provider = MockProvider()
         provider.is_available = False
-        with pytest.raises(RuntimeError):
+        with pytest.raises(CaptureProviderUnavailableError) as info:
             await orch.start_capture(provider, "s1", timeout_s=0.1)
+        # Message must point at the provider by name + (if known)
+        # the receiver entity so the panel can show a useful hint.
+        assert "mock" in str(info.value)

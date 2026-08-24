@@ -820,3 +820,50 @@ def _make_fake_websocket_api(monkeypatch: pytest.MonkeyPatch) -> Any:
     mod.result_message = result_message
     monkeypatch.setitem(sys.modules, "homeassistant.components.websocket_api", mod)
     return mod
+
+
+class TestPickIrReceiver:
+    """``_pick_ir_receiver`` is the gate that decides which entity the
+    WS learn handler will subscribe to. The choices feed into the
+    orchestrator and the SPA's user-facing error messages, so the
+    ordering and fallback rules need to be locked in."""
+
+    def test_prefers_configured_infrared_entity(self) -> None:
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        hass = FakeHass(
+            states=[
+                ("infrared.bedroom", "idle"),
+                ("remote.broadlink", "idle"),
+            ]
+        )
+        # ``device.receiver_entity_ids`` order is preserved — the
+        # user's explicit pick wins over the HA discovery list.
+        assert (
+            _pick_ir_receiver(hass, ["remote.broadlink", "infrared.bedroom"])
+            == "infrared.bedroom"
+        )
+
+    def test_falls_back_to_infrared_from_discovery(self) -> None:
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        hass = FakeHass(
+            states=[
+                ("infrared.bedroom", "idle"),
+                ("remote.broadlink", "idle"),
+            ]
+        )
+        # Empty ``configured_receivers`` → fall back to HA discovery.
+        assert _pick_ir_receiver(hass, []) == "infrared.bedroom"
+
+    def test_returns_none_when_only_rf_receivers(self) -> None:
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        hass = FakeHass(states=[("remote.broadlink_rf_rx", "idle")])
+        assert _pick_ir_receiver(hass, ["remote.broadlink_rf_rx"]) is None
+
+    def test_returns_none_when_no_receivers_anywhere(self) -> None:
+        from custom_components.rune.websocket_api import _pick_ir_receiver
+
+        hass = FakeHass(states=[("light.kitchen", "on")])
+        assert _pick_ir_receiver(hass, []) is None

@@ -633,58 +633,40 @@ async def _ws_command_learn(
     # Pick the first receiver attached to the device, else any
     # known receiver from HA. The transport (IR vs RF) follows the
     # entity's domain — ``infrared.*`` → IR, ``remote.*`` → RF.
+    # We only support IR capture today; an RF-only configuration
+    # surfaces a clear "not implemented" message instead of a
+    # generic HA failure.
     from custom_components.rune.adapters.capture.native_ir import (
         NativeIRCaptureProvider,
     )
-    from custom_components.rune.adapters.capture.providers import CaptureProvider
-    from custom_components.rune.adapters.receivers.factory import select_receiver
-    from custom_components.rune.domain.enums import SignalTransport
 
-    receiver_entity_id: str | None = None
-    if device.receiver_entity_ids:
-        receiver_entity_id = device.receiver_entity_ids[0]
-    else:
-        known = _list_receiver_entities(ctx.hass)
-        if known:
-            receiver_entity_id = known[0]["entity_id"]
+    receiver_entity_id = _pick_ir_receiver(ctx.hass, device.receiver_entity_ids)
     if not receiver_entity_id:
-        raise CaptureProviderUnavailableError(
-            "No IR/RF receiver configured for this device"
+        rf_ids = [r for r in device.receiver_entity_ids if r.startswith("remote.")]
+        hint = (
+            "Configure an IR receiver (domain ``infrared.*``) on this device "
+            "to learn new commands."
         )
-
-    # Pick transport from the entity's domain — forcing IR on a
-    # ``remote.*`` Broadlink entity raises ``receiver_not_found``
-    # because the entity isn't an ``InfraredReceiverEntity``.
-    domain = receiver_entity_id.split(".", 1)[0] if "." in receiver_entity_id else ""
-    transport = SignalTransport.RF if domain == "remote" else SignalTransport.IR
-
-    provider: CaptureProvider
-    if transport == SignalTransport.RF:
-        # ``NativeIRCaptureProvider`` is the only provider implemented
-        # today. The RF path needs ``device_api`` for Broadlink
-        # receivers and isn't ready yet — surface a clear error so the
-        # SPA can ask the user to configure an IR receiver instead of
-        # getting a generic HA failure.
-        raise UnsupportedHardwareError(
-            f"RF capture for {receiver_entity_id!r} is not implemented yet. "
-            "Configure an IR receiver (domain ``infrared.*``) on this "
-            "device to learn new commands."
-        )
-
-    # Probe the receiver factory up-front so we don't start the
-    # orchestrator lock for an entity the adapter can't talk to.
-    try:
-        select_receiver(ctx.hass, receiver_entity_id, transport)
-    except UnsupportedHardwareError as err:
+        if rf_ids and not any(
+            r.startswith("infrared.") for r in device.receiver_entity_ids
+        ):
+            # The user only has RF receivers — be explicit so the SPA
+            # can guide them through adding an IR receiver rather
+            # than blaming the integration.
+            raise UnsupportedHardwareError(
+                f"Device {device.name!r} only has RF receivers "
+                f"({', '.join(rf_ids)}). {hint}"
+            )
         raise CaptureProviderUnavailableError(
-            f"No receiver adapter for {receiver_entity_id!r}: {err}"
-        ) from err
+            "No IR receiver configured for this device. " + hint
+        )
 
     provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
     if not provider.is_available:
         raise CaptureProviderUnavailableError(
             f"IR receiver {receiver_entity_id!r} is not available. Check that "
-            "the entity is loaded and exposed in Home Assistant."
+            "the entity is loaded and registered as an "
+            "InfraredReceiverEntity in Home Assistant."
         )
 
     timeout_s = float(msg.get("timeout_s", 15.0))
@@ -1012,6 +994,35 @@ def _list_transmitter_entities(hass: Any) -> list[dict[str, str]]:
 def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
     """Return entity_id + state for every known receiver domain."""
     return _list_entities_for_domains(hass, ("infrared", "esphome", "remote"))
+
+
+def _pick_ir_receiver(
+    hass: Any, configured_receivers: list[str]
+) -> str | None:
+    """Pick the best IR receiver for a learn session.
+
+    Prefer receivers the device already references (the user's
+    intent), then any IR entity HA knows about. Returns ``None``
+    when nothing compatible is available — the caller turns that
+    into a friendly error rather than the bare
+    ``Capture provider native-ir is not available`` RuntimeError
+    the orchestrator raises.
+
+    Only ``infrared.*`` entities pass — ``remote.*`` (Broadlink RF)
+    and ``esphome.*`` (legacy IR via event bus) need a different
+    capture path that isn't implemented yet.
+    """
+    candidates: list[str] = []
+    if configured_receivers:
+        candidates.extend(configured_receivers)
+    else:
+        for entry in _list_receiver_entities(hass):
+            candidates.append(entry["entity_id"])
+
+    for entity_id in candidates:
+        if entity_id.startswith("infrared."):
+            return entity_id
+    return None
 
 
 def _list_entities_for_domains(
