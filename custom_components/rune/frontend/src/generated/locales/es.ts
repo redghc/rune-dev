@@ -60,7 +60,6 @@
 's27abe41d36325926': str`Usa solo letras minúsculas, dígitos y guiones bajos.`,
 's283e5cbac93640f4': str`Opciones de «${0}»`,
 's289128a4d2f964c1': str`Señales del sniffer`,
-'s29e0a1b1cbfb3f08': str`Cada comando también se expone a Home Assistant como una entidad de botón: visible en Ajustes → Dispositivos y servicios → ${0} y en el panel de Botones. Pulsa ⋮ en cada tarjeta para editar, re-aprender o eliminar.`,
 's2b671b6be1cdf4a2': str`vinculación`,
 's2ceb11be2290bb1b': str`Cancelar`,
 's33f85f24c0f5f008': str`Guardar`,

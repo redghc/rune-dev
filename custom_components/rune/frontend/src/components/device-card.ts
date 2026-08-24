@@ -248,25 +248,6 @@ export class RuneDeviceCard extends LitElement {
         width: 16px;
         text-align: center;
       }
-      .cmd-hint {
-        margin-top: var(--rune-space-3);
-        padding: var(--rune-space-2) var(--rune-space-3);
-        font-size: var(--rune-fs-xs);
-        color: var(--rune-text-muted);
-        background: var(--rune-surface-alt);
-        border: 1px dashed var(--rune-border);
-        border-radius: var(--rune-radius-sm);
-        line-height: var(--rune-lh-normal);
-        display: flex;
-        gap: var(--rune-space-2);
-        align-items: flex-start;
-      }
-      .cmd-hint i {
-        font-size: 14px;
-        color: var(--rune-primary);
-        flex-shrink: 0;
-        margin-top: 1px;
-      }
     `,
   ];
 
@@ -490,18 +471,6 @@ export class RuneDeviceCard extends LitElement {
             <span>${msg(str`Learn command`)}</span>
           </button>
         </div>
-        ${
-          (d.commands ?? []).length > 0
-            ? html`
-                <div class="cmd-hint">
-                  <i class="ti ti-info-circle"></i>
-                  ${msg(
-                    str`Each command is also exposed to Home Assistant as a button entity — visible under Settings → Devices & Services → ${d.name} and on the Buttons dashboard. Click the ⋮ on each tile to edit, re-learn or delete.`,
-                  )}
-                </div>
-              `
-            : null
-        }
       </div>
 
       ${
