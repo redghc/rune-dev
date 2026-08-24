@@ -277,6 +277,44 @@ class TestFindRfDevices:
         hass = FakeHass(devices=[device])
         assert find_rf_device_for_entity(hass, "remote.broadlink") is None
 
+    def test_returns_device_for_broadlink_ir_emitter(self) -> None:
+        """Modern Broadlink integrations expose IR emitters under the
+        ``infrared.*`` domain AND register them as owned entities of
+        the BroadlinkDevice. The RF capture provider needs to resolve
+        them regardless of their domain — this is what makes the
+        "Broadlink-owned IR emitter is valid for RF capture" UX
+        work in the Learn dialog."""
+        # The Broadlink integration lists every entity it owns on
+        # ``device.entities``. Emulate that with both an IR emitter
+        # and an RF transmitter.
+        emitter = type("_E", (), {"entity_id": "infrared.remoto_emisor_ir"})()
+        rf_tx = type("_E", (), {"entity_id": "radio_frequency.broadlink_tx"})()
+        device = FakeBroadlinkDevice(
+            mac_address="aa:bb:cc:dd:ee:ff",
+            entity_id="infrared.remoto_emisor_ir",
+            api=FakeBroadlinkAPI(),
+        )
+        device.entities = [emitter, rf_tx]
+        hass = FakeHass(devices=[device])
+        # Both the IR emitter AND the RF transmitter resolve to the
+        # same device — the WS handler picks either to drive the
+        # sweep + capture flow.
+        assert (
+            find_rf_device_for_entity(hass, "infrared.remoto_emisor_ir")
+            is device
+        )
+        assert (
+            find_rf_device_for_entity(hass, "radio_frequency.broadlink_tx")
+            is device
+        )
+        # But a non-Broadlink IR emitter does NOT resolve — the
+        # domain match is only the first filter; Broadlink ownership
+        # is what counts.
+        assert (
+            find_rf_device_for_entity(hass, "infrared.some_other_emitter")
+            is None
+        )
+
     def test_returns_none_for_empty_entity_id(self) -> None:
         hass = FakeHass(devices=[])
         assert find_rf_device_for_entity(hass, "") is None

@@ -648,17 +648,32 @@ async def _ws_command_learn(
     # an RF session (or vice versa), tell them immediately. We don't
     # need the orchestrator for this and shouldn't hold its lock just
     # to bounce a misconfigured entity_id.
+    #
+    # For RF capture the strict ``remote.*`` domain check is too
+    # narrow — Broadlink RM Pro / RM4 Pro devices expose IR
+    # emitter/receiver entities under the ``infrared.*`` domain AND
+    # RF under the new ``radio_frequency.*`` platform. The
+    # capture path doesn't care about the entity's domain: it only
+    # needs a ``BroadlinkDevice`` handle. We resolve that here so the
+    # user can pick any entity belonging to a Broadlink.
     receiver_domain = (
         receiver_entity_id.split(".", 1)[0]
         if "." in receiver_entity_id
         else ""
     )
-    if transport is SignalTransport.RF and receiver_domain != "remote":
-        raise CaptureProviderUnavailableError(
-            f"Receiver {receiver_entity_id!r} is not an RF receiver. "
-            "Pick an entity in the ``remote.*`` domain for RF capture."
+    if transport is SignalTransport.RF:
+        from custom_components.rune.adapters.broadlink_devices import (
+            find_rf_device_for_entity,
         )
-    if transport is SignalTransport.IR and receiver_domain not in {
+
+        if find_rf_device_for_entity(ctx.hass, receiver_entity_id) is None:
+            raise CaptureProviderUnavailableError(
+                f"Receiver {receiver_entity_id!r} is not an RF-capable "
+                "Broadlink device. Pick an entity that belongs to a "
+                "Broadlink RM Pro / RM4 Pro — the receiver selector only "
+                "lists entities that resolve to a Broadlink device."
+            )
+    elif transport is SignalTransport.IR and receiver_domain not in {
         "infrared",
         "esphome",
     }:
@@ -1058,9 +1073,57 @@ def _list_transmitter_entities(hass: Any) -> list[dict[str, str]]:
     return _list_entities_for_domains(hass, ("infrared", "remote", "esphome"))
 
 
-def _list_receiver_entities(hass: Any) -> list[dict[str, str]]:
-    """Return entity_id + state for every known receiver domain."""
-    return _list_entities_for_domains(hass, ("infrared", "esphome", "remote"))
+def _list_receiver_entities(hass: Any) -> list[dict[str, Any]]:
+    """Return entity_id + state for every known receiver domain.
+
+    Includes entities from any Broadlink device registered with the
+    Broadlink integration — those live in the ``infrared.*`` /
+    ``remote.*`` / ``radio_frequency.*`` domains and the SPA needs to
+    see them in the receiver picker so RF capture can resolve the
+    underlying device via :func:`adapters.broadlink_devices.find_rf_device_for_entity`.
+
+    Every returned entry carries a ``broadlink`` flag so the SPA can
+    tell at a glance which entities are RF-capable Broadlinks (the
+    RF picker filters on it) and which are HA-registered IR receivers
+    (the IR picker filters on the domain).
+    """
+    entities = _list_entities_for_domains(
+        hass, ("infrared", "esphome", "remote", "radio_frequency")
+    )
+    # Augment with Broadlink-owned entities that may live in other
+    # domains (custom integrations, etc.). ``find_rf_devices`` is the
+    # source of truth for RF-capable Broadlinks — we resolve each one
+    # to its HA state so the SPA shows it with a friendly name.
+    from custom_components.rune.adapters.broadlink_devices import (
+        find_rf_devices,
+    )
+
+    broadlink = find_rf_devices(hass)
+    seen = {entry["entity_id"] for entry in entities}
+    area_by_id = _area_index(hass)
+    area_by_entity, device_by_entity = _entity_indexes(hass)
+    device_by_id = _device_index(hass)
+    for entity_id in broadlink:
+        if entity_id in seen:
+            continue
+        state = hass.states.get(entity_id)
+        if state is None:
+            continue
+        entities.append(
+            _state_to_entity_entry(
+                state,
+                area_by_entity,
+                device_by_entity,
+                device_by_id,
+                area_by_id,
+            )
+        )
+    # Tag every entry so the SPA knows which entities are Broadlink-
+    # owned vs plain HA receivers. The flag drives the RF picker
+    # filter; the IR picker ignores it.
+    for entry in entities:
+        entry["broadlink"] = entry["entity_id"] in broadlink
+    return entities
 
 
 def _pick_ir_receiver(
@@ -1170,25 +1233,43 @@ def _list_entities_for_domains(
     for state in hass.states.async_all():
         domain = state.entity_id.split(".", 1)[0] if "." in state.entity_id else ""
         if domain in domains:
-            friendly_name = (
-                getattr(state, "name", None)
-                or (getattr(state, "attributes", {}) or {}).get("friendly_name")
-                or state.entity_id
-            )
-            area_name = _resolve_area(state.entity_id, area_by_entity, device_by_entity, device_by_id, area_by_id)
-            device_name = _resolve_device_name(
-                state.entity_id, device_by_entity, device_by_id
-            )
             entities.append(
-                {
-                    "entity_id": state.entity_id,
-                    "name": str(friendly_name),
-                    "state": state.state,
-                    "area": area_name,
-                    "device_name": device_name,
-                }
+                _state_to_entity_entry(
+                    state, area_by_entity, device_by_entity, device_by_id, area_by_id
+                )
             )
     return entities
+
+
+def _state_to_entity_entry(
+    state: Any,
+    area_by_entity: dict[str, str],
+    device_by_entity: dict[str, str],
+    device_by_id: dict[str, dict[str, str]],
+    area_by_id: dict[str, str],
+) -> dict[str, str]:
+    """Build the wire entry ``[{entity_id, name, state, area, device_name}]``.
+
+    Extracted from :func:`_list_entities_for_domains` so the Broadlink
+    receiver list (which adds entities by id after the domain sweep)
+    can reuse the same friendly-name / area resolution.
+    """
+    friendly_name = (
+        getattr(state, "name", None)
+        or (getattr(state, "attributes", {}) or {}).get("friendly_name")
+        or state.entity_id
+    )
+    area_name = _resolve_area(
+        state.entity_id, area_by_entity, device_by_entity, device_by_id, area_by_id
+    )
+    device_name = _resolve_device_name(state.entity_id, device_by_entity, device_by_id)
+    return {
+        "entity_id": state.entity_id,
+        "name": str(friendly_name),
+        "state": state.state,
+        "area": area_name,
+        "device_name": device_name,
+    }
 
 
 def _resolve_area(

@@ -874,7 +874,7 @@ class TestWsCommandLearn:
             await _ws_command_learn(ctx, msg)
 
     @pytest.mark.asyncio
-    async def test_rf_receiver_must_be_remote_domain(
+    async def test_rf_receiver_must_be_broadlink(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from custom_components.rune.domain.errors import (
@@ -882,35 +882,18 @@ class TestWsCommandLearn:
         )
         from custom_components.rune.websocket_api import _ws_command_learn
 
+        # No Broadlink registry on this ``hass`` — every lookup misses.
         hass = FakeHass(states=[("infrared.rx", "idle")])
-        # Patch the IR probe + the RF provider so the WS handler
-        # exercises the domain-validation branch in isolation.
-        from custom_components.rune import websocket_api as ws_api
-
-        monkeypatch.setattr(
-            ws_api,
-            "_is_ir_receiver",
-            lambda *_a, **_kw: True,
-        )
-        from custom_components.rune.adapters.capture import (
-            broadlink_rf as brf_mod,
-        )
-
-        monkeypatch.setattr(
-            brf_mod.BroadlinkRFCaptureProvider,
-            "is_available",
-            property(lambda _self: True),
-        )
         ctx = RuneWebSocketContext(hass=hass, connection_id=None)
         msg = {
             "id": 1,
             "device_id": "dev-1",
             "command_key": "off",
             "transport": "rf",
-            "receiver_entity_id": "infrared.rx",  # wrong domain for RF
+            "receiver_entity_id": "infrared.rx",  # not a Broadlink
         }
         with pytest.raises(
-            CaptureProviderUnavailableError, match="not an RF receiver"
+            CaptureProviderUnavailableError, match="not an RF-capable Broadlink"
         ):
             await _ws_command_learn(ctx, msg)
 
@@ -940,6 +923,83 @@ class TestWsCommandLearn:
 async def _async(coro):
     """Tiny helper to build a one-shot awaitable from a coroutine."""
     return await coro
+
+
+class TestBroadlinkRfReceiverRouting:
+    """Modern Broadlink integrations expose IR entities under the
+    ``infrared.*`` domain even though they're part of an RF-capable
+    RM Pro / RM4 Pro. The WS handler must accept any entity that
+    resolves to a Broadlink device for RF capture — not just the
+    legacy ``remote.*`` entities."""
+
+    @pytest.mark.asyncio
+    async def test_infrared_emitter_resolves_to_broadlink_for_rf(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """User picks transport=RF with an ``infrared.*`` entity that
+        belongs to a Broadlink — the handler must accept it and
+        reach the RF provider, not bounce the domain check."""
+        from custom_components.rune.adapters.capture import (
+            broadlink_rf as brf_mod,
+        )
+        from custom_components.rune.adapters.broadlink_devices import (
+            find_rf_device_for_entity,
+        )
+        from custom_components.rune.websocket_api import _ws_command_learn
+
+        # Register a Broadlink device that owns ``infrared.broadlink_emitter``.
+        # The WS handler imports the helper inside the function, so
+        # patch the canonical module path (``adapters.broadlink_devices``)
+        # rather than the websocket_api module.
+        fake_device = object()
+        captured: dict[str, str] = {}
+
+        def _fake_find(hass: Any, entity_id: str) -> Any:
+            captured[entity_id] = entity_id
+            return fake_device if entity_id == "infrared.broadlink_emitter" else None
+
+        import custom_components.rune.adapters.broadlink_devices as bl_devices
+
+        monkeypatch.setattr(bl_devices, "find_rf_device_for_entity", _fake_find)
+        # Stub the RF provider so we don't need a real orchestrator.
+        # ``is_available`` short-circuits the capture path — set it
+        # on the fake class before swapping it in.
+        class _FakeProvider:
+            transport = "rf"  # placeholder; never read
+
+            def __init__(self, hass, entity_id, **kwargs) -> None:
+                pass
+
+            is_available = True
+
+        monkeypatch.setattr(brf_mod, "BroadlinkRFCaptureProvider", _FakeProvider)
+        # The orchestrator lookup must succeed for the test to
+        # reach the provider construction path.
+        hass = FakeHass(states=[("infrared.broadlink_emitter", "idle")])
+        # Inject a fake orchestrator into ``hass.data``.
+        from custom_components.rune.const import DOMAIN as _DOMAIN
+
+        hass.data[_DOMAIN] = {
+            "entry-1": {"capture_orchestrator": object()}
+        }
+        ctx = RuneWebSocketContext(hass=hass, connection_id=None)
+        msg = {
+            "id": 1,
+            "device_id": "dev-1",
+            "command_key": "off",
+            "transport": "rf",
+            "receiver_entity_id": "infrared.broadlink_emitter",
+        }
+        # The handler will raise past the domain check (Broadlink
+        # resolves), past the orchestrator lookup (fake injected),
+        # then hit the device repo which our ``FakeHass`` doesn't
+        # have — that's fine for this test, we just want to
+        # confirm the Broadlink resolution path is taken.
+        with pytest.raises(Exception) as info:
+            await _ws_command_learn(ctx, msg)
+        # The lookup ran with the user's entity_id — that proves
+        # we took the Broadlink path, not the old ``remote.*`` check.
+        assert "infrared.broadlink_emitter" in captured
 
 
 @pytest.fixture

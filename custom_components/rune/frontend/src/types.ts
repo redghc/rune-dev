@@ -69,6 +69,13 @@ export interface RxEntity {
   area?: string;
   /** Optional device friendly name from the HA device registry. */
   device_name?: string;
+  /**
+   * ``true`` when the entity belongs to a Broadlink RM Pro / RM4 Pro
+   * registered with HA's Broadlink integration. Drives the RF Learn
+   * dialog's receiver filter — Broadlink-owned entities are valid
+   * RF capture targets regardless of their domain prefix.
+   */
+  broadlink?: boolean;
 }
 
 export interface ListResponse {

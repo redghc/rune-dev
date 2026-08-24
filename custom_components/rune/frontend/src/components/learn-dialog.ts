@@ -415,13 +415,35 @@ export class RuneLearnDialog extends LitElement {
         value: r.entity_id,
         label: r.name || r.entity_id,
       }));
-    const rfReceivers = store.transmitters
-      .filter((t) => t.entity_id.startsWith("remote."))
-      .map((t) => ({
-        value: t.entity_id,
-        label: t.name || t.entity_id,
-      }));
-    const receiverOptions = transport === "rf" ? rfReceivers : irReceivers;
+    // RF capture resolves any entity that belongs to a Broadlink
+    // RM Pro / RM4 Pro — the backend tags ``broadlink: true`` on
+    // every such entity regardless of domain. We surface ALL of
+    // them in the RF picker so the user can pick whatever entity
+    // HA shows for their Broadlink (typically an IR emitter or
+    // the new ``radio_frequency.*`` transmitter).
+    const rfReceivers = [
+      ...store.receivers
+        .filter((r) => r.broadlink)
+        .map((r) => ({
+          value: r.entity_id,
+          label: r.name || r.entity_id,
+        })),
+      ...store.transmitters
+        .filter((t) => t.entity_id.startsWith("remote."))
+        .map((t) => ({
+          value: t.entity_id,
+          label: t.name || t.entity_id,
+        })),
+    ];
+    // De-duplicate by entity_id (some Broadlink devices expose the
+    // same entity as both a "receiver" and a "transmitter" entry).
+    const seenRf = new Set<string>();
+    const rfReceiversUnique = rfReceivers.filter((opt) => {
+      if (seenRf.has(opt.value)) return false;
+      seenRf.add(opt.value);
+      return true;
+    });
+    const receiverOptions = transport === "rf" ? rfReceiversUnique : irReceivers;
     const selected = this._receiverEntityIdDraft || ld.receiverEntityId;
     const transportOptions = [
       { value: "ir", label: () => msg(str`Infrared (IR)`), icon: "scan-eye" },
