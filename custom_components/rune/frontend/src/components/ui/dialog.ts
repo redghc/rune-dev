@@ -16,13 +16,13 @@ export class RuneDialog extends LitElement {
         display: contents;
       }
       sl-dialog {
-        --width: 480px;
+        --width: 520px;
       }
       sl-dialog[size="small"] {
-        --width: 360px;
+        --width: 400px;
       }
       sl-dialog[size="large"] {
-        --width: 720px;
+        --width: 680px;
       }
       sl-dialog::part(panel) {
         background: var(--rune-surface);
@@ -37,6 +37,10 @@ export class RuneDialog extends LitElement {
         font-weight: var(--rune-fw-semibold);
         color: var(--rune-text-strong);
         letter-spacing: -0.01em;
+        padding-top: var(--rune-space-4);
+      }
+      sl-dialog::part(header) {
+        padding-bottom: 0;
       }
       sl-dialog::part(close-button) {
         color: var(--rune-text-muted);
@@ -48,11 +52,31 @@ export class RuneDialog extends LitElement {
         font-family: var(--rune-font);
         font-size: var(--rune-fs-sm);
         color: var(--rune-text);
-        padding-top: var(--rune-space-2);
+        padding: var(--rune-space-4) var(--rune-space-5);
       }
       sl-dialog::part(footer) {
+        border-top: 1px solid var(--rune-border);
+        padding: var(--rune-space-3) var(--rune-space-5);
         gap: var(--rune-space-2);
-        padding-top: var(--rune-space-4);
+      }
+      ::slotted([slot="footer"]) {
+        display: flex;
+        gap: var(--rune-space-2);
+        justify-content: flex-end;
+        align-items: center;
+        width: 100%;
+      }
+      ::slotted([slot="stepper"]) {
+        display: block;
+        margin: var(--rune-space-3) 0 var(--rune-space-4);
+      }
+      ::slotted([slot="subtitle"]) {
+        display: block;
+        font-family: var(--rune-font);
+        font-size: var(--rune-fs-sm);
+        color: var(--rune-text-muted);
+        line-height: var(--rune-lh-normal);
+        margin-bottom: var(--rune-space-3);
       }
       sl-dialog::part(overlay) {
         backdrop-filter: blur(6px) saturate(140%);
@@ -137,6 +161,14 @@ export class RuneDialog extends LitElement {
           this.label && typeof this.label !== "string"
             ? html`<span slot="label">${this.label}</span>`
             : null
+        }
+        ${
+          this.noHeader
+            ? null
+            : html`
+                <slot name="subtitle"></slot>
+                <slot name="stepper"></slot>
+              `
         }
         <slot></slot>
         <slot name="footer" slot="footer"></slot>

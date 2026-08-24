@@ -31,10 +31,14 @@ export type LearnStatus =
   | { kind: "no_signal" }
   | { kind: "failed"; message: string };
 
+export type LearnStep = "pick" | "capture" | "review";
+
 export interface LearnDialogState {
   open: boolean;
   deviceId: string | null;
+  step: LearnStep;
   commandKey: string;
+  commandLabel: string;
   status: LearnStatus;
   captured: LearnResult["captured"] | null;
   rawTimings: number[] | null;
@@ -56,7 +60,9 @@ export const store = {
   learnDialog: {
     open: false,
     deviceId: null,
+    step: "pick" as LearnStep,
     commandKey: "",
+    commandLabel: "",
     status: { kind: "idle" } as LearnStatus,
     captured: null,
     rawTimings: null,
@@ -88,11 +94,14 @@ export const store = {
     notify();
   },
 
-  openLearnDialog(deviceId: string, commandKey: string): void {
+  openLearnDialog(deviceId: string, commandKey = "", commandLabel = ""): void {
+    const hasKey = commandKey.trim().length > 0;
     this.learnDialog = {
       open: true,
       deviceId,
-      commandKey,
+      step: hasKey ? "capture" : "pick",
+      commandKey: commandKey.trim(),
+      commandLabel: commandLabel.trim(),
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,
@@ -105,7 +114,26 @@ export const store = {
     this.learnDialog = {
       open: false,
       deviceId: null,
+      step: "pick",
       commandKey: "",
+      commandLabel: "",
+      status: { kind: "idle" },
+      captured: null,
+      rawTimings: null,
+      carrierHz: null,
+    };
+    notify();
+  },
+
+  setLearnStep(step: LearnStep): void {
+    if (this.learnDialog.step === step) return;
+    this.learnDialog = { ...this.learnDialog, step };
+    notify();
+  },
+
+  resetLearnCapture(): void {
+    this.learnDialog = {
+      ...this.learnDialog,
       status: { kind: "idle" },
       captured: null,
       rawTimings: null,

@@ -353,12 +353,20 @@ export class RuneDeviceDialog extends LitElement {
         size="large"
         .label=${editing ? msg(str`Edit device`) : msg(str`Add device`)}
       >
+        <div
+          slot="subtitle"
+          style="font-family:var(--rune-font);font-size:var(--rune-fs-sm);color:var(--rune-text-muted);line-height:var(--rune-lh-normal);margin-bottom:var(--rune-space-3)"
+        >
+          ${msg(
+            str`Define the device's category, name, and the emitter entity that will broadcast commands.`,
+          )}
+        </div>
         <div class="grid">
           ${visible.map((f) => this._renderField(f))}
           ${this._err ? html`<div class="err">${this._err}</div>` : nothing}
           ${this._renderPreview()}
         </div>
-        <div slot="footer" style="display:flex;gap:var(--rune-space-2);justify-content:flex-end">
+        <div slot="footer">
           <rune-button variant="secondary" icon="x" ?disabled=${this._busy} @click=${this._onClose}>
             ${msg(str`Cancel`)}
           </rune-button>

@@ -205,17 +205,10 @@ export class RuneDeviceCard extends LitElement {
     }
   }
 
-  /** Kick off the learn flow. Uses ``window.prompt`` for now — a
-   *  custom dialog with live validation is a v0.4 follow-up. */
+  /** Kick off the learn flow. The dialog handles command-key entry +
+   *  capture + save in a single step-by-step flow. */
   private _learn(): void {
-    const key = window.prompt(
-      msg(
-        str`Learn which command on "${this.device.name}"?\n\nEnter a command key (e.g. "off", "speed_2", "power_on"):`,
-      ),
-      "off",
-    );
-    if (!key) return;
-    store.openLearnDialog(this.device.id, key.trim());
+    store.openLearnDialog(this.device.id);
   }
 
   render() {
@@ -303,11 +296,18 @@ export class RuneDeviceCard extends LitElement {
               .label=${msg(str`Delete device`)}
               @sl-after-hide=${() => (this._confirmingDelete = false)}
             >
-              <p>${msg(str`Delete device "${d.name}"? This cannot be undone.`)}</p>
               <div
-                slot="footer"
-                style="display:flex;gap:var(--rune-space-2);justify-content:flex-end"
+                slot="subtitle"
+                style="font-family:var(--rune-font);font-size:var(--rune-fs-sm);color:var(--rune-text-muted);line-height:var(--rune-lh-normal);margin-bottom:var(--rune-space-3)"
               >
+                ${msg(str`This action is permanent and cannot be undone.`)}
+              </div>
+              <p
+                style="margin:0;color:var(--rune-text);font-size:var(--rune-fs-sm);line-height:var(--rune-lh-normal)"
+              >
+                ${msg(str`Delete device "${d.name}"?`)}
+              </p>
+              <div slot="footer">
                 <rune-button
                   variant="secondary"
                   icon="x"

@@ -188,9 +188,9 @@
     <target>¿Cuántos niveles de velocidad discretos expone este ventilador?</target>
   </trans-unit>
 <trans-unit id="s064a4f8afa514ca2">
-  <source>Learned "<x id="0" equiv-text="${commandKey}"/>"</source>
-    <target>Aprendido "<x id="0" equiv-text="${commandKey}"/>"</target>
-  </trans-unit>
+  <source>Learned "<x id="0" equiv-text="${commandLabel || commandKey}"/>"</source>
+  <target>Aprendido "<x id="0" equiv-text="${commandLabel || commandKey}"/>"</target>
+</trans-unit>
 <trans-unit id="s1ee96debc21e1e35">
   <source>Idle — click Start learn</source>
     <target>Inactivo: pulsa en Iniciar aprendizaje</target>
@@ -201,12 +201,8 @@
   </trans-unit>
 <trans-unit id="sb0a3ab9fec778bb7">
   <source>Captured: <x id="0" equiv-text="${s.protocol}"/> @ <x id="1" equiv-text="${s.carrierHz}"/> Hz</source>
-    <target>Capturado: <x id="0" equiv-text="${status.protocol}"/> @ <x id="1" equiv-text="${status.carrierHz}"/> Hz</target>
-  </trans-unit>
-<trans-unit id="s5b224298bf2add8c">
-  <source>No signal captured</source>
-    <target>No se capturó ninguna señal</target>
-  </trans-unit>
+  <target>Capturado: <x id="0" equiv-text="${s.protocol}"/> @ <x id="1" equiv-text="${s.carrierHz}"/> Hz</target>
+</trans-unit>
 <trans-unit id="s9a44f95f7acf28e0">
   <source>Failed: <x id="0" equiv-text="${s.message}"/></source>
     <target>Error: <x id="0" equiv-text="${status.message}"/></target>
@@ -218,10 +214,6 @@
 <trans-unit id="sad3e3c8146fc920f">
   <source>Status</source>
     <target>Estado</target>
-  </trans-unit>
-<trans-unit id="s7a739056ef970404">
-  <source>Captured timings</source>
-    <target>Tiempos capturados</target>
   </trans-unit>
 <trans-unit id="scea6918d3880f133">
   <source>Re-learn</source>
@@ -387,39 +379,13 @@
   <source>Sent <x id="0" equiv-text="${cmd.label ?? cmd.key}"/></source>
   <target>Enviado <x id="0" equiv-text="${cmd.label ?? cmd.key}"/></target>
 </trans-unit>
-<trans-unit id="s274d0241c4139713">
-  <source>Learn which command on "<x id="0" equiv-text="${this.device.name}"/>"?
-
-Enter a command key (e.g. "off", "speed_2", "power_on"):</source>
-  <target>Aprende qué comando en "<x id="0" equiv-text="${this.device.name}"/>":
-
-Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
-</trans-unit>
 <trans-unit id="sb62fb7b2161bc5c0">
   <source>Delete device</source>
   <target>Eliminar dispositivo</target>
 </trans-unit>
-<trans-unit id="s9821339d307c474a">
-  <source>Delete device "<x id="0" equiv-text="${d.name}"/>"? This cannot be undone.</source>
-  <target>¿Eliminar el dispositivo "<x id="0" equiv-text="${d.name}"/>"? Esta acción no se puede deshacer.</target>
-</trans-unit>
 <trans-unit id="sdc673e73b5c13aea">
   <source>Delete</source>
   <target>Eliminar</target>
-</trans-unit>
-<trans-unit id="sbf9c5c5a8e5efad4">
-  <source>Failed</source>
-  <target>Falló</target>
-</trans-unit>
-<trans-unit id="s4c2e50f73ff9175f">
-  <source>Captured</source>
-  <target>Capturado</target>
-</trans-unit>
-<trans-unit id="h1fb4a999c505bec9">
-  <source>Point your remote at the receiver and press the button you want to capture. RUNE
-              records the raw timings and writes them into the command slot.</source>
-  <target>Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE registra
-              los tiempos en crudo y los escribe en el espacio del comando.</target>
 </trans-unit>
 <trans-unit id="s8931e8e1b5688a4e">
   <source><x id="0" equiv-text="${s.hit_count}"/> hit<x id="1" equiv-text="${s.hit_count === 1 ? &quot;&quot; : &quot;s&quot;}"/></source>
@@ -533,6 +499,113 @@ Introduce una clave de comando (p. ej. "off", "speed_2", "power_on"):</target>
   <source>speed steps</source>
     <target>niveles de velocidad</target>
 </trans-unit>
+<trans-unit id="see7dbc2d10dc7273">
+  <source>This action is permanent and cannot be undone.</source>
+    <target>Esta acción es permanente y no se puede deshacer.</target>
+  </trans-unit>
+<trans-unit id="sf6ac8bfcba790e33">
+  <source>Delete device "<x id="0" equiv-text="${d.name}"/>"?</source>
+    <target>¿Eliminar el dispositivo «<x id="0" equiv-text="${d.name}"/>»?</target>
+  </trans-unit>
+<trans-unit id="sb229529406212829">
+  <source>Define the device's category, name, and the emitter entity that will broadcast commands.</source>
+    <target>Define la categoría, el nombre y la entidad emisora que transmitirá los comandos del dispositivo.</target>
+  </trans-unit>
+<trans-unit id="s1a5230a71d9285c1">
+  <source>Capture</source>
+    <target>Capturar</target>
+  </trans-unit>
+<trans-unit id="s1b897015174c6e80">
+  <source>Review &amp; save</source>
+    <target>Revisar y guardar</target>
+  </trans-unit>
+<trans-unit id="s503d4b322b1ed5e1">
+  <source>No signal captured — try again</source>
+    <target>No se capturó señal — inténtalo de nuevo</target>
+  </trans-unit>
+<trans-unit id="s27abe41d36325926">
+  <source>Use lowercase letters, digits, and underscores only.</source>
+    <target>Usa solo letras minúsculas, dígitos y guiones bajos.</target>
+  </trans-unit>
+<trans-unit id="h18fc17a05364c3ef">
+  <source>Pick a unique identifier and a friendly label for the command you want RUNE to
+              learn. You will press the remote button on the next step.</source>
+    <target>Elige un identificador único y una etiqueta para el comando que quieres que RUNE aprenda. Pulsarás el botón del mando en el siguiente paso.</target>
+  </trans-unit>
+<trans-unit id="s0b0a02a4470de153">
+  <source>Device</source>
+    <target>Dispositivo</target>
+  </trans-unit>
+<trans-unit id="sd874f6567e9c0fed">
+  <source>Command key</source>
+    <target>Clave del comando</target>
+  </trans-unit>
+<trans-unit id="s343d79bca542425b">
+  <source>Lowercase identifier, e.g. off, speed_2, power_on</source>
+    <target>Identificador en minúsculas, p. ej. off, speed_2, power_on</target>
+  </trans-unit>
+<trans-unit id="s1a249b1921e2bdea">
+  <source>off</source>
+    <target>off</target>
+  </trans-unit>
+<trans-unit id="s5590dbf7e425789d">
+  <source>Label</source>
+    <target>Etiqueta</target>
+  </trans-unit>
+<trans-unit id="s043243e73a40955e">
+  <source>What users see on the device card</source>
+    <target>Lo que ven los usuarios en la tarjeta del dispositivo</target>
+  </trans-unit>
+<trans-unit id="s6e7e9ee0ae4dcc2f">
+  <source>Power off</source>
+    <target>Apagar</target>
+  </trans-unit>
+<trans-unit id="hcc8755c3cb9139b0">
+  <source>Point your remote at the receiver and press the button you want to capture. RUNE
+              listens for up to 15 seconds.</source>
+    <target>Apunta el mando al receptor y pulsa el botón que quieres capturar. RUNE escucha durante un máximo de 15 segundos.</target>
+  </trans-unit>
+<trans-unit id="s17479755f9e1e34d">
+  <source>Capturing for</source>
+    <target>Capturando para</target>
+  </trans-unit>
+<trans-unit id="hb3fb23481a5285e3">
+  <source>RUNE captured the signal. Review the details below and save — the timings land in
+              the command slot for this device.</source>
+    <target>RUNE capturó la señal. Revisa los detalles y guarda; los tiempos se almacenan en el slot de comando de este dispositivo.</target>
+  </trans-unit>
+<trans-unit id="s61e136c0658e27d5">
+  <source>Protocol</source>
+    <target>Protocolo</target>
+  </trans-unit>
+<trans-unit id="s867ae6f7a84d07d7">
+  <source>Carrier</source>
+    <target>Portadora</target>
+  </trans-unit>
+<trans-unit id="sfbca8326a775cc77">
+  <source>Pulses</source>
+    <target>Pulsos</target>
+  </trans-unit>
+<trans-unit id="sdd907db93bf499ca">
+  <source>Raw timings</source>
+    <target>Tiempos en bruto</target>
+  </trans-unit>
+<trans-unit id="s81ecf2d4386b8e84">
+  <source>Continue</source>
+    <target>Continuar</target>
+  </trans-unit>
+<trans-unit id="sc16e00a7a8b2fde2">
+  <source>Back</source>
+    <target>Atrás</target>
+  </trans-unit>
+<trans-unit id="sbb7913463764098f">
+  <source>Re-capture</source>
+    <target>Volver a capturar</target>
+  </trans-unit>
+<trans-unit id="sa80cab2239d4d8a4">
+  <source>Teach RUNE a new IR or RF command by capturing the raw signal from your remote.</source>
+    <target>Enseña a RUNE un nuevo comando IR o RF capturando la señal en bruto desde tu mando.</target>
+  </trans-unit>
 </body>
 </file>
 </xliff>

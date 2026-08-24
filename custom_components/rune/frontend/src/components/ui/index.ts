@@ -17,6 +17,7 @@ import "./empty-state.js";
 import "./rune-icon.js";
 import "./theme-toggle.js";
 import "./locale-toggle.js";
+import "./stepper.js";
 
 export { attachFloating } from "./floating.js";
 export type { FloatingOptions } from "./floating.js";
@@ -38,3 +39,4 @@ export { RuneEmptyState } from "./empty-state.js";
 export { RuneIcon, type RuneIconSize } from "./rune-icon.js";
 export { RuneThemeToggle } from "./theme-toggle.js";
 export { RuneLocaleToggle } from "./locale-toggle.js";
+export { RuneStepper, type RuneStepDef } from "./stepper.js";
