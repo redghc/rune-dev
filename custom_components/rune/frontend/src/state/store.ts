@@ -186,6 +186,12 @@ export const store = {
     this.receivers = r;
     notify();
   },
+
+  /** True once the receiver/transmitter lists have been fetched at
+   *  least once during this session — guards against the "open the
+   *  dialog before visiting Settings" race that used to leave the
+   *  Learn receiver selector empty. */
+  hasReceiverEntitiesLoaded: false as boolean,
 };
 
 // ---- subscriber plumbing ----

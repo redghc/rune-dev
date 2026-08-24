@@ -6,7 +6,7 @@ import type { TemplateResult } from "lit";
 
 import "@/components/ui/index.js";
 
-import { api, refreshDevices } from "@/api/bridge.js";
+import { api, refreshDevices, refreshReceiverEntities } from "@/api/bridge.js";
 import { attachDialogFocus } from "@/components/ui/dialog-focus.js";
 import { attachStoreController } from "@/state/store-controller.js";
 import { reportError, store } from "@/state/store.js";
@@ -595,6 +595,12 @@ export class RuneLearnDialog extends LitElement {
         this._pickError = "";
       }
       return;
+    }
+    // The receiver selector needs the store caches; make sure they're
+    // warm when the user opens the dialog straight from Devices
+    // (skipping Settings).
+    if (!store.hasReceiverEntitiesLoaded) {
+      void refreshReceiverEntities();
     }
     if (ld.step === "pick") {
       if (ld.commandKey && !this._commandKeyDraft) {

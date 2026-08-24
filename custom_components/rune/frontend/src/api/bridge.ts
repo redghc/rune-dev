@@ -234,3 +234,22 @@ export async function refreshDevices(): Promise<void> {
   const { devices } = await api.list();
   store.setDevices(devices ?? []);
 }
+
+/** Fetch receivers + transmitters and write them into the store.
+ *
+ *  The Learn dialog needs the receiver list to populate the entity
+ *  selector. Until this commit the list only got populated when the
+ *  user visited the Settings tab — opening the Learn dialog straight
+ *  from the Devices view left the selector empty and the dialog
+ *  stuck on Step 1. This helper fires whenever a dialog that
+ *  depends on the list opens and the cache is cold.
+ */
+export async function refreshReceiverEntities(): Promise<void> {
+  const [{ transmitters }, { receivers }] = await Promise.all([
+    api.transmitters(),
+    api.receivers(),
+  ]);
+  store.setTransmitters(transmitters ?? []);
+  store.setReceivers(receivers ?? []);
+  store.hasReceiverEntitiesLoaded = true;
+}
