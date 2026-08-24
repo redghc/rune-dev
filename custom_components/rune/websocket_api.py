@@ -631,11 +631,14 @@ async def _ws_command_learn(
         raise CommandNotLearnedError(f"Device {device_id!r} not found")
 
     # Pick the first receiver attached to the device, else any
-    # known receiver from HA. Phase 7 will pick based on signal
-    # transport category (IR vs RF) instead of always going IR.
+    # known receiver from HA. The transport (IR vs RF) follows the
+    # entity's domain — ``infrared.*`` → IR, ``remote.*`` → RF.
     from custom_components.rune.adapters.capture.native_ir import (
         NativeIRCaptureProvider,
     )
+    from custom_components.rune.adapters.capture.providers import CaptureProvider
+    from custom_components.rune.adapters.receivers.factory import select_receiver
+    from custom_components.rune.domain.enums import SignalTransport
 
     receiver_entity_id: str | None = None
     if device.receiver_entity_ids:
@@ -649,7 +652,40 @@ async def _ws_command_learn(
             "No IR/RF receiver configured for this device"
         )
 
+    # Pick transport from the entity's domain — forcing IR on a
+    # ``remote.*`` Broadlink entity raises ``receiver_not_found``
+    # because the entity isn't an ``InfraredReceiverEntity``.
+    domain = receiver_entity_id.split(".", 1)[0] if "." in receiver_entity_id else ""
+    transport = SignalTransport.RF if domain == "remote" else SignalTransport.IR
+
+    provider: CaptureProvider
+    if transport == SignalTransport.RF:
+        # ``NativeIRCaptureProvider`` is the only provider implemented
+        # today. The RF path needs ``device_api`` for Broadlink
+        # receivers and isn't ready yet — surface a clear error so the
+        # SPA can ask the user to configure an IR receiver instead of
+        # getting a generic HA failure.
+        raise UnsupportedHardwareError(
+            f"RF capture for {receiver_entity_id!r} is not implemented yet. "
+            "Configure an IR receiver (domain ``infrared.*``) on this "
+            "device to learn new commands."
+        )
+
+    # Probe the receiver factory up-front so we don't start the
+    # orchestrator lock for an entity the adapter can't talk to.
+    try:
+        select_receiver(ctx.hass, receiver_entity_id, transport)
+    except UnsupportedHardwareError as err:
+        raise CaptureProviderUnavailableError(
+            f"No receiver adapter for {receiver_entity_id!r}: {err}"
+        ) from err
+
     provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
+    if not provider.is_available:
+        raise CaptureProviderUnavailableError(
+            f"IR receiver {receiver_entity_id!r} is not available. Check that "
+            "the entity is loaded and exposed in Home Assistant."
+        )
 
     timeout_s = float(msg.get("timeout_s", 15.0))
     try:

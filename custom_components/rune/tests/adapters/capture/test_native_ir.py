@@ -53,9 +53,19 @@ class _States:
 
 
 class FakeHass:
-    def __init__(self, states: dict[str, _FakeState] | None = None) -> None:
+    def __init__(
+        self,
+        states: dict[str, _FakeState] | None = None,
+        *,
+        ir_receivers: list[str] | None = None,
+    ) -> None:
         self.states = _States(states or {})
         self.captured: list[CapturedPulse] = []
+        # ``hass.data[DOMAIN]`` — providers probe this to detect
+        # entities registered with the infrared platform.
+        self.data: dict[str, dict[str, object]] = {}
+        if ir_receivers is not None:
+            self.data["infrared"] = {entity_id: object() for entity_id in ir_receivers}
 
     def async_create_task(self, coro: Any) -> asyncio.Task:  # pragma: no cover - unused
         return asyncio.create_task(coro)
@@ -111,11 +121,24 @@ def _pulse(carrier: int = 38_000, timings: tuple[int, ...] = (100, -200)) -> Cap
 
 @pytest.fixture
 def fake_receiver(monkeypatch: pytest.MonkeyPatch) -> FakeNativeIRReceiver:
-    """Patch the receivers factory so the provider picks up our fake."""
+    """Patch the receivers factory + IR registry probe so the
+    provider picks up our fake without needing HA installed.
+
+    The production probe (``_is_ir_receiver``) calls into
+    ``homeassistant.components.infrared``, which isn't on the test
+    path. We swap it for a local function that reads ``hass.data`` —
+    matches the production contract, no HA dependency.
+    """
     from custom_components.rune.adapters.capture import native_ir as native_ir_mod
 
     receiver = FakeNativeIRReceiver()
     monkeypatch.setattr(native_ir_mod, "select_receiver", lambda *_a, **_kw: receiver)
+
+    def _is_ir(hass: Any, entity_id: str) -> bool:
+        registry = getattr(hass, "data", {}).get("infrared", {})
+        return entity_id in registry
+
+    monkeypatch.setattr(native_ir_mod, "_is_ir_receiver", _is_ir)
     return receiver
 
 
@@ -124,7 +147,10 @@ class TestNativeIRCaptureProvider:
     async def test_is_available_probes_entity_and_factory(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         assert provider.is_available is True
 
@@ -133,7 +159,24 @@ class TestNativeIRCaptureProvider:
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
         fake_receiver._available = False
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
+        provider = NativeIRCaptureProvider(hass, "infrared.test")
+        assert provider.is_available is False
+
+    @pytest.mark.asyncio
+    async def test_is_available_false_when_not_in_ir_registry(
+        self, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        # The factory says yes, but the entity isn't in HA's infrared
+        # registry — ``infrared.async_subscribe_receiver`` would raise
+        # ``receiver_not_found``. The probe catches that early.
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=[],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         assert provider.is_available is False
 
@@ -141,7 +184,10 @@ class TestNativeIRCaptureProvider:
     async def test_start_then_wait_returns_first_pulse(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=1.0)
         # Fire the pulse asynchronously — the subscription callback
@@ -156,7 +202,10 @@ class TestNativeIRCaptureProvider:
     async def test_wait_times_out_when_no_signal(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=0.1)
         result = await provider.async_wait_for_signal(timeout_s=0.1)
@@ -167,7 +216,10 @@ class TestNativeIRCaptureProvider:
     async def test_stop_unsubscribes_and_drains_stragglers(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=0.5)
         # Two pulses arrive before anyone calls wait_for_signal.
@@ -188,7 +240,10 @@ class TestNativeIRCaptureProvider:
     async def test_wait_without_start_raises(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         with pytest.raises(RuntimeError, match="before async_start_capture"):
             await provider.async_wait_for_signal(timeout_s=0.1)
@@ -202,7 +257,42 @@ class TestNativeIRCaptureProvider:
         )
 
         fake_receiver._available = False
-        hass = FakeHass(states={"infrared.test": _FakeState("idle")})
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         with pytest.raises(CaptureProviderUnavailableError):
+            await provider.async_start_capture(timeout_s=0.1)
+
+    @pytest.mark.asyncio
+    async def test_start_translates_receiver_not_found(
+        self, monkeypatch: pytest.MonkeyPatch, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        """``infrared.async_subscribe_receiver`` raises
+        ``HomeAssistantError(translation_key="receiver_not_found")``
+        when the entity exists but isn't an IR receiver. We must
+        surface a friendly ``CaptureProviderUnavailableError``
+        instead of leaking the raw HA class name."""
+        from custom_components.rune.adapters.capture import native_ir as native_ir_mod
+        from custom_components.rune.domain.errors import (
+            CaptureProviderUnavailableError,
+        )
+
+        class _FakeHAError(Exception):
+            translation_key = "receiver_not_found"
+
+        async def _raise(*_a: Any, **_kw: Any) -> None:
+            raise _FakeHAError("receiver_not_found")
+
+        # Swap the real ``HomeAssistantError`` import with our stand-in
+        # so ``_is_unknown_receiver_error`` recognises it.
+        monkeypatch.setattr(native_ir_mod, "HomeAssistantError", _FakeHAError)
+        fake_receiver.start_listening = _raise  # type: ignore[method-assign]
+        hass = FakeHass(
+            states={"infrared.test": _FakeState("idle")},
+            ir_receivers=["infrared.test"],
+        )
+        provider = NativeIRCaptureProvider(hass, "infrared.test")
+        with pytest.raises(CaptureProviderUnavailableError, match="not a registered"):
             await provider.async_start_capture(timeout_s=0.1)
