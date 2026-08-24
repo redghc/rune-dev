@@ -33,7 +33,11 @@ from custom_components.rune.domain.errors import (
     CommandNotLearnedError,
     UnsupportedHardwareError,
 )
-from custom_components.rune.domain.models import RuneDevice
+from custom_components.rune.domain.models import (
+    PulseCommand,
+    PulsePayload,
+    RuneDevice,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,6 +86,23 @@ class RuneWebSocketContext:
                 coord = entry_data.get("coordinator")
                 if coord is not None:
                     return coord
+        return None
+
+    def entry_id(self) -> str | None:
+        """Return the active config entry id for this WS connection.
+
+        Walks ``hass.data[DOMAIN]`` to find the first per-entry dict.
+        Returns ``None`` when the integration is mid-setup, during a
+        reload, or under unit tests that don't stub ``data``. Used by
+        ``rune/device/create`` / ``update`` to pass
+        ``config_entry_id`` into ``device_registry.async_get_or_create``
+        so the resulting HA Device is owned by the right entry.
+        """
+        domain_data = getattr(self.hass, "data", None) or {}
+        domain_data = domain_data.get(DOMAIN, {}) if hasattr(domain_data, "get") else {}
+        for entry_id in domain_data:
+            if isinstance(domain_data.get(entry_id), dict):
+                return entry_id
         return None
 
 
@@ -284,6 +305,80 @@ async def _ws_device_get(
     return {"device": device.to_dict()}
 
 
+def _merge_commands(
+    existing: dict[str, PulseCommand],
+    incoming: dict[str, Any] | None,
+) -> dict[str, PulseCommand]:
+    """Merge incoming ``commands`` payload onto an existing command map.
+
+    Used by ``rune/device/update`` so the Learn flow can persist a freshly
+    captured pulse: the SPA sends ``{device_id, commands: {key: payload}}``
+    and we keep every other key already on the device. Returns a new
+    dict; ``existing`` is left untouched.
+
+    An incoming command with no ``signal_category`` falls back to
+    :meth:`SignalCategory.default_ir` so the entity renders a transport /
+    encoding / carrier instead of crashing on the first ``to_dict``.
+    """
+    from custom_components.rune.domain.enums import (
+        DEFAULT_IR_CARRIER_HZ,
+        CommandCategory,
+        SignalCategory,
+        SignalEncoding,
+        SignalTransport,
+    )
+
+    merged: dict[str, PulseCommand] = dict(existing)
+    if not incoming:
+        return merged
+    if not isinstance(incoming, dict):
+        raise ActionError("commands must be a dict of key → payload")
+    for key, payload_dict in incoming.items():
+        if not isinstance(payload_dict, dict):
+            raise ActionError(f"command {key!r} payload must be a dict")
+        raw_signal_category = payload_dict.get("signal_category")
+        if raw_signal_category is None:
+            signal_category = SignalCategory.default_ir()
+        elif isinstance(raw_signal_category, dict):
+            transport = SignalTransport.IR
+            encoding = SignalEncoding.RAW_TIMINGS
+            carrier = DEFAULT_IR_CARRIER_HZ
+            try:
+                transport = SignalTransport(
+                    raw_signal_category.get("transport", "ir")
+                )
+                encoding = SignalEncoding(
+                    raw_signal_category.get("encoding", "raw_timings")
+                )
+                carrier = int(
+                    raw_signal_category.get("carrier_frequency_hz")
+                    or DEFAULT_IR_CARRIER_HZ
+                )
+            except ValueError:
+                pass
+            signal_category = SignalCategory(
+                transport=transport,
+                encoding=encoding,
+                carrier_frequency_hz=carrier,
+            )
+        else:
+            signal_category = raw_signal_category
+        try:
+            category = CommandCategory(
+                payload_dict.get("category", CommandCategory.CUSTOM)
+            )
+        except ValueError:
+            category = CommandCategory.CUSTOM
+        merged[key] = PulseCommand(
+            key=key,
+            label=payload_dict.get("label", key),
+            category=category,
+            signal_category=signal_category,
+            payload=PulsePayload.from_dict(payload_dict.get("payload") or {}),
+        )
+    return merged
+
+
 @_register("device/create")
 async def _ws_device_create(
     ctx: RuneWebSocketContext, msg: dict[str, Any]
@@ -310,11 +405,6 @@ async def _ws_device_create(
     from uuid import uuid4
 
     from custom_components.rune.domain.enums import EntityCategory
-    from custom_components.rune.domain.models import (
-        PulseCommand,
-        PulsePayload,
-        RuneDevice,
-    )
 
     name = msg.get("name")
     category_value = msg.get("category")
@@ -370,6 +460,32 @@ async def _ws_device_create(
     await repo.upsert(device)
     _LOGGER.info("rune: created device %s (%s)", device.id, device.name)
 
+    # Register the HA Device registry row. HA's ``EntityPlatform`` would
+    # also upsert one when an entity is added with a ``device_info`` dict,
+    # but doing it explicitly (a) matches the working HAIR pattern, (b)
+    # surfaces ``DeviceInfoError`` (empty identifiers, malformed
+    # manufacturer, etc.) instead of silently dropping the entity, and
+    # (c) keeps the device visible even if no entity ever attaches.
+    entry_id = ctx.entry_id()
+    if entry_id is not None:
+        try:
+            from homeassistant.helpers import device_registry as dr
+
+            registry = dr.async_get(ctx.hass)
+            registry.async_get_or_create(
+                config_entry_id=entry_id,
+                identifiers={(DOMAIN, device.id)},
+                name=device.name,
+                manufacturer=device.manufacturer,
+                model=device.model,
+            )
+        except Exception as err:
+            _LOGGER.warning(
+                "rune: device_registry upsert failed for %s: %s",
+                device.id,
+                err,
+            )
+
     # Push the new device into HA as live entities without a full
     # config-entry reload. The coordinator walks every registered
     # platform builder; only platforms matching the device's category
@@ -378,6 +494,12 @@ async def _ws_device_create(
     coordinator = ctx.coordinator()
     if coordinator is not None:
         await coordinator.async_add_entities_for_device(device)
+    else:
+        _LOGGER.warning(
+            "rune: no coordinator on WS context; entities will appear "
+            "after the next reload (device %s)",
+            device.id,
+        )
 
     return {"device": device.to_dict()}
 
@@ -408,9 +530,9 @@ async def _ws_device_update(
     - ``receiver_entity_ids`` (list, replaces existing)
     - ``discrete_speed_count`` (int)
     - ``power_sensor_entity_id``, ``power_off_below_w``, ``power_on_above_w``
+    - ``commands`` (dict of ``key → PulseCommand`` payload, MERGED onto
+      the existing command map; used by the Learn command flow)
     """
-    from custom_components.rune.domain.models import RuneDevice
-
     device_id = msg.get("device_id")
     if not device_id:
         raise ActionError("device_id is required")
@@ -460,13 +582,36 @@ async def _ws_device_update(
         temperature_sensor_entity_id=device.temperature_sensor_entity_id,
         humidity_sensor_entity_id=device.humidity_sensor_entity_id,
         climate_matrix=device.climate_matrix,
-        commands=device.commands,
+        commands=_merge_commands(device.commands, msg.get("commands")),
         actions=device.actions,
         version=device.version,
         created_at=device.created_at,
         updated_at=device.updated_at,
     )
     await repo.upsert(updated)
+
+    # Refresh the HA Device registry row so name / manufacturer / model
+    # edits show on the device card without a manual reload.
+    entry_id = ctx.entry_id()
+    if entry_id is not None:
+        try:
+            from homeassistant.helpers import device_registry as dr
+
+            registry = dr.async_get(ctx.hass)
+            registry.async_get_or_create(
+                config_entry_id=entry_id,
+                identifiers={(DOMAIN, updated.id)},
+                name=updated.name,
+                manufacturer=updated.manufacturer,
+                model=updated.model,
+            )
+        except Exception as err:
+            _LOGGER.warning(
+                "rune: device_registry refresh failed for %s: %s",
+                updated.id,
+                err,
+            )
+
     return {"device": updated.to_dict()}
 
 
@@ -700,7 +845,7 @@ async def _ws_debug_registry_check(
     device, and what the device's area is. Empty fields explain why
     ``area`` / ``device_name`` come back blank from ``transmitter/list``.
     """
-    _ = msg  # noqa: F841 — kept for handler-signature parity
+    _ = msg
     entity_payload, entity_err = _try_entity_registry(ctx.hass)
     device_payload, device_err = _try_device_registry(ctx.hass)
     area_payload, area_err = _try_area_registry(ctx.hass)

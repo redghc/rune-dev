@@ -420,6 +420,158 @@ class TestWsDeviceCreate:
         assert [e.role for e in seen[0]] == ["fan:Bedroom fan"]
 
 
+class TestMergeCommands:
+    def test_empty_incoming_returns_existing_copy(self) -> None:
+        from custom_components.rune.domain.enums import (
+            CommandCategory,
+            SignalCategory,
+        )
+        from custom_components.rune.domain.models import (
+            PulseCommand,
+            PulsePayload,
+        )
+        from custom_components.rune.websocket_api import _merge_commands
+
+        existing = {
+            "off": PulseCommand(
+                key="off",
+                label="Off",
+                category=CommandCategory.POWER,
+                signal_category=SignalCategory.default_ir(),
+                payload=PulsePayload(raw_timings=(9000, -4500)),
+            ),
+        }
+        merged = _merge_commands(existing, None)
+        assert set(merged) == {"off"}
+        # The original dict is left alone — we hand back a fresh copy so
+        # the caller can mutate without surprising other readers.
+        assert merged is not existing
+
+    def test_incoming_overwrites_matching_keys(self) -> None:
+        from custom_components.rune.domain.enums import (
+            CommandCategory,
+            SignalCategory,
+        )
+        from custom_components.rune.domain.models import (
+            PulseCommand,
+            PulsePayload,
+        )
+        from custom_components.rune.websocket_api import _merge_commands
+
+        existing = {
+            "off": PulseCommand(
+                key="off",
+                label="Off",
+                category=CommandCategory.POWER,
+                signal_category=SignalCategory.default_ir(),
+                payload=PulsePayload(raw_timings=(9000, -4500)),
+            ),
+        }
+        merged = _merge_commands(
+            existing,
+            {
+                "off": {
+                    "label": "Power Off",
+                    "category": "power",
+                    "payload": {"raw_timings": [1000, -500]},
+                },
+            },
+        )
+        assert set(merged) == {"off"}
+        assert merged["off"].label == "Power Off"
+        assert merged["off"].payload.raw_timings == (1000, -500)
+
+    def test_incoming_adds_new_keys(self) -> None:
+        from custom_components.rune.websocket_api import _merge_commands
+
+        existing: dict[str, PulseCommand] = {}
+        merged = _merge_commands(
+            existing,
+            {
+                "speed_1": {
+                    "label": "Speed 1",
+                    "payload": {"raw_timings": [350, -650]},
+                },
+            },
+        )
+        assert set(merged) == {"speed_1"}
+        assert merged["speed_1"].key == "speed_1"
+        assert merged["speed_1"].label == "Speed 1"
+
+    def test_non_dict_incoming_raises(self) -> None:
+        from custom_components.rune.domain.errors import ActionError
+        from custom_components.rune.websocket_api import _merge_commands
+
+        with pytest.raises(ActionError):
+            _merge_commands({}, ["not", "a", "dict"])
+
+    def test_non_dict_payload_raises(self) -> None:
+        from custom_components.rune.domain.errors import ActionError
+        from custom_components.rune.websocket_api import _merge_commands
+
+        with pytest.raises(ActionError):
+            _merge_commands({}, {"speed_1": "raw"})
+
+
+class TestWsDeviceUpdateCommands:
+    """Confirm ``rune/device/update`` accepts an incoming ``commands`` map.
+
+    The Learn dialog sends ``{device_id, commands}`` after capturing a
+    pulse. Without this merge, learned commands vanish into the void
+    because the handler otherwise preserves ``device.commands`` verbatim.
+    """
+
+    @pytest.mark.asyncio
+    async def test_update_persists_incoming_commands(self) -> None:
+        from custom_components.rune.websocket_api import _ws_device_update
+
+        repo = InMemoryDeviceRepository()
+        device = RuneDevice(
+            id="d1",
+            name="Bedroom fan",
+            category=EntityCategory.FAN,
+            transmitter_entity_ids=["infrared.bedroom"],
+        )
+        await repo.upsert(device)
+
+        async def _list_repo(self) -> InMemoryDeviceRepository:  # type: ignore[no-untyped-def]
+            return repo
+
+        hass = FakeHass()
+        # Pre-seed the hass.data with an entry so device_registry.upsert
+        # inside the handler can resolve a config_entry_id. We don't
+        # actually need the coordinator to exist here.
+        hass.data = {DOMAIN: {"entry-1": {}}}
+
+        original = RuneWebSocketContext.device_repository
+        RuneWebSocketContext.device_repository = _list_repo  # type: ignore[method-assign]
+        try:
+            result = await _ws_device_update(
+                RuneWebSocketContext(hass=hass, connection_id=None),
+                {
+                    "device_id": "d1",
+                    "commands": {
+                        "off": {
+                            "label": "Off",
+                            "category": "power",
+                            "payload": {"raw_timings": [9000, -4500]},
+                        },
+                        "speed_1": {
+                            "label": "Speed 1",
+                            "payload": {"raw_timings": [350, -650]},
+                        },
+                    },
+                },
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original  # type: ignore[method-assign]
+
+        assert set(result["device"]["commands"]) == {"off", "speed_1"}
+        persisted = await repo.get("d1")
+        assert persisted is not None
+        assert set(persisted.commands) == {"off", "speed_1"}
+
+
 class TestWsEntityListers:
     @pytest.mark.asyncio
     async def test_transmitter_list_filters_domains(self) -> None:
