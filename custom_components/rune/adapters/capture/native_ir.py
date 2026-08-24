@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from custom_components.rune.adapters.capture.providers import CaptureProvider
@@ -33,11 +34,30 @@ from custom_components.rune.ports.receiver import CapturedPulse
 
 # Importing ``homeassistant`` lazily keeps the capture package usable
 # from pure-Python unit tests without a HA install. Anything that
-# touches HA belongs behind ``_probe_receiver`` / ``async_start_capture``.
+# touches HA belongs behind ``_is_ir_receiver`` / ``async_start_capture``.
 try:
     from homeassistant.exceptions import HomeAssistantError
 except ImportError:  # pragma: no cover - exercised in tests via monkeypatch
     HomeAssistantError = None  # type: ignore[assignment,misc]
+
+
+@dataclass(frozen=True)
+class ProbeResult:
+    """What ``probe_receiver`` found out about a candidate entity.
+
+    Carries the diagnostic reason alongside ``available`` so the WS
+    handler can render a real explanation instead of the bare
+    "not available" string. The most common misconfiguration is
+    attaching an :class:`InfraredEmitterEntity` (a transmitter the
+    user named ``emisor`` / ``tx`` / ``blaster``) to a slot the
+    integration expects to *listen* on; we surface that explicitly
+    via :attr:`is_emitter`.
+    """
+
+    available: bool
+    reason: str  # human-readable; safe to render to the user
+    is_emitter: bool = False  # True → entity is an InfraredEmitterEntity
+
 
 if TYPE_CHECKING:
     from custom_components.rune.adapters.receivers.native_ir import NativeIRReceiver
@@ -78,29 +98,18 @@ class NativeIRCaptureProvider(CaptureProvider):
 
     @property
     def is_available(self) -> bool:
-        """True when the underlying entity is loaded and reachable.
+        """Boolean shortcut for the orchestrator's lock check.
 
-        We also probe :func:`select_receiver` so a domain mismatch
-        (e.g. an ``esphome`` entity passed as IR) raises a clear
-        :class:`UnsupportedHardwareError` instead of failing later
-        mid-capture.
+        The WS handler should prefer :func:`probe_receiver` so it can
+        surface a useful diagnostic; ``is_available`` stays simple for
+        the single-flight lock guard.
         """
-        if not self.receiver_entity_id:
-            return False
-        try:
-            self._receiver = select_receiver(
-                self._hass, self.receiver_entity_id, SignalTransport.IR
-            )
-        except UnsupportedHardwareError:
-            return False
-        return self._receiver.is_available and _is_ir_receiver(
-            self._hass, self.receiver_entity_id
-        )
+        return probe_receiver(self._hass, self.receiver_entity_id).available
 
     def _ensure_receiver(self) -> "NativeIRReceiver":
         if self._receiver is None:
-            # ``is_available`` ran first in the happy path; this is the
-            # belt-and-braces guard for callers that skipped the probe.
+            # ``probe_receiver`` ran first in the happy path; this is
+            # the belt-and-braces guard for callers that skipped it.
             self._receiver = select_receiver(
                 self._hass, self.receiver_entity_id, SignalTransport.IR
             )
@@ -179,27 +188,110 @@ class NativeIRCaptureProvider(CaptureProvider):
                 break
 
 
-__all__ = ["NativeIRCaptureProvider"]
+__all__ = ["NativeIRCaptureProvider", "ProbeResult", "probe_receiver"]
+
+
+def probe_receiver(hass: Any, receiver_entity_id: str) -> ProbeResult:
+    """Inspect a candidate receiver entity and explain its status.
+
+    Public helper so the WS handler can surface the same diagnostic
+    the provider uses internally. We probe in this order:
+
+    1. The factory can resolve an IR adapter for the entity (else
+       we can't talk to it at all).
+    2. The HA infrared platform reports the entity as a registered
+       receiver (``async_get_receivers``).
+    3. The HA state object says it's not unavailable.
+
+    Each step that fails produces a distinct :attr:`ProbeResult.reason`
+    so the panel can render actionable guidance — including the
+    emitter-vs-receiver distinction, which is the most common
+    misconfiguration.
+    """
+    if not receiver_entity_id:
+        return ProbeResult(False, "No receiver entity configured.")
+    try:
+        receiver = select_receiver(hass, receiver_entity_id, SignalTransport.IR)
+    except UnsupportedHardwareError as err:
+        return ProbeResult(
+            False,
+            f"No IR adapter for entity {receiver_entity_id!r}: {err}",
+        )
+    if not _is_ir_receiver(hass, receiver_entity_id):
+        # Special-case the most common mistake: the user wired up the
+        # *transmitter* entity (named ``emisor`` / ``emitter`` /
+        # ``blaster``) thinking it's the receiver. Naming aside, the
+        # ``infrared.async_subscribe_receiver`` call would raise
+        # ``receiver_not_found`` mid-capture — catch it here and
+        # explain what's actually attached.
+        if _is_ir_emitter(hass, receiver_entity_id):
+            return ProbeResult(
+                False,
+                f"Entity {receiver_entity_id!r} is an IR emitter (transmitter), "
+                "not a receiver. To learn commands you need an IR receiver "
+                "entity — devices with both blaster + receiver capabilities "
+                "expose two separate entities. Pick the receiver one.",
+                is_emitter=True,
+            )
+        return ProbeResult(
+            False,
+            f"Entity {receiver_entity_id!r} is in the infrared domain but is "
+            "not registered as an InfraredReceiverEntity in Home Assistant. "
+            "Make sure the integration that provides it loaded the receiver "
+            "component (look for 'receiver' in the entity's settings).",
+        )
+    if not receiver.is_available:
+        return ProbeResult(
+            False,
+            f"Entity {receiver_entity_id!r} is currently unavailable "
+            "(state is 'unavailable' or missing). Check that the device is "
+            "powered on and connected to Home Assistant.",
+        )
+    return ProbeResult(
+        True,
+        f"Entity {receiver_entity_id!r} is a registered infrared receiver.",
+    )
 
 
 def _is_ir_receiver(hass: Any, receiver_entity_id: str) -> bool:
     """True when the entity is registered as an HA infrared receiver.
 
-    HA's infrared platform keeps ``hass.data[infrared.DOMAIN]`` keyed
-    by ``entity_id`` — only entities that implement
-    ``InfraredReceiverEntity`` show up there. Anything else (a state
-    that exists in another domain, a stale reference, etc.) returns
-    ``False`` so the provider can refuse early instead of raising a
-    raw ``HomeAssistantError`` mid-capture.
+    Uses ``infrared.async_get_receivers`` — the canonical probe the
+    HA platform itself recommends. Anything else (a stale reference,
+    an emitter misconfigured as a receiver, etc.) returns ``False``
+    so the provider can refuse early instead of raising a raw
+    ``HomeAssistantError`` mid-capture.
     """
     try:
         from homeassistant.components import infrared
     except ImportError:
         return False
-    registry = hass.data.get(infrared.DOMAIN)
-    if not isinstance(registry, dict):
+    try:
+        receivers = infrared.async_get_receivers(hass)
+    except Exception:  # pragma: no cover - defensive against HA quirks
         return False
-    return receiver_entity_id in registry
+    return receiver_entity_id in receivers
+
+
+def _is_ir_emitter(hass: Any, entity_id: str) -> bool:
+    """True when the entity is registered as an HA infrared emitter.
+
+    Separate from ``_is_ir_receiver`` because the user's most common
+    mistake is attaching the *transmitter* entity (named ``emisor`` /
+    ``emitter`` / ``tx`` etc.) to a slot the integration expects to
+    *listen* on. Telling them "this is an emitter, not a receiver"
+    is the difference between a productive debug session and a
+    frustrating one.
+    """
+    try:
+        from homeassistant.components import infrared
+    except ImportError:
+        return False
+    try:
+        emitters = infrared.async_get_emitters(hass)
+    except Exception:  # pragma: no cover - defensive against HA quirks
+        return False
+    return entity_id in emitters
 
 
 def _is_unknown_receiver_error(err: BaseException) -> bool:

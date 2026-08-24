@@ -662,12 +662,14 @@ async def _ws_command_learn(
         )
 
     provider = NativeIRCaptureProvider(ctx.hass, receiver_entity_id)
-    if not provider.is_available:
-        raise CaptureProviderUnavailableError(
-            f"IR receiver {receiver_entity_id!r} is not available. Check that "
-            "the entity is loaded and registered as an "
-            "InfraredReceiverEntity in Home Assistant."
-        )
+    # Use ``probe_receiver`` instead of ``is_available`` so the panel
+    # gets the specific reason (entity missing / is an emitter /
+    # unavailable state) instead of a single opaque message.
+    from custom_components.rune.adapters.capture.native_ir import probe_receiver
+
+    probe = probe_receiver(ctx.hass, receiver_entity_id)
+    if not probe.available:
+        raise CaptureProviderUnavailableError(probe.reason)
 
     timeout_s = float(msg.get("timeout_s", 15.0))
     try:

@@ -61,11 +61,15 @@ class FakeHass:
     ) -> None:
         self.states = _States(states or {})
         self.captured: list[CapturedPulse] = []
-        # ``hass.data[DOMAIN]`` — providers probe this to detect
-        # entities registered with the infrared platform.
-        self.data: dict[str, dict[str, object]] = {}
-        if ir_receivers is not None:
-            self.data["infrared"] = {entity_id: object() for entity_id in ir_receivers}
+        # ``hass.data`` shape mirrors what the patched probes read
+        # in the ``fake_receiver`` fixture — receivers live in a set
+        # keyed by ``infrared_receivers`` and emitters in
+        # ``infrared_emitters``. Tests that need a different layout
+        # mutate ``hass.data`` directly.
+        self.data: dict[str, object] = {
+            "infrared_receivers": set(ir_receivers or []),
+            "infrared_emitters": set(),
+        }
 
     def async_create_task(self, coro: Any) -> asyncio.Task:  # pragma: no cover - unused
         return asyncio.create_task(coro)
@@ -121,25 +125,43 @@ def _pulse(carrier: int = 38_000, timings: tuple[int, ...] = (100, -200)) -> Cap
 
 @pytest.fixture
 def fake_receiver(monkeypatch: pytest.MonkeyPatch) -> FakeNativeIRReceiver:
-    """Patch the receivers factory + IR registry probe so the
+    """Patch the receivers factory + IR registry probes so the
     provider picks up our fake without needing HA installed.
 
-    The production probe (``_is_ir_receiver``) calls into
-    ``homeassistant.components.infrared``, which isn't on the test
-    path. We swap it for a local function that reads ``hass.data`` —
-    matches the production contract, no HA dependency.
+    The production probes (``_is_ir_receiver`` / ``_is_ir_emitter``)
+    call into ``homeassistant.components.infrared``, which isn't on
+    the test path. We swap them for local functions that read
+    ``hass.data`` — matches the production contract, no HA dependency.
     """
     from custom_components.rune.adapters.capture import native_ir as native_ir_mod
 
     receiver = FakeNativeIRReceiver()
     monkeypatch.setattr(native_ir_mod, "select_receiver", lambda *_a, **_kw: receiver)
 
-    def _is_ir(hass: Any, entity_id: str) -> bool:
-        registry = getattr(hass, "data", {}).get("infrared", {})
+    def _is_ir_receiver(hass: Any, entity_id: str) -> bool:
+        registry = getattr(hass, "data", {}).get("infrared_receivers", set())
         return entity_id in registry
 
-    monkeypatch.setattr(native_ir_mod, "_is_ir_receiver", _is_ir)
+    def _is_ir_emitter(hass: Any, entity_id: str) -> bool:
+        registry = getattr(hass, "data", {}).get("infrared_emitters", set())
+        return entity_id in registry
+
+    monkeypatch.setattr(native_ir_mod, "_is_ir_receiver", _is_ir_receiver)
+    monkeypatch.setattr(native_ir_mod, "_is_ir_emitter", _is_ir_emitter)
     return receiver
+
+
+def _hass_with_ir(
+    receivers: list[str] | None = None,
+    emitters: list[str] | None = None,
+) -> FakeHass:
+    """Convenience constructor that wires both registries."""
+    hass = FakeHass(
+        states={"infrared.test": _FakeState("idle")},
+        ir_receivers=receivers or [],
+    )
+    hass.data["infrared_emitters"] = set(emitters or [])
+    return hass
 
 
 class TestNativeIRCaptureProvider:
@@ -147,10 +169,7 @@ class TestNativeIRCaptureProvider:
     async def test_is_available_probes_entity_and_factory(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         assert provider.is_available is True
 
@@ -159,10 +178,7 @@ class TestNativeIRCaptureProvider:
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
         fake_receiver._available = False
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         assert provider.is_available is False
 
@@ -173,10 +189,7 @@ class TestNativeIRCaptureProvider:
         # The factory says yes, but the entity isn't in HA's infrared
         # registry — ``infrared.async_subscribe_receiver`` would raise
         # ``receiver_not_found``. The probe catches that early.
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=[],
-        )
+        hass = _hass_with_ir(receivers=[])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         assert provider.is_available is False
 
@@ -184,10 +197,7 @@ class TestNativeIRCaptureProvider:
     async def test_start_then_wait_returns_first_pulse(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=1.0)
         # Fire the pulse asynchronously — the subscription callback
@@ -202,10 +212,7 @@ class TestNativeIRCaptureProvider:
     async def test_wait_times_out_when_no_signal(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=0.1)
         result = await provider.async_wait_for_signal(timeout_s=0.1)
@@ -216,10 +223,7 @@ class TestNativeIRCaptureProvider:
     async def test_stop_unsubscribes_and_drains_stragglers(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         await provider.async_start_capture(timeout_s=0.5)
         # Two pulses arrive before anyone calls wait_for_signal.
@@ -240,10 +244,7 @@ class TestNativeIRCaptureProvider:
     async def test_wait_without_start_raises(
         self, fake_receiver: FakeNativeIRReceiver
     ) -> None:
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         with pytest.raises(RuntimeError, match="before async_start_capture"):
             await provider.async_wait_for_signal(timeout_s=0.1)
@@ -257,10 +258,7 @@ class TestNativeIRCaptureProvider:
         )
 
         fake_receiver._available = False
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         with pytest.raises(CaptureProviderUnavailableError):
             await provider.async_start_capture(timeout_s=0.1)
@@ -289,10 +287,60 @@ class TestNativeIRCaptureProvider:
         # so ``_is_unknown_receiver_error`` recognises it.
         monkeypatch.setattr(native_ir_mod, "HomeAssistantError", _FakeHAError)
         fake_receiver.start_listening = _raise  # type: ignore[method-assign]
-        hass = FakeHass(
-            states={"infrared.test": _FakeState("idle")},
-            ir_receivers=["infrared.test"],
-        )
+        hass = _hass_with_ir(receivers=["infrared.test"])
         provider = NativeIRCaptureProvider(hass, "infrared.test")
         with pytest.raises(CaptureProviderUnavailableError, match="not a registered"):
             await provider.async_start_capture(timeout_s=0.1)
+
+
+class TestProbeReceiver:
+    """``probe_receiver`` is the public diagnostic the WS handler
+    surfaces to the panel. Each branch produces a distinct message
+    so the user can tell emitter-vs-receiver vs unavailable apart."""
+
+    def test_available_for_registered_receiver(
+        self, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        from custom_components.rune.adapters.capture.native_ir import probe_receiver
+
+        hass = _hass_with_ir(receivers=["infrared.test"])
+        result = probe_receiver(hass, "infrared.test")
+        assert result.available is True
+        assert result.is_emitter is False
+        assert "registered infrared receiver" in result.reason
+
+    def test_flags_emitter_as_such(
+        self, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        """The most common misconfiguration: the user wired an IR
+        *transmitter* entity (``emisor`` / ``blaster``) into the
+        receiver slot. ``probe_receiver`` must call that out."""
+        from custom_components.rune.adapters.capture.native_ir import probe_receiver
+
+        hass = _hass_with_ir(emitters=["infrared.remoto_emisor_ir"])
+        result = probe_receiver(hass, "infrared.remoto_emisor_ir")
+        assert result.available is False
+        assert result.is_emitter is True
+        assert "emitter" in result.reason
+        assert "receiver" in result.reason
+
+    def test_unknown_ir_entity_gets_generic_message(
+        self, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        from custom_components.rune.adapters.capture.native_ir import probe_receiver
+
+        hass = _hass_with_ir()
+        result = probe_receiver(hass, "infrared.test")
+        assert result.available is False
+        assert result.is_emitter is False
+        assert "InfraredReceiverEntity" in result.reason
+
+    def test_empty_entity_id_rejected(
+        self, fake_receiver: FakeNativeIRReceiver
+    ) -> None:
+        from custom_components.rune.adapters.capture.native_ir import probe_receiver
+
+        hass = _hass_with_ir()
+        result = probe_receiver(hass, "")
+        assert result.available is False
+        assert "No receiver entity" in result.reason
