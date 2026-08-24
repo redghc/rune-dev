@@ -147,5 +147,23 @@ class RuneLightPlatform:
         ]
         async_add_entities(entities)
 
+    def build_entities_for_device(self, device):
+        if device.category != EntityCategory.LIGHT:
+            return []
+        return [RuneLightEntity(device=device, coordinator=self._coordinator)]
 
-__all__ = ["RuneLightEntity", "RuneLightPlatform"]
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the light platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="light",
+        platform_cls=RuneLightPlatform,
+    )
+
+
+__all__ = ["RuneLightEntity", "RuneLightPlatform", "async_setup_entry"]

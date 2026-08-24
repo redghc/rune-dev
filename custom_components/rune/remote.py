@@ -76,5 +76,23 @@ class RuneRemotePlatform:
         ]
         async_add_entities(entities)
 
+    def build_entities_for_device(self, device):
+        if device.category != EntityCategory.REMOTE:
+            return []
+        return [RuneRemoteEntity(device=device, coordinator=self._coordinator)]
 
-__all__ = ["RuneRemoteEntity", "RuneRemotePlatform"]
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the remote platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="remote",
+        platform_cls=RuneRemotePlatform,
+    )
+
+
+__all__ = ["RuneRemoteEntity", "RuneRemotePlatform", "async_setup_entry"]

@@ -95,6 +95,21 @@ class DevicePlatformCoordinator:
         self._transmitter_factory = transmitter_factory
         self._power_monitors: dict[str, HAPowerMonitor | InMemoryPowerMonitor] = {}
         self._entities: dict[str, EntityDescriptor] = {}
+        # Live-entity hooks: each platform module registers an
+        # ``async_add_entities`` callback here during ``async_setup_entry``.
+        # When a new device arrives via ``rune/device/create`` we use these
+        # hooks to push the freshly-built entities into HA without a full
+        # config-entry reload. Keyed by the platform module name (e.g.
+        # ``"fan"``); value is the ``async_add_entities`` callable.
+        self._entity_adders: dict[str, Callable[[list[Any]], None]] = {}
+        # Builders: each platform exposes ``build_entities_for_device(device)``
+        # returning the entities it owns for that device (empty if the
+        # device doesn't belong to this platform). Coordinator iterates
+        # every builder on a fresh device and pushes results to the
+        # matching ``async_add_entities``.
+        self._entity_builders: dict[
+            str, Callable[[RuneDevice], list[Any]]
+        ] = {}
 
     # ------------------------------------------------------------------
     # TX path (shared by every entity)
@@ -315,6 +330,86 @@ class DevicePlatformCoordinator:
         raise NotImplementedError(
             "Use async_load_devices() from async_setup_platform"
         )
+
+    # ------------------------------------------------------------------
+    # Live-entity push (used after ``rune/device/create``)
+    # ------------------------------------------------------------------
+
+    def register_entity_adder(
+        self, platform: str, async_add_entities: Callable[[list[Any]], None]
+    ) -> None:
+        """Register HA's ``async_add_entities`` for ``platform``.
+
+        Called from each platform module's ``async_setup_entry``. The
+        coordinator stores one adder per platform so a freshly created
+        RuneDevice can be promoted to HA entities without a full
+        config-entry reload.
+        """
+        self._entity_adders[platform] = async_add_entities
+
+    def register_entity_builder(
+        self,
+        platform: str,
+        builder: Callable[[RuneDevice], list[Any]],
+    ) -> None:
+        """Register ``builder(device) → list[entity]`` for ``platform``.
+
+        Builders are platform-owned: each one decides whether the
+        device belongs to its platform and returns the matching
+        entities (empty list otherwise). Coordinator iterates every
+        builder when a fresh device arrives.
+        """
+        self._entity_builders[platform] = builder
+
+    def unregister_entity_adder(self, platform: str) -> None:
+        """Drop the adder for ``platform`` (called on config-entry unload)."""
+        self._entity_adders.pop(platform, None)
+
+    def unregister_entity_builder(self, platform: str) -> None:
+        """Drop the builder for ``platform`` (called on config-entry unload)."""
+        self._entity_builders.pop(platform, None)
+
+    def has_entity_adder(self, platform: str) -> bool:
+        return platform in self._entity_adders
+
+    async def async_add_entities_for_device(self, device: RuneDevice) -> None:
+        """Build entities for ``device`` and push via registered adders.
+
+        Called by the WS ``rune/device/create`` handler after a fresh
+        device has been persisted. Iterates every registered builder;
+        each platform returns its own entities (empty when the device
+        doesn't belong to it). Results are routed to the matching
+        platform's ``async_add_entities`` callable.
+        """
+        for platform, builder in list(self._entity_builders.items()):
+            try:
+                entities = builder(device)
+            except Exception as err:
+                _LOGGER.warning(
+                    "rune: %s builder failed for device %s: %s",
+                    platform,
+                    device.id,
+                    err,
+                )
+                continue
+            if not entities:
+                continue
+            adder = self._entity_adders.get(platform)
+            if adder is None:
+                _LOGGER.debug(
+                    "rune: %s produced entities but no adder is registered",
+                    platform,
+                )
+                continue
+            try:
+                adder(list(entities))
+            except Exception as err:
+                _LOGGER.warning(
+                    "rune: %s async_add_entities failed for device %s: %s",
+                    platform,
+                    device.id,
+                    err,
+                )
 
     # ------------------------------------------------------------------
     # Diagnostics

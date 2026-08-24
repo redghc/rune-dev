@@ -123,5 +123,23 @@ class RuneCoverPlatform:
         ]
         async_add_entities(entities)
 
+    def build_entities_for_device(self, device):
+        if device.category != EntityCategory.COVER:
+            return []
+        return [RuneCoverEntity(device=device, coordinator=self._coordinator)]
 
-__all__ = ["RuneCoverEntity", "RuneCoverPlatform"]
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the cover platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="cover",
+        platform_cls=RuneCoverPlatform,
+    )
+
+
+__all__ = ["RuneCoverEntity", "RuneCoverPlatform", "async_setup_entry"]

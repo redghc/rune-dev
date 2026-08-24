@@ -66,6 +66,24 @@ class RuneWebSocketContext:
 
         return HAStoreDeviceRepository(self.hass)
 
+    def coordinator(self):
+        """Return the live :class:`DevicePlatformCoordinator`.
+
+        Walks ``hass.data[DOMAIN]`` to find the first entry that
+        registered a coordinator. Returns ``None`` when the integration
+        hasn't completed setup yet (race during reload) or when tests
+        substitute a context without ``data``. The WS handlers tolerate
+        ``None`` and skip the live-entity push.
+        """
+        domain_data = getattr(self.hass, "data", None) or {}
+        domain_data = domain_data.get(DOMAIN, {}) if hasattr(domain_data, "get") else {}
+        for entry_data in domain_data.values():
+            if isinstance(entry_data, dict):
+                coord = entry_data.get("coordinator")
+                if coord is not None:
+                    return coord
+        return None
+
 
 # ---------------------------------------------------------------------------
 # Command registry
@@ -351,6 +369,15 @@ async def _ws_device_create(
     repo = await ctx.device_repository()
     await repo.upsert(device)
     _LOGGER.info("rune: created device %s (%s)", device.id, device.name)
+
+    # Push the new device into HA as live entities without a full
+    # config-entry reload. The coordinator walks every registered
+    # platform builder; only platforms matching the device's category
+    # (plus the always-on button platform) produce entities. Failures
+    # are logged inside the coordinator and don't block the create.
+    coordinator = ctx.coordinator()
+    if coordinator is not None:
+        await coordinator.async_add_entities_for_device(device)
 
     return {"device": device.to_dict()}
 
@@ -800,11 +827,20 @@ def _try_area_registry(hass: Any) -> tuple[dict[str, str], str | None]:
 
 
 def _device_summary(device: RuneDevice) -> dict[str, Any]:
-    """Compact summary used by ``rune/list``."""
+    """Compact summary used by ``rune/list``.
+
+    Includes every field the SPA's edit dialog needs so reopening the
+    dialog pre-fills correctly without a per-card ``rune/device/get``
+    round-trip. Keep this list in sync with ``DeviceSummary`` on the
+    TS side (``frontend/src/types.ts``).
+    """
     return {
         "id": device.id,
         "name": device.name,
         "category": device.category.value,
+        "manufacturer": device.manufacturer,
+        "model": device.model,
+        "discrete_speed_count": device.discrete_speed_count,
         "transmitter_entity_ids": list(device.transmitter_entity_ids),
         "receiver_entity_ids": list(device.receiver_entity_ids),
         "command_count": len(device.commands),

@@ -7,9 +7,15 @@ in-memory repository.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
-from custom_components.rune.adapters.storage.memory import InMemoryDeviceRepository
+from custom_components.rune.adapters.storage.memory import (
+    InMemoryActionRepository,
+    InMemoryDeviceRepository,
+)
+from custom_components.rune.const import DOMAIN
 from custom_components.rune.domain.enums import (
     CommandCategory,
     EntityCategory,
@@ -349,6 +355,70 @@ class TestWsDeviceCreate:
         with pytest.raises(ActionError):
             await _ws_device_create(_ctx(), {})
 
+    async def test_create_pushes_entities_through_coordinator(self) -> None:
+        """Newly created devices are pushed to live entity adders.
+
+        The WS handler must call ``coordinator.async_add_entities_for_device``
+        so platforms registered via the runtime hook see the new device
+        without a full reload.
+        """
+        from custom_components.rune._platform_support._coordinator import (
+            DevicePlatformCoordinator,
+        )
+        from custom_components.rune.websocket_api import _ws_device_create
+
+        repo = InMemoryDeviceRepository()
+
+        async def _list_repo(self) -> InMemoryDeviceRepository:  # type: ignore[no-untyped-def]
+            return repo
+
+        coord = DevicePlatformCoordinator(
+            hass=FakeHass(),
+            device_repository=repo,
+            action_repository=InMemoryActionRepository(),
+            tx_gate=type(
+                "_G", (), {"send": staticmethod(lambda *_a, **_kw: None)}
+            )(),
+        )
+
+        class _FakeEntity:
+            def __init__(self, role: str) -> None:
+                self.role = role
+
+        seen: list[list[Any]] = []
+        coord.register_entity_adder(
+            "fan", lambda entities: seen.append(list(entities))
+        )
+        coord.register_entity_builder(
+            "fan",
+            lambda d: [_FakeEntity("fan:" + d.name)]
+            if d.category.value == "fan"
+            else [],
+        )
+
+        # Stand in for the live hass with the coordinator registered on
+        # the per-entry dict the WS context walks.
+        hass = FakeHass()
+        hass.data = {DOMAIN: {"entry-1": {"coordinator": coord}}}
+
+        original_repo = RuneWebSocketContext.device_repository
+        RuneWebSocketContext.device_repository = _list_repo  # type: ignore[method-assign]
+        try:
+            result = await _ws_device_create(
+                RuneWebSocketContext(hass=hass, connection_id=None),
+                {
+                    "name": "Bedroom fan",
+                    "category": "fan",
+                    "transmitter": "infrared.bedroom",
+                },
+            )
+        finally:
+            RuneWebSocketContext.device_repository = original_repo  # type: ignore[method-assign]
+
+        assert result["device"]["name"] == "Bedroom fan"
+        assert len(seen) == 1
+        assert [e.role for e in seen[0]] == ["fan:Bedroom fan"]
+
 
 class TestWsEntityListers:
     @pytest.mark.asyncio
@@ -448,11 +518,17 @@ class TestDeviceSummary:
 
         device = _device(device_id="d1", name="My fan")
         device.transmitter_entity_ids = ["infrared.bedroom"]
+        device.manufacturer = "Vonluce"
+        device.model = "CFN1318BW"
+        device.discrete_speed_count = 6
         summary = _device_summary(device)
         assert summary == {
             "id": "d1",
             "name": "My fan",
             "category": "fan",
+            "manufacturer": "Vonluce",
+            "model": "CFN1318BW",
+            "discrete_speed_count": 6,
             "transmitter_entity_ids": ["infrared.bedroom"],
             "receiver_entity_ids": [],
             "command_count": 1,

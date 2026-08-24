@@ -292,3 +292,61 @@ class TestAsyncDispatchAction:
         )
         fired = await coord.async_dispatch_action(binding=binding)
         assert fired is False
+
+    @pytest.mark.asyncio
+    async def test_live_entity_push_dispatches_to_registered_adders(self) -> None:
+        """New devices added via register_device flow through the adders."""
+        coord = _coordinator()[0]
+        device = _fan_device()
+
+        class _FakeEntity:
+            def __init__(self, role: str) -> None:
+                self.role = role
+
+        fan_calls: list[list[Any]] = []
+        button_calls: list[list[Any]] = []
+
+        coord.register_entity_adder(
+            "fan", lambda entities: fan_calls.append(list(entities))
+        )
+        coord.register_entity_builder(
+            "fan", lambda d: [_FakeEntity(f"fan:{d.name}")]
+        )
+        coord.register_entity_adder(
+            "button", lambda entities: button_calls.append(list(entities))
+        )
+        coord.register_entity_builder(
+            "button", lambda d: [_FakeEntity(f"btn:{d.name}")]
+        )
+        coord.register_entity_builder(
+            "ignored", lambda d: [_FakeEntity(f"ign:{d.name}")]
+        )
+
+        await coord.async_add_entities_for_device(device)
+
+        assert [e.role for e in fan_calls[0]] == ["fan:Bedroom fan"]
+        assert [e.role for e in button_calls[0]] == ["btn:Bedroom fan"]
+        assert coord.has_entity_adder("ignored") is False
+
+    @pytest.mark.asyncio
+    async def test_live_entity_push_skips_when_builder_returns_empty(self) -> None:
+        coord = _coordinator()[0]
+        device = _fan_device()
+        device.category = EntityCategory.LIGHT
+        adder_calls: list[list[Any]] = []
+        coord.register_entity_adder(
+            "fan", lambda entities: adder_calls.append(list(entities))
+        )
+        coord.register_entity_builder("fan", lambda d: [])
+        await coord.async_add_entities_for_device(device)
+        assert adder_calls == []
+
+    @pytest.mark.asyncio
+    async def test_live_entity_push_unwind_on_unregister(self) -> None:
+        coord = _coordinator()[0]
+        coord.register_entity_adder("fan", lambda e: None)
+        coord.register_entity_builder("fan", lambda d: [])
+        assert coord.has_entity_adder("fan") is True
+        coord.unregister_entity_adder("fan")
+        coord.unregister_entity_builder("fan")
+        assert coord.has_entity_adder("fan") is False

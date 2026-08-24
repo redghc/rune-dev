@@ -182,5 +182,28 @@ class RuneFanPlatform:
         ]
         async_add_entities(entities)
 
+    def build_entities_for_device(self, device):
+        """Return the fan entity for ``device``, or [] if category mismatches.
 
-__all__ = ["RuneFanEntity", "RuneFanPlatform", "SpeedMapper"]
+        Used by the coordinator to push a single fresh device into HA
+        after ``rune/device/create``.
+        """
+        if device.category != EntityCategory.FAN:
+            return []
+        return [RuneFanEntity(device=device, coordinator=self._coordinator)]
+
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the fan platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="fan",
+        platform_cls=RuneFanPlatform,
+    )
+
+
+__all__ = ["RuneFanEntity", "RuneFanPlatform", "SpeedMapper", "async_setup_entry"]

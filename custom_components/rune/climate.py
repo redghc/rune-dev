@@ -176,5 +176,23 @@ class RuneClimatePlatform:
         ]
         async_add_entities(entities)
 
+    def build_entities_for_device(self, device):
+        if device.category != EntityCategory.CLIMATE:
+            return []
+        return [RuneClimateEntity(device=device, coordinator=self._coordinator)]
 
-__all__ = ["RuneClimateEntity", "RuneClimatePlatform"]
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the climate platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="climate",
+        platform_cls=RuneClimatePlatform,
+    )
+
+
+__all__ = ["RuneClimateEntity", "RuneClimatePlatform", "async_setup_entry"]

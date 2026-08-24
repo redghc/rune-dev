@@ -121,5 +121,22 @@ class RuneButtonPlatform:
             )
         return entities
 
+    def build_entities_for_device(self, device):
+        """Buttons exist for every device — there is no category filter."""
+        return self._build_for_device(device)
 
-__all__ = ["RuneButtonPlatform", "RunePulseButtonEntity"]
+
+async def async_setup_entry(hass: Any, entry: Any, async_add_entities: Any) -> None:
+    """HA entry-setup hook for the button platform."""
+    from custom_components.rune._platform_support.setup import setup_rune_platform
+
+    await setup_rune_platform(
+        hass=hass,
+        entry=entry,
+        async_add_entities=async_add_entities,
+        platform_name="button",
+        platform_cls=RuneButtonPlatform,
+    )
+
+
+__all__ = ["RuneButtonPlatform", "RunePulseButtonEntity", "async_setup_entry"]
