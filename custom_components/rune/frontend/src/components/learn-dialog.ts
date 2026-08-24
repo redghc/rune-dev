@@ -314,12 +314,44 @@ export class RuneLearnDialog extends LitElement {
         store.updateLearn({ status: { kind: "no_signal" } });
       }
     } catch (err) {
+      const message = (err as Error).message;
+      // Pre-flight errors (wrong domain, missing receiver, etc.)
+      // mean the user picked the wrong entity — bounce back to step 1
+      // so they can re-select without closing the dialog. Runtime
+      // capture errors (no signal, timeout) keep them on the capture
+      // step so they can re-press the remote button.
+      if (this._isPreflightError(message)) {
+        store.updateLearn({
+          status: { kind: "idle" },
+          captured: null,
+          rawTimings: null,
+          carrierHz: null,
+          step: "pick",
+          receiverEntityId: "",
+        });
+        this._receiverEntityIdDraft = "";
+      }
       store.updateLearn({
-        status: { kind: "failed", message: (err as Error).message },
+        status: { kind: "failed", message },
       });
     } finally {
       this._busy = false;
     }
+  }
+
+  /** True for errors raised *before* the orchestrator takes its lock —
+   *  bad entity pick, missing receiver, etc. We bounce these back to
+   *  step 1 so the user can re-pick. Runtime capture failures
+   *  ("no signal", "capture failed: …", timeouts) keep the user on
+   *  the capture step so they can retry the press.
+   *
+   *  Backend raises ``CaptureProviderUnavailableError`` /
+   *  ``ActionError`` for pre-flight failures; the wire strips the
+   *  exception class so we match by message keywords. The list is
+   *  intentionally narrow — anything that doesn't match is treated
+   *  as a runtime error. */
+  private _isPreflightError(message: string): boolean {
+    return /receiver|emitter|pick|configure|broadlink|transport/i.test(message);
   }
 
   private _recapture = (): void => {
@@ -711,10 +743,33 @@ export class RuneLearnDialog extends LitElement {
       if (ld.transport && this._transportDraft !== ld.transport) {
         this._transportDraft = ld.transport;
       }
-      if (ld.receiverEntityId && !this._receiverEntityIdDraft) {
-        this._receiverEntityIdDraft = ld.receiverEntityId;
+      // Validate the persisted receiver against the IR registry. A
+      // previously-stored entity may have changed status (e.g. the
+      // user reconfigured it as an emitter) since the last session —
+      // don't silently keep an invalid pick, force a re-selection.
+      const stored = this._receiverEntityIdDraft || ld.receiverEntityId;
+      if (stored && !this._isValidReceiver(stored, ld.transport)) {
+        if (this._receiverEntityIdDraft) this._receiverEntityIdDraft = "";
+        store.updateLearn({ receiverEntityId: "" });
+      } else if (stored && !this._receiverEntityIdDraft) {
+        this._receiverEntityIdDraft = stored;
       }
     }
+  }
+
+  /** True when ``entity_id`` is registered with HA as an IR receiver
+   *  (for IR transport) or as a Broadlink device (for RF transport).
+   *
+   *  Mirrors the backend's pre-flight checks in ``probe_receiver`` /
+   *  ``find_rf_device_for_entity`` — keeping the frontend filter in
+   *  sync means a stale store pick (e.g. an emitter mistakenly saved
+   *  as a receiver in a prior session) gets cleared on reopen instead
+   *  of bouncing off the backend with an opaque error. */
+  private _isValidReceiver(entity_id: string, transport: LearnTransport): boolean {
+    if (transport === "ir") {
+      return store.receivers.some((r) => r.entity_id === entity_id);
+    }
+    return store.transmitters.some((t) => t.entity_id === entity_id);
   }
 
   render() {
